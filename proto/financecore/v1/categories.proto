@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package financecore.v1;
+
+option go_package = "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1;financecorev1";
+
+// Common
+message CategoryResponse {
+    string id = 1;
+    string category_name = 2;
+}
+
+// RPC: List Categories
+message ListCategoriesRequest {}
+
+message ListCategoriesResponse {
+    repeated CategoryResponse categories = 1;
+}
+
+service CategoryService {
+    rpc ListCategories (ListCategoriesRequest) returns (ListCategoriesResponse);
+}

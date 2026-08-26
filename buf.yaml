@@ -1,0 +1,11 @@
+version: v2
+modules:
+  - path: proto
+deps: []
+lint:
+  use:
+    - STANDARD
+  service_suffix: Service
+breaking:
+  use:
+    - FILE

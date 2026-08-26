@@ -1,0 +1,78 @@
+-include .env
+export
+
+GRPC_ADDR ?= localhost:50051
+GRPC_PROTOS := -proto financecore/v1/categories.proto -proto financecore/v1/expenses.proto -proto financecore/v1/user_contexts.proto
+
+.PHONY: run build test vet check tidy \
+	up down down-v logs \
+	migrate-up migrate-down migrate-force migrate-create migrate-version \
+	sqlc-generate proto-generate proto-lint \
+	grpc-list grpc-describe
+
+run:
+	go run ./cmd/api
+
+build:
+	go build -o bin/api ./cmd/api
+
+test:
+	go test ./...
+
+vet:
+	go vet ./...
+
+check: vet test proto-lint
+
+tidy:
+	go mod tidy
+
+## --- local infra (Postgres via docker-compose) ---
+
+up:
+	docker compose up -d
+
+down:
+	docker compose down
+
+down-v:
+	docker compose down -v
+
+logs:
+	docker compose logs -f postgres
+
+## --- migrations (golang-migrate) ---
+
+migrate-up:
+	migrate -path migrations -database "$(DATABASE_URL)" up
+
+migrate-down:
+	migrate -path migrations -database "$(DATABASE_URL)" down 1
+
+migrate-force:
+	migrate -path migrations -database "$(DATABASE_URL)" force $(version)
+
+migrate-create:
+	migrate create -ext sql -dir migrations -seq $(name)
+
+migrate-version:
+	migrate -path migrations -database "$(DATABASE_URL)" version
+
+## --- codegen ---
+
+sqlc-generate:
+	sqlc generate
+
+proto-generate:
+	buf generate
+
+proto-lint:
+	buf lint
+
+## --- gRPC dev tools (reflection isn't registered, so proto files are passed explicitly) ---
+
+grpc-list:
+	grpcurl -plaintext -import-path proto $(GRPC_PROTOS) $(GRPC_ADDR) list
+
+grpc-describe:
+	grpcurl -plaintext -import-path proto $(GRPC_PROTOS) $(GRPC_ADDR) describe $(symbol)

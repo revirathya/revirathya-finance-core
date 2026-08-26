@@ -1,0 +1,24 @@
+-- name: GetUserTelegramContext :one
+SELECT
+  utel.id,
+  utel.user_id,
+  utel.telegram_chat_id,
+  utel.conversation,
+  utel.state,
+  utel.interaction_chat_id,
+  utel.interaction_message_id
+FROM
+  app.user_telegram_contexts AS utel
+WHERE
+  utel.user_id = sqlc.arg('user_id');
+
+-- name: UpdateUserTelegramContext :one
+UPDATE app.user_telegram_contexts
+SET
+  conversation = sqlc.narg('conversation'),
+  state = sqlc.narg('state'),
+  interaction_chat_id = sqlc.narg('interaction_chat_id'),
+  interaction_message_id = sqlc.narg('interaction_message_id')
+WHERE
+  user_id = sqlc.arg('user_id')
+RETURNING *;

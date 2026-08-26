@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package financecore.v1;
+
+option go_package = "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1;financecorev1";
+
+
+// Common
+
+// RPC: Create Expense
+message CreateExpenseRequest {
+    string user_id = 1;
+    string category_id = 2;
+    string transaction_dt = 3;
+    optional string description = 4;
+    string amount = 5;
+}
+
+message CreateExpenseResponse {
+    string id = 1;
+    string user_id = 2;
+    string category_id = 3;
+    string transaction_dt = 4;
+    optional string description = 5;
+    string amount = 6;
+}
+
+// RPC: List Expense
+message ListExpensesRequest {
+  string user_id = 1;
+  optional string transaction_dt = 2;
+}
+
+message ExpenseResponse {
+    string id = 1;
+    string user_id = 2;
+    string category_id = 3;
+    string category_name = 4;
+    string transaction_dt = 5;
+    optional string description = 6;
+    string amount = 7;
+}
+
+message ListExpensesResponse {
+    repeated ExpenseResponse expenses = 1;
+}
+
+// RPC: Get Expense By ID
+message GetExpenseByIDRequest {
+    string id = 1;
+}
+
+message GetExpenseByIDResponse {
+    string id = 1;
+    string user_id = 2;
+    string category_id = 3;
+    string category_name = 4;
+    string transaction_dt = 5;
+    optional string description = 6;
+    string amount = 7;
+}
+
+// RPC: Update Expense
+message UpdateExpenseRequest {
+    string id = 1;
+    string user_id = 2;
+    string category_id = 3;
+    string transaction_dt = 4;
+    optional string description = 5;
+    string amount = 6;
+}
+
+message UpdateExpenseResponse {
+    string id = 1;
+    string user_id = 2;
+    string category_id = 3;
+    string transaction_dt = 4;
+    optional string description = 5;
+    string amount = 6;
+}
+
+// RPC: Delete Expense
+message DeleteExpenseRequest {
+    string id = 1;
+}
+
+message DeleteExpenseResponse {}
+
+// Service
+service ExpenseService {
+    rpc CreateExpense (CreateExpenseRequest) returns (CreateExpenseResponse);
+    rpc GetExpenseByID (GetExpenseByIDRequest) returns (GetExpenseByIDResponse);
+    rpc ListExpenses (ListExpensesRequest) returns (ListExpensesResponse);
+    rpc UpdateExpense (UpdateExpenseRequest) returns (UpdateExpenseResponse);
+    rpc DeleteExpense (DeleteExpenseRequest) returns (DeleteExpenseResponse);
+}

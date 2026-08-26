@@ -1,0 +1,10 @@
+bin/
+vendor/
+.idea/
+.vscode/
+.env
+*.log
+.DS_Store
+
+# Internal
+notes.sh

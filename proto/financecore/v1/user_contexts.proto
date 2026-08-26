@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package financecore.v1;
+
+option go_package = "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1;financecorev1";
+
+
+// RPC: Get User Telegram Context
+message GetUserTelegramContextRequest {
+    string user_id = 1;
+}
+
+message GetUserTelegramContextResponse {
+    string id = 1;
+    string user_id = 2;
+    optional string telegram_chat_id = 3;
+    optional string conversation = 4;
+    optional string state = 5;
+    optional string interaction_chat_id = 6;
+    optional string interaction_message_id = 7;
+}
+
+// RPC: Update User Telegram Context
+message UpdateUserTelegramContextRequest {
+    string user_id = 1;
+    optional string conversation = 2;
+    optional string state = 3;
+    optional string interaction_chat_id = 4;
+    optional string interaction_message_id = 5;
+}
+
+message UpdateUserTelegramContextResponse {
+    string id = 1;
+    string user_id = 2;
+    optional string telegram_chat_id = 3;
+    optional string conversation = 4;
+    optional string state = 5;
+    optional string interaction_chat_id = 6;
+    optional string interaction_message_id = 7;
+}
+
+// Service
+service UserTelegramContextService {
+    rpc GetUserTelegramContext (GetUserTelegramContextRequest) returns (GetUserTelegramContextResponse);
+    rpc UpdateUserTelegramContext (UpdateUserTelegramContextRequest) returns (UpdateUserTelegramContextResponse);
+}
