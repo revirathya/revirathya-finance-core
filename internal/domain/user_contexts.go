@@ -10,7 +10,7 @@ import (
 type UserTelegramContext struct {
 	ID                   uuid.UUID
 	UserID               uuid.UUID
-	TelegramChatID       *string
+	TelegramChatID       string
 	Conversation         *string
 	State                *string
 	InteractionChatID    *string
@@ -20,5 +20,6 @@ type UserTelegramContext struct {
 // Repository: User Telegram Context
 type UserTelegramContextRepository interface {
 	GetUserTelegramContext(ctx context.Context, userID uuid.UUID) (*UserTelegramContext, error)
+	GetUserTelegramContextByTelegramID(ctx context.Context, telegramChatID string) (*UserTelegramContext, error)
 	UpdateUserTelegramContext(ctx context.Context, userID uuid.UUID, conversation *string, state *string, interactionChatID *string, interactionMessageID *string) (*UserTelegramContext, error)
 }

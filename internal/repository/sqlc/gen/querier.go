@@ -13,9 +13,11 @@ import (
 type Querier interface {
 	CreateExpense(ctx context.Context, arg CreateExpenseParams) (AppExpense, error)
 	DeleteExpense(ctx context.Context, id pgtype.UUID) error
+	GetCategoryByID(ctx context.Context, id pgtype.UUID) (GetCategoryByIDRow, error)
 	GetExpenseByID(ctx context.Context, id pgtype.UUID) (GetExpenseByIDRow, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error)
 	GetUserTelegramContext(ctx context.Context, userID pgtype.UUID) (GetUserTelegramContextRow, error)
+	GetUserTelegramContextByTelegramID(ctx context.Context, telegramChatID string) (GetUserTelegramContextByTelegramIDRow, error)
 	ListCategories(ctx context.Context) ([]ListCategoriesRow, error)
 	ListExpenses(ctx context.Context, arg ListExpensesParams) ([]ListExpensesRow, error)
 	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (AppExpense, error)

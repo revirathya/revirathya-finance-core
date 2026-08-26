@@ -18,7 +18,7 @@ CREATE TABLE app.users (
 CREATE TABLE app.user_telegram_contexts (
   id UUID DEFAULT GEN_RANDOM_UUID(),
   user_id UUID UNIQUE NOT NULL,
-  telegram_chat_id VARCHAR(100) UNIQUE,
+  telegram_chat_id VARCHAR(100) UNIQUE NOT NULL,
   conversation VARCHAR(100),
   state VARCHAR(100),
   interaction_chat_id VARCHAR(100),

@@ -49,6 +49,27 @@ func (h *UserTelegramContextHandler) GetUserTelegramContext(ctx context.Context,
 	return resp, nil
 }
 
+func (h *UserTelegramContextHandler) GetUserTelegramContextByTelegramID(ctx context.Context, req *financecorev1.GetUserTelegramContextByTelegramIDRequest) (*financecorev1.GetUserTelegramContextByTelegramIDResponse, error) {
+	user_context, err := h.utelUc.GetUserTelegramContextByTelegramID(ctx, req.TelegramChatId)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, status.Errorf(codes.NotFound, "user context telegram for user %s not found", req.TelegramChatId)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get user telegram context: %v", err)
+	}
+
+	resp := &financecorev1.GetUserTelegramContextByTelegramIDResponse{
+		Id:                   user_context.ID.String(),
+		UserId:               user_context.UserID.String(),
+		TelegramChatId:       user_context.TelegramChatID,
+		Conversation:         user_context.Conversation,
+		State:                user_context.State,
+		InteractionChatId:    user_context.InteractionChatID,
+		InteractionMessageId: user_context.InteractionMessageID,
+	}
+	return resp, nil
+}
+
 func (h *UserTelegramContextHandler) UpdateUserTelegramContext(ctx context.Context, req *financecorev1.UpdateUserTelegramContextRequest) (*financecorev1.UpdateUserTelegramContextResponse, error) {
 	uuidUserID, err := uuid.Parse(req.UserId)
 	if err != nil {

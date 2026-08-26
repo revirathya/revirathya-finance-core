@@ -6,18 +6,24 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 )
 
 // Fake
 type fakeCategoryRepo struct {
-	categories []domain.Category
-	err        error
+	categories   []domain.Category
+	categoryByID *domain.Category
+	err          error
 }
 
 func (f *fakeCategoryRepo) ListCategories(ctx context.Context) ([]domain.Category, error) {
 	return f.categories, f.err
+}
+
+func (f *fakeCategoryRepo) GetCategoryByID(ctx context.Context, id uuid.UUID) (*domain.Category, error) {
+	return f.categoryByID, f.err
 }
 
 // Test
@@ -58,4 +64,32 @@ func TestListCategories(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetCategoryByID(t *testing.T) {
+	id := uuid.New()
+	want := &domain.Category{ID: id, CategoryName: "Food"}
+
+	t.Run("returns category", func(t *testing.T) {
+		repo := &fakeCategoryRepo{categoryByID: want}
+		uc := category.NewCategoryUsecase(repo)
+
+		got, err := uc.GetCategoryByID(context.Background(), id)
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("got %v, want %v", got, want)
+		}
+	})
+
+	t.Run("propagates repo error", func(t *testing.T) {
+		repo := &fakeCategoryRepo{err: errors.New("not found")}
+		uc := category.NewCategoryUsecase(repo)
+
+		if _, err := uc.GetCategoryByID(context.Background(), id); err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
 }

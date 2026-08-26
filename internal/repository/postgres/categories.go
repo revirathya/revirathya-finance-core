@@ -2,7 +2,10 @@ package postgres
 
 import (
 	"context"
+	"errors"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
@@ -36,5 +39,19 @@ func (r *categoryRepositoryImpl) ListCategories(ctx context.Context) ([]domain.C
 	return results, nil
 }
 
-// Sanity Check
-var _ domain.CategoryRepository = (&categoryRepositoryImpl{})
+func (r *categoryRepositoryImpl) GetCategoryByID(ctx context.Context, id uuid.UUID) (*domain.Category, error) {
+	row, err := r.query.GetCategoryByID(ctx, database.ToPgxUUID(id))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
+		return nil, err
+	}
+
+	result := &domain.Category{
+		ID:           database.FromPgxUUID(row.ID),
+		CategoryName: row.CategoryName,
+	}
+
+	return result, nil
+}

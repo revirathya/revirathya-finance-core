@@ -13,11 +13,14 @@ import (
 
 // Fake
 type fakeUserContextRepo struct {
-	getResp    *domain.UserTelegramContext
-	updateResp *domain.UserTelegramContext
-	err        error
+	getResp             *domain.UserTelegramContext
+	getByTelegramIDResp *domain.UserTelegramContext
+	updateResp          *domain.UserTelegramContext
+	err                 error
 
 	gotGetUserID uuid.UUID
+
+	gotGetTelegramChatID string
 
 	gotUpdateUserID               uuid.UUID
 	gotUpdateConversation         *string
@@ -29,6 +32,11 @@ type fakeUserContextRepo struct {
 func (f *fakeUserContextRepo) GetUserTelegramContext(ctx context.Context, userID uuid.UUID) (*domain.UserTelegramContext, error) {
 	f.gotGetUserID = userID
 	return f.getResp, f.err
+}
+
+func (f *fakeUserContextRepo) GetUserTelegramContextByTelegramID(ctx context.Context, telegramChatID string) (*domain.UserTelegramContext, error) {
+	f.gotGetTelegramChatID = telegramChatID
+	return f.getByTelegramIDResp, f.err
 }
 
 func (f *fakeUserContextRepo) UpdateUserTelegramContext(ctx context.Context, userID uuid.UUID, conversation *string, state *string, interactionChatID *string, interactionMessageID *string) (*domain.UserTelegramContext, error) {
@@ -69,6 +77,38 @@ func TestGetUserTelegramContext(t *testing.T) {
 		uc := usercontext.NewUserTelegramContextUsecase(repo)
 
 		if _, err := uc.GetUserTelegramContext(context.Background(), userID); err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
+}
+
+func TestGetUserTelegramContextByTelegramID(t *testing.T) {
+	telegramChatID := "999888777"
+	state := "awaiting_amount"
+	want := &domain.UserTelegramContext{TelegramChatID: telegramChatID, State: &state}
+
+	t.Run("returns context", func(t *testing.T) {
+		repo := &fakeUserContextRepo{getByTelegramIDResp: want}
+		uc := usercontext.NewUserTelegramContextUsecase(repo)
+
+		got, err := uc.GetUserTelegramContextByTelegramID(context.Background(), telegramChatID)
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("got %v, want %v", got, want)
+		}
+		if repo.gotGetTelegramChatID != telegramChatID {
+			t.Fatalf("repo received telegramChatID %v, want %v", repo.gotGetTelegramChatID, telegramChatID)
+		}
+	})
+
+	t.Run("propagates repo error", func(t *testing.T) {
+		repo := &fakeUserContextRepo{err: errors.New("not found")}
+		uc := usercontext.NewUserTelegramContextUsecase(repo)
+
+		if _, err := uc.GetUserTelegramContextByTelegramID(context.Background(), telegramChatID); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})

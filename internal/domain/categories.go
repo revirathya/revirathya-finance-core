@@ -15,4 +15,5 @@ type Category struct {
 // Repository: Category
 type CategoryRepository interface {
 	ListCategories(ctx context.Context) ([]Category, error)
+	GetCategoryByID(ctx context.Context, id uuid.UUID) (*Category, error)
 }

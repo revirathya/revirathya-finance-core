@@ -37,7 +37,7 @@ type AppUser struct {
 type AppUserTelegramContext struct {
 	ID                   pgtype.UUID        `json:"id"`
 	UserID               pgtype.UUID        `json:"user_id"`
-	TelegramChatID       *string            `json:"telegram_chat_id"`
+	TelegramChatID       string             `json:"telegram_chat_id"`
 	Conversation         *string            `json:"conversation"`
 	State                *string            `json:"state"`
 	InteractionChatID    *string            `json:"interaction_chat_id"`

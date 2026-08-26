@@ -23,6 +23,10 @@ func (uc *UserTelegramContextUsecase) GetUserTelegramContext(ctx context.Context
 	return uc.utelRepo.GetUserTelegramContext(ctx, userID)
 }
 
+func (uc *UserTelegramContextUsecase) GetUserTelegramContextByTelegramID(ctx context.Context, telegramChatID string) (*domain.UserTelegramContext, error) {
+	return uc.utelRepo.GetUserTelegramContextByTelegramID(ctx, telegramChatID)
+}
+
 func (uc *UserTelegramContextUsecase) UpdateUserTelegramContext(ctx context.Context, userID uuid.UUID, conversation *string, state *string, interactionChatID *string, interactionMessageID *string) (*domain.UserTelegramContext, error) {
 	return uc.utelRepo.UpdateUserTelegramContext(
 		ctx,

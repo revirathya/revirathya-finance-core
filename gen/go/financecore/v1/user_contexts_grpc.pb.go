@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UserTelegramContextService_GetUserTelegramContext_FullMethodName    = "/financecore.v1.UserTelegramContextService/GetUserTelegramContext"
-	UserTelegramContextService_UpdateUserTelegramContext_FullMethodName = "/financecore.v1.UserTelegramContextService/UpdateUserTelegramContext"
+	UserTelegramContextService_GetUserTelegramContext_FullMethodName             = "/financecore.v1.UserTelegramContextService/GetUserTelegramContext"
+	UserTelegramContextService_GetUserTelegramContextByTelegramID_FullMethodName = "/financecore.v1.UserTelegramContextService/GetUserTelegramContextByTelegramID"
+	UserTelegramContextService_UpdateUserTelegramContext_FullMethodName          = "/financecore.v1.UserTelegramContextService/UpdateUserTelegramContext"
 )
 
 // UserTelegramContextServiceClient is the client API for UserTelegramContextService service.
@@ -30,6 +31,7 @@ const (
 // Service
 type UserTelegramContextServiceClient interface {
 	GetUserTelegramContext(ctx context.Context, in *GetUserTelegramContextRequest, opts ...grpc.CallOption) (*GetUserTelegramContextResponse, error)
+	GetUserTelegramContextByTelegramID(ctx context.Context, in *GetUserTelegramContextByTelegramIDRequest, opts ...grpc.CallOption) (*GetUserTelegramContextByTelegramIDResponse, error)
 	UpdateUserTelegramContext(ctx context.Context, in *UpdateUserTelegramContextRequest, opts ...grpc.CallOption) (*UpdateUserTelegramContextResponse, error)
 }
 
@@ -45,6 +47,16 @@ func (c *userTelegramContextServiceClient) GetUserTelegramContext(ctx context.Co
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetUserTelegramContextResponse)
 	err := c.cc.Invoke(ctx, UserTelegramContextService_GetUserTelegramContext_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userTelegramContextServiceClient) GetUserTelegramContextByTelegramID(ctx context.Context, in *GetUserTelegramContextByTelegramIDRequest, opts ...grpc.CallOption) (*GetUserTelegramContextByTelegramIDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUserTelegramContextByTelegramIDResponse)
+	err := c.cc.Invoke(ctx, UserTelegramContextService_GetUserTelegramContextByTelegramID_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -68,6 +80,7 @@ func (c *userTelegramContextServiceClient) UpdateUserTelegramContext(ctx context
 // Service
 type UserTelegramContextServiceServer interface {
 	GetUserTelegramContext(context.Context, *GetUserTelegramContextRequest) (*GetUserTelegramContextResponse, error)
+	GetUserTelegramContextByTelegramID(context.Context, *GetUserTelegramContextByTelegramIDRequest) (*GetUserTelegramContextByTelegramIDResponse, error)
 	UpdateUserTelegramContext(context.Context, *UpdateUserTelegramContextRequest) (*UpdateUserTelegramContextResponse, error)
 	mustEmbedUnimplementedUserTelegramContextServiceServer()
 }
@@ -81,6 +94,9 @@ type UnimplementedUserTelegramContextServiceServer struct{}
 
 func (UnimplementedUserTelegramContextServiceServer) GetUserTelegramContext(context.Context, *GetUserTelegramContextRequest) (*GetUserTelegramContextResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUserTelegramContext not implemented")
+}
+func (UnimplementedUserTelegramContextServiceServer) GetUserTelegramContextByTelegramID(context.Context, *GetUserTelegramContextByTelegramIDRequest) (*GetUserTelegramContextByTelegramIDResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetUserTelegramContextByTelegramID not implemented")
 }
 func (UnimplementedUserTelegramContextServiceServer) UpdateUserTelegramContext(context.Context, *UpdateUserTelegramContextRequest) (*UpdateUserTelegramContextResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateUserTelegramContext not implemented")
@@ -125,6 +141,24 @@ func _UserTelegramContextService_GetUserTelegramContext_Handler(srv interface{},
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserTelegramContextService_GetUserTelegramContextByTelegramID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserTelegramContextByTelegramIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserTelegramContextServiceServer).GetUserTelegramContextByTelegramID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserTelegramContextService_GetUserTelegramContextByTelegramID_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserTelegramContextServiceServer).GetUserTelegramContextByTelegramID(ctx, req.(*GetUserTelegramContextByTelegramIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _UserTelegramContextService_UpdateUserTelegramContext_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpdateUserTelegramContextRequest)
 	if err := dec(in); err != nil {
@@ -153,6 +187,10 @@ var UserTelegramContextService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserTelegramContext",
 			Handler:    _UserTelegramContextService_GetUserTelegramContext_Handler,
+		},
+		{
+			MethodName: "GetUserTelegramContextByTelegramID",
+			Handler:    _UserTelegramContextService_GetUserTelegramContextByTelegramID_Handler,
 		},
 		{
 			MethodName: "UpdateUserTelegramContext",

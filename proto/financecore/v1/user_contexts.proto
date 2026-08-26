@@ -13,7 +13,22 @@ message GetUserTelegramContextRequest {
 message GetUserTelegramContextResponse {
     string id = 1;
     string user_id = 2;
-    optional string telegram_chat_id = 3;
+    string telegram_chat_id = 3;
+    optional string conversation = 4;
+    optional string state = 5;
+    optional string interaction_chat_id = 6;
+    optional string interaction_message_id = 7;
+}
+
+// RPC: Get User Telegram Context By Telegram ID
+message GetUserTelegramContextByTelegramIDRequest {
+    string telegram_chat_id = 1;
+}
+
+message GetUserTelegramContextByTelegramIDResponse {
+    string id = 1;
+    string user_id = 2;
+    string telegram_chat_id = 3;
     optional string conversation = 4;
     optional string state = 5;
     optional string interaction_chat_id = 6;
@@ -32,7 +47,7 @@ message UpdateUserTelegramContextRequest {
 message UpdateUserTelegramContextResponse {
     string id = 1;
     string user_id = 2;
-    optional string telegram_chat_id = 3;
+    string telegram_chat_id = 3;
     optional string conversation = 4;
     optional string state = 5;
     optional string interaction_chat_id = 6;
@@ -42,5 +57,6 @@ message UpdateUserTelegramContextResponse {
 // Service
 service UserTelegramContextService {
     rpc GetUserTelegramContext (GetUserTelegramContextRequest) returns (GetUserTelegramContextResponse);
+    rpc GetUserTelegramContextByTelegramID (GetUserTelegramContextByTelegramIDRequest) returns (GetUserTelegramContextByTelegramIDResponse);
     rpc UpdateUserTelegramContext (UpdateUserTelegramContextRequest) returns (UpdateUserTelegramContextResponse);
 }

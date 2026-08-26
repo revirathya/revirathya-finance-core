@@ -11,6 +11,28 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getCategoryByID = `-- name: GetCategoryByID :one
+SELECT
+  c.id,
+  c.category_name
+FROM
+  app.categories AS c
+WHERE
+  c.id = $1
+`
+
+type GetCategoryByIDRow struct {
+	ID           pgtype.UUID `json:"id"`
+	CategoryName string      `json:"category_name"`
+}
+
+func (q *Queries) GetCategoryByID(ctx context.Context, id pgtype.UUID) (GetCategoryByIDRow, error) {
+	row := q.db.QueryRow(ctx, getCategoryByID, id)
+	var i GetCategoryByIDRow
+	err := row.Scan(&i.ID, &i.CategoryName)
+	return i, err
+}
+
 const listCategories = `-- name: ListCategories :many
 SELECT
   c.id,

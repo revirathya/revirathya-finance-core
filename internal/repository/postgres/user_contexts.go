@@ -43,6 +43,27 @@ func (r *userTelegramContextRepositoryImpl) GetUserTelegramContext(ctx context.C
 	return result, nil
 }
 
+func (r *userTelegramContextRepositoryImpl) GetUserTelegramContextByTelegramID(ctx context.Context, telegramChatID string) (*domain.UserTelegramContext, error) {
+	row, err := r.query.GetUserTelegramContextByTelegramID(ctx, telegramChatID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
+		return nil, err
+	}
+
+	result := &domain.UserTelegramContext{
+		ID:                   database.FromPgxUUID(row.ID),
+		UserID:               database.FromPgxUUID(row.UserID),
+		TelegramChatID:       row.TelegramChatID,
+		Conversation:         row.Conversation,
+		State:                row.State,
+		InteractionChatID:    row.InteractionChatID,
+		InteractionMessageID: row.InteractionMessageID,
+	}
+	return result, nil
+}
+
 func (r *userTelegramContextRepositoryImpl) UpdateUserTelegramContext(ctx context.Context, userID uuid.UUID, conversation *string, state *string, interactionChatID *string, interactionMessageID *string) (*domain.UserTelegramContext, error) {
 	args := sqlcgen.UpdateUserTelegramContextParams{
 		Conversation:         conversation,

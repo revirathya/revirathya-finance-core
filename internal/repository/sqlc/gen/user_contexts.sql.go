@@ -29,7 +29,7 @@ WHERE
 type GetUserTelegramContextRow struct {
 	ID                   pgtype.UUID `json:"id"`
 	UserID               pgtype.UUID `json:"user_id"`
-	TelegramChatID       *string     `json:"telegram_chat_id"`
+	TelegramChatID       string      `json:"telegram_chat_id"`
 	Conversation         *string     `json:"conversation"`
 	State                *string     `json:"state"`
 	InteractionChatID    *string     `json:"interaction_chat_id"`
@@ -39,6 +39,46 @@ type GetUserTelegramContextRow struct {
 func (q *Queries) GetUserTelegramContext(ctx context.Context, userID pgtype.UUID) (GetUserTelegramContextRow, error) {
 	row := q.db.QueryRow(ctx, getUserTelegramContext, userID)
 	var i GetUserTelegramContextRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.TelegramChatID,
+		&i.Conversation,
+		&i.State,
+		&i.InteractionChatID,
+		&i.InteractionMessageID,
+	)
+	return i, err
+}
+
+const getUserTelegramContextByTelegramID = `-- name: GetUserTelegramContextByTelegramID :one
+SELECT
+  utel.id,
+  utel.user_id,
+  utel.telegram_chat_id,
+  utel.conversation,
+  utel.state,
+  utel.interaction_chat_id,
+  utel.interaction_message_id
+FROM
+  app.user_telegram_contexts AS utel
+WHERE
+  utel.telegram_chat_id = $1
+`
+
+type GetUserTelegramContextByTelegramIDRow struct {
+	ID                   pgtype.UUID `json:"id"`
+	UserID               pgtype.UUID `json:"user_id"`
+	TelegramChatID       string      `json:"telegram_chat_id"`
+	Conversation         *string     `json:"conversation"`
+	State                *string     `json:"state"`
+	InteractionChatID    *string     `json:"interaction_chat_id"`
+	InteractionMessageID *string     `json:"interaction_message_id"`
+}
+
+func (q *Queries) GetUserTelegramContextByTelegramID(ctx context.Context, telegramChatID string) (GetUserTelegramContextByTelegramIDRow, error) {
+	row := q.db.QueryRow(ctx, getUserTelegramContextByTelegramID, telegramChatID)
+	var i GetUserTelegramContextByTelegramIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
