@@ -94,10 +94,10 @@ func (q *Queries) GetUserTelegramContextByTelegramID(ctx context.Context, telegr
 const updateUserTelegramContext = `-- name: UpdateUserTelegramContext :one
 UPDATE app.user_telegram_contexts
 SET
-  conversation = $1,
-  state = $2,
-  interaction_chat_id = $3,
-  interaction_message_id = $4
+  conversation = COALESCE($1, conversation),
+  state = COALESCE($2, state),
+  interaction_chat_id = COALESCE($3, interaction_chat_id),
+  interaction_message_id = COALESCE($4, interaction_message_id)
 WHERE
   user_id = $5
 RETURNING id, user_id, telegram_chat_id, conversation, state, interaction_chat_id, interaction_message_id, created_at, updated_at
