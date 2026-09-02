@@ -70,7 +70,7 @@ type GetUserTelegramContextResponse struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	UserId               string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	TelegramChatId       string                 `protobuf:"bytes,3,opt,name=telegram_chat_id,json=telegramChatId,proto3" json:"telegram_chat_id,omitempty"`
+	TelegramChatId       *string                `protobuf:"bytes,3,opt,name=telegram_chat_id,json=telegramChatId,proto3,oneof" json:"telegram_chat_id,omitempty"`
 	Conversation         *string                `protobuf:"bytes,4,opt,name=conversation,proto3,oneof" json:"conversation,omitempty"`
 	State                *string                `protobuf:"bytes,5,opt,name=state,proto3,oneof" json:"state,omitempty"`
 	InteractionChatId    *string                `protobuf:"bytes,6,opt,name=interaction_chat_id,json=interactionChatId,proto3,oneof" json:"interaction_chat_id,omitempty"`
@@ -124,8 +124,8 @@ func (x *GetUserTelegramContextResponse) GetUserId() string {
 }
 
 func (x *GetUserTelegramContextResponse) GetTelegramChatId() string {
-	if x != nil {
-		return x.TelegramChatId
+	if x != nil && x.TelegramChatId != nil {
+		return *x.TelegramChatId
 	}
 	return ""
 }
@@ -207,7 +207,7 @@ type GetUserTelegramContextByTelegramIDResponse struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	UserId               string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	TelegramChatId       string                 `protobuf:"bytes,3,opt,name=telegram_chat_id,json=telegramChatId,proto3" json:"telegram_chat_id,omitempty"`
+	TelegramChatId       *string                `protobuf:"bytes,3,opt,name=telegram_chat_id,json=telegramChatId,proto3,oneof" json:"telegram_chat_id,omitempty"`
 	Conversation         *string                `protobuf:"bytes,4,opt,name=conversation,proto3,oneof" json:"conversation,omitempty"`
 	State                *string                `protobuf:"bytes,5,opt,name=state,proto3,oneof" json:"state,omitempty"`
 	InteractionChatId    *string                `protobuf:"bytes,6,opt,name=interaction_chat_id,json=interactionChatId,proto3,oneof" json:"interaction_chat_id,omitempty"`
@@ -261,8 +261,8 @@ func (x *GetUserTelegramContextByTelegramIDResponse) GetUserId() string {
 }
 
 func (x *GetUserTelegramContextByTelegramIDResponse) GetTelegramChatId() string {
-	if x != nil {
-		return x.TelegramChatId
+	if x != nil && x.TelegramChatId != nil {
+		return *x.TelegramChatId
 	}
 	return ""
 }
@@ -376,7 +376,7 @@ type UpdateUserTelegramContextResponse struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	UserId               string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	TelegramChatId       string                 `protobuf:"bytes,3,opt,name=telegram_chat_id,json=telegramChatId,proto3" json:"telegram_chat_id,omitempty"`
+	TelegramChatId       *string                `protobuf:"bytes,3,opt,name=telegram_chat_id,json=telegramChatId,proto3,oneof" json:"telegram_chat_id,omitempty"`
 	Conversation         *string                `protobuf:"bytes,4,opt,name=conversation,proto3,oneof" json:"conversation,omitempty"`
 	State                *string                `protobuf:"bytes,5,opt,name=state,proto3,oneof" json:"state,omitempty"`
 	InteractionChatId    *string                `protobuf:"bytes,6,opt,name=interaction_chat_id,json=interactionChatId,proto3,oneof" json:"interaction_chat_id,omitempty"`
@@ -430,8 +430,8 @@ func (x *UpdateUserTelegramContextResponse) GetUserId() string {
 }
 
 func (x *UpdateUserTelegramContextResponse) GetTelegramChatId() string {
-	if x != nil {
-		return x.TelegramChatId
+	if x != nil && x.TelegramChatId != nil {
+		return *x.TelegramChatId
 	}
 	return ""
 }
@@ -470,29 +470,31 @@ const file_financecore_v1_user_contexts_proto_rawDesc = "" +
 	"\n" +
 	"\"financecore/v1/user_contexts.proto\x12\x0efinancecore.v1\"8\n" +
 	"\x1dGetUserTelegramContextRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\"\xf5\x02\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x8f\x03\n" +
 	"\x1eGetUserTelegramContextResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12(\n" +
-	"\x10telegram_chat_id\x18\x03 \x01(\tR\x0etelegramChatId\x12'\n" +
-	"\fconversation\x18\x04 \x01(\tH\x00R\fconversation\x88\x01\x01\x12\x19\n" +
-	"\x05state\x18\x05 \x01(\tH\x01R\x05state\x88\x01\x01\x123\n" +
-	"\x13interaction_chat_id\x18\x06 \x01(\tH\x02R\x11interactionChatId\x88\x01\x01\x129\n" +
-	"\x16interaction_message_id\x18\a \x01(\tH\x03R\x14interactionMessageId\x88\x01\x01B\x0f\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12-\n" +
+	"\x10telegram_chat_id\x18\x03 \x01(\tH\x00R\x0etelegramChatId\x88\x01\x01\x12'\n" +
+	"\fconversation\x18\x04 \x01(\tH\x01R\fconversation\x88\x01\x01\x12\x19\n" +
+	"\x05state\x18\x05 \x01(\tH\x02R\x05state\x88\x01\x01\x123\n" +
+	"\x13interaction_chat_id\x18\x06 \x01(\tH\x03R\x11interactionChatId\x88\x01\x01\x129\n" +
+	"\x16interaction_message_id\x18\a \x01(\tH\x04R\x14interactionMessageId\x88\x01\x01B\x13\n" +
+	"\x11_telegram_chat_idB\x0f\n" +
 	"\r_conversationB\b\n" +
 	"\x06_stateB\x16\n" +
 	"\x14_interaction_chat_idB\x19\n" +
 	"\x17_interaction_message_id\"U\n" +
 	")GetUserTelegramContextByTelegramIDRequest\x12(\n" +
-	"\x10telegram_chat_id\x18\x01 \x01(\tR\x0etelegramChatId\"\x81\x03\n" +
+	"\x10telegram_chat_id\x18\x01 \x01(\tR\x0etelegramChatId\"\x9b\x03\n" +
 	"*GetUserTelegramContextByTelegramIDResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12(\n" +
-	"\x10telegram_chat_id\x18\x03 \x01(\tR\x0etelegramChatId\x12'\n" +
-	"\fconversation\x18\x04 \x01(\tH\x00R\fconversation\x88\x01\x01\x12\x19\n" +
-	"\x05state\x18\x05 \x01(\tH\x01R\x05state\x88\x01\x01\x123\n" +
-	"\x13interaction_chat_id\x18\x06 \x01(\tH\x02R\x11interactionChatId\x88\x01\x01\x129\n" +
-	"\x16interaction_message_id\x18\a \x01(\tH\x03R\x14interactionMessageId\x88\x01\x01B\x0f\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12-\n" +
+	"\x10telegram_chat_id\x18\x03 \x01(\tH\x00R\x0etelegramChatId\x88\x01\x01\x12'\n" +
+	"\fconversation\x18\x04 \x01(\tH\x01R\fconversation\x88\x01\x01\x12\x19\n" +
+	"\x05state\x18\x05 \x01(\tH\x02R\x05state\x88\x01\x01\x123\n" +
+	"\x13interaction_chat_id\x18\x06 \x01(\tH\x03R\x11interactionChatId\x88\x01\x01\x129\n" +
+	"\x16interaction_message_id\x18\a \x01(\tH\x04R\x14interactionMessageId\x88\x01\x01B\x13\n" +
+	"\x11_telegram_chat_idB\x0f\n" +
 	"\r_conversationB\b\n" +
 	"\x06_stateB\x16\n" +
 	"\x14_interaction_chat_idB\x19\n" +
@@ -506,15 +508,16 @@ const file_financecore_v1_user_contexts_proto_rawDesc = "" +
 	"\r_conversationB\b\n" +
 	"\x06_stateB\x16\n" +
 	"\x14_interaction_chat_idB\x19\n" +
-	"\x17_interaction_message_id\"\xf8\x02\n" +
+	"\x17_interaction_message_id\"\x92\x03\n" +
 	"!UpdateUserTelegramContextResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12(\n" +
-	"\x10telegram_chat_id\x18\x03 \x01(\tR\x0etelegramChatId\x12'\n" +
-	"\fconversation\x18\x04 \x01(\tH\x00R\fconversation\x88\x01\x01\x12\x19\n" +
-	"\x05state\x18\x05 \x01(\tH\x01R\x05state\x88\x01\x01\x123\n" +
-	"\x13interaction_chat_id\x18\x06 \x01(\tH\x02R\x11interactionChatId\x88\x01\x01\x129\n" +
-	"\x16interaction_message_id\x18\a \x01(\tH\x03R\x14interactionMessageId\x88\x01\x01B\x0f\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12-\n" +
+	"\x10telegram_chat_id\x18\x03 \x01(\tH\x00R\x0etelegramChatId\x88\x01\x01\x12'\n" +
+	"\fconversation\x18\x04 \x01(\tH\x01R\fconversation\x88\x01\x01\x12\x19\n" +
+	"\x05state\x18\x05 \x01(\tH\x02R\x05state\x88\x01\x01\x123\n" +
+	"\x13interaction_chat_id\x18\x06 \x01(\tH\x03R\x11interactionChatId\x88\x01\x01\x129\n" +
+	"\x16interaction_message_id\x18\a \x01(\tH\x04R\x14interactionMessageId\x88\x01\x01B\x13\n" +
+	"\x11_telegram_chat_idB\x0f\n" +
 	"\r_conversationB\b\n" +
 	"\x06_stateB\x16\n" +
 	"\x14_interaction_chat_idB\x19\n" +

@@ -8,7 +8,7 @@ CREATE SCHEMA app;
 -- d. expenses: Records of expenses
 CREATE TABLE app.users (
   id UUID DEFAULT GEN_RANDOM_UUID(),
-  first_name VARCHAR(100),
+  first_name VARCHAR(100) NOT NULL,
   last_name VARCHAR(100),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -18,7 +18,7 @@ CREATE TABLE app.users (
 CREATE TABLE app.user_telegram_contexts (
   id UUID DEFAULT GEN_RANDOM_UUID(),
   user_id UUID UNIQUE NOT NULL,
-  telegram_chat_id VARCHAR(100) UNIQUE NOT NULL,
+  telegram_chat_id VARCHAR(100) UNIQUE,
   conversation VARCHAR(100),
   state VARCHAR(100),
   interaction_chat_id VARCHAR(100),

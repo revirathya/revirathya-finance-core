@@ -20,8 +20,15 @@ func NewExpenseUsecase(expRepo domain.ExpenseRepository) *ExpenseUsecase {
 	}
 }
 
-func (uc *ExpenseUsecase) CreateExpense(ctx context.Context, newExpense domain.CreateExpense) (*domain.Expense, error) {
-	return uc.expRepo.CreateExpense(ctx, newExpense)
+func (uc *ExpenseUsecase) CreateExpense(ctx context.Context, userID uuid.UUID, categoryID uuid.UUID, transactionDt time.Time, description *string, amount decimal.Decimal) (*domain.Expense, error) {
+	input := domain.ExpenseForm{
+		UserID:        userID,
+		CategoryID:    categoryID,
+		TransactionDt: transactionDt,
+		Description:   description,
+		Amount:        amount,
+	}
+	return uc.expRepo.CreateExpense(ctx, input)
 }
 
 func (uc *ExpenseUsecase) GetExpenseByID(ctx context.Context, id uuid.UUID) (*domain.Expense, error) {
@@ -33,15 +40,14 @@ func (uc *ExpenseUsecase) ListExpenses(ctx context.Context, userID uuid.UUID, tr
 }
 
 func (uc *ExpenseUsecase) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, categoryID uuid.UUID, transactionDt time.Time, description *string, amount decimal.Decimal) (*domain.Expense, error) {
-	return uc.expRepo.UpdateExpense(
-		ctx,
-		id,
-		userID,
-		categoryID,
-		transactionDt,
-		description,
-		amount,
-	)
+	patch := domain.ExpenseForm{
+		UserID:        userID,
+		CategoryID:    categoryID,
+		TransactionDt: transactionDt,
+		Description:   description,
+		Amount:        amount,
+	}
+	return uc.expRepo.UpdateExpense(ctx, id, patch)
 }
 
 func (uc *ExpenseUsecase) DeleteExpense(ctx context.Context, id uuid.UUID) error {

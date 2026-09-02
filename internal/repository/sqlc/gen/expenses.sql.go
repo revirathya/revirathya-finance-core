@@ -176,11 +176,11 @@ func (q *Queries) ListExpenses(ctx context.Context, arg ListExpensesParams) ([]L
 const updateExpense = `-- name: UpdateExpense :one
 UPDATE app.expenses
 SET
-  user_id = $1,
-  category_id = $2,
-  transaction_dt = $3,
-  description = $4,
-  amount = $5
+  user_id = COALESCE($1, user_id),
+  category_id = COALESCE($2, category_id),
+  transaction_dt = COALESCE($3, transaction_dt),
+  description = COALESCE($4, description),
+  amount = COALESCE($5, amount)
 WHERE
   id = $6
 RETURNING id, user_id, category_id, transaction_dt, description, amount, created_at, updated_at

@@ -34,5 +34,5 @@ extend type Query {
 extend type Mutation {
     createExpense(input: CreateExpenseInput): Expense
     updateExpense(id: ID!, patch: UpdateExpenseInput): Expense
-    deleteExpense(id: ID!): Expense
+    deleteExpense(id: ID!): ID
 }

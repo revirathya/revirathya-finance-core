@@ -22,6 +22,19 @@ func NewCategoryRepositoryImpl(pool *pgxpool.Pool) domain.CategoryRepository {
 	}
 }
 
+func (r *categoryRepositoryImpl) CreateCategory(ctx context.Context, input domain.CategoryForm) (*domain.Category, error) {
+	row, err := r.query.CreateCategory(ctx, input.CategoryName)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &domain.Category{
+		ID:           database.FromPgxUUID(row.ID),
+		CategoryName: row.CategoryName,
+	}
+	return result, nil
+}
+
 func (r *categoryRepositoryImpl) ListCategories(ctx context.Context) ([]domain.Category, error) {
 	rows, err := r.query.ListCategories(ctx)
 	if err != nil {
@@ -54,4 +67,29 @@ func (r *categoryRepositoryImpl) GetCategoryByID(ctx context.Context, id uuid.UU
 	}
 
 	return result, nil
+}
+
+func (r *categoryRepositoryImpl) UpdateCategory(ctx context.Context, id uuid.UUID, patch domain.CategoryForm) (*domain.Category, error) {
+	args := sqlcgen.UpdateCategoryParams{
+		ID:           database.ToPgxUUID(id),
+		CategoryName: patch.CategoryName,
+	}
+
+	row, err := r.query.UpdateCategory(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &domain.Category{
+		ID:           database.FromPgxUUID(row.ID),
+		CategoryName: row.CategoryName,
+	}
+	return result, nil
+}
+
+func (r *categoryRepositoryImpl) DeleteCategory(ctx context.Context, id uuid.UUID) error {
+	if err := r.query.DeleteCategory(ctx, database.ToPgxUUID(id)); err != nil {
+		return err
+	}
+	return nil
 }

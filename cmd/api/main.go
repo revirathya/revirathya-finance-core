@@ -11,6 +11,7 @@ import (
 
 	ucCtg "github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 	ucExp "github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
+	ucUsr "github.com/revirathya/revirathya-finance-core/internal/usecase/user"
 	ucUtel "github.com/revirathya/revirathya-finance-core/internal/usecase/usercontext"
 )
 
@@ -38,11 +39,13 @@ func main() {
 	// Gen Repository
 	ctgRepo := pgRepo.NewCategoryRepositoryImpl(pool)
 	expRepo := pgRepo.NewExpenseRepositoryImpl(pool)
+	usrRepo := pgRepo.NewUserRepositoryImpl(pool)
 	utelRepo := pgRepo.NewUserTelegramContextRepositoryImpl(pool)
 
 	// Gen Usecase
 	ctgUc := ucCtg.NewCategoryUsecase(ctgRepo)
 	expUc := ucExp.NewExpenseUsecase(expRepo)
+	usrUc := ucUsr.NewUserUsecase(usrRepo)
 	utelUc := ucUtel.NewUserTelegramContextUsecase(utelRepo)
 
 	// Setup servers
@@ -50,7 +53,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	gqlServer := setupGraphQLServer(gqlAddr, ctgUc, expUc)
+	gqlServer := setupGraphQLServer(gqlAddr, ctgUc, expUc, usrUc)
 
 	g := setupServers(lis, ctx, grpcServer, gqlServer)
 	if err = g.Wait(); err != nil {

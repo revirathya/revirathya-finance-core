@@ -13,7 +13,7 @@ message GetUserTelegramContextRequest {
 message GetUserTelegramContextResponse {
     string id = 1;
     string user_id = 2;
-    string telegram_chat_id = 3;
+    optional string telegram_chat_id = 3;
     optional string conversation = 4;
     optional string state = 5;
     optional string interaction_chat_id = 6;
@@ -28,7 +28,7 @@ message GetUserTelegramContextByTelegramIDRequest {
 message GetUserTelegramContextByTelegramIDResponse {
     string id = 1;
     string user_id = 2;
-    string telegram_chat_id = 3;
+    optional string telegram_chat_id = 3;
     optional string conversation = 4;
     optional string state = 5;
     optional string interaction_chat_id = 6;
@@ -47,7 +47,7 @@ message UpdateUserTelegramContextRequest {
 message UpdateUserTelegramContextResponse {
     string id = 1;
     string user_id = 2;
-    string telegram_chat_id = 3;
+    optional string telegram_chat_id = 3;
     optional string conversation = 4;
     optional string state = 5;
     optional string interaction_chat_id = 6;

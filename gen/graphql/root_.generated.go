@@ -61,6 +61,14 @@ type ComplexityRoot struct {
 		Expense    func(childComplexity int, id string) int
 		Expenses   func(childComplexity int, userID string, transactionDt *string) int
 		Ok         func(childComplexity int) int
+		User       func(childComplexity int, id string) int
+	}
+
+	User struct {
+		FirstName      func(childComplexity int) int
+		ID             func(childComplexity int) int
+		LastName       func(childComplexity int) int
+		TelegramChatID func(childComplexity int) int
 	}
 }
 
@@ -253,6 +261,42 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Ok(childComplexity), true
+	case "Query.user":
+		if e.ComplexityRoot.Query.User == nil {
+			break
+		}
+
+		args, err := ec.field_Query_user_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.User(childComplexity, args["id"].(string)), true
+
+	case "User.firstName":
+		if e.ComplexityRoot.User.FirstName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.User.FirstName(childComplexity), true
+	case "User.id":
+		if e.ComplexityRoot.User.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.User.ID(childComplexity), true
+	case "User.lastName":
+		if e.ComplexityRoot.User.LastName == nil {
+			break
+		}
+
+		return e.ComplexityRoot.User.LastName(childComplexity), true
+	case "User.telegramChatId":
+		if e.ComplexityRoot.User.TelegramChatID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.User.TelegramChatID(childComplexity), true
 
 	}
 	return 0, false
@@ -362,7 +406,7 @@ extend type Query {
 extend type Mutation {
     createCategory(input: CreateCategoryInput): Category
     updateCategory(id: ID!, patch: UpdateCategoryInput): Category
-    deleteCategory(id: ID!): ID!
+    deleteCategory(id: ID!): ID
 }`, BuiltIn: false},
 	{Name: "../../graphql/schema/expense.graphql", Input: `type Expense {
     id: ID!
@@ -400,14 +444,26 @@ extend type Query {
 extend type Mutation {
     createExpense(input: CreateExpenseInput): Expense
     updateExpense(id: ID!, patch: UpdateExpenseInput): Expense
-    deleteExpense(id: ID!): Expense
+    deleteExpense(id: ID!): ID
 }`, BuiltIn: false},
-	{Name: "../../graphql/schema/schema.graphql", Input: `type Query {
+	{Name: "../../graphql/schema/schema.graphql", Input: `directive @goField(forceResolver: Boolean, name: String) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
+
+type Query {
     ok: Boolean
 }
 
 type Mutation {
     ok: Boolean
+}`, BuiltIn: false},
+	{Name: "../../graphql/schema/user.graphql", Input: `type User {
+    id: ID!
+    firstName: String!
+    lastName: String
+    telegramChatId: String
+}
+
+extend type Query {
+    user(id: ID!): User
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -444,6 +500,20 @@ func (ec *executionContext) childFields_Expense(ctx context.Context, field graph
 		return ec.fieldContext_Expense_amount(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Expense", field.Name)
+}
+
+func (ec *executionContext) childFields_User(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_User_id(ctx, field)
+	case "firstName":
+		return ec.fieldContext_User_firstName(ctx, field)
+	case "lastName":
+		return ec.fieldContext_User_lastName(ctx, field)
+	case "telegramChatId":
+		return ec.fieldContext_User_telegramChatId(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 }
 
 func (ec *executionContext) childFields___Directive(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {

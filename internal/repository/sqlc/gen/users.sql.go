@@ -15,22 +15,33 @@ const getUserByID = `-- name: GetUserByID :one
 SELECT
   usr.id,
   usr.first_name,
-  usr.last_name
+  usr.last_name,
+  utel.telegram_chat_id
 FROM
   app.users AS usr
+INNER JOIN
+  app.user_telegram_contexts AS utel
+  ON
+    usr.id = utel.user_id
 WHERE
   usr.id = $1
 `
 
 type GetUserByIDRow struct {
-	ID        pgtype.UUID `json:"id"`
-	FirstName *string     `json:"first_name"`
-	LastName  *string     `json:"last_name"`
+	ID             pgtype.UUID `json:"id"`
+	FirstName      string      `json:"first_name"`
+	LastName       *string     `json:"last_name"`
+	TelegramChatID *string     `json:"telegram_chat_id"`
 }
 
 func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error) {
 	row := q.db.QueryRow(ctx, getUserByID, id)
 	var i GetUserByIDRow
-	err := row.Scan(&i.ID, &i.FirstName, &i.LastName)
+	err := row.Scan(
+		&i.ID,
+		&i.FirstName,
+		&i.LastName,
+		&i.TelegramChatID,
+	)
 	return i, err
 }

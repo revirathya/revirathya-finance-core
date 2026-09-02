@@ -19,7 +19,7 @@ type Expense struct {
 	Amount        decimal.Decimal
 }
 
-type CreateExpense struct {
+type ExpenseForm struct {
 	UserID        uuid.UUID
 	CategoryID    uuid.UUID
 	TransactionDt time.Time
@@ -29,9 +29,9 @@ type CreateExpense struct {
 
 // Repository
 type ExpenseRepository interface {
-	CreateExpense(ctx context.Context, newExpense CreateExpense) (*Expense, error)
+	CreateExpense(ctx context.Context, input ExpenseForm) (*Expense, error)
 	GetExpenseByID(ctx context.Context, id uuid.UUID) (*Expense, error)
 	ListExpenses(ctx context.Context, userID uuid.UUID, transactionDt *time.Time) ([]Expense, error)
-	UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, categoryID uuid.UUID, transactionDt time.Time, description *string, amount decimal.Decimal) (*Expense, error)
+	UpdateExpense(ctx context.Context, id uuid.UUID, patch ExpenseForm) (*Expense, error)
 	DeleteExpense(ctx context.Context, id uuid.UUID) error
 }

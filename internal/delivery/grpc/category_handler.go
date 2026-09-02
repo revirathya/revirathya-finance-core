@@ -3,7 +3,6 @@ package grpc
 import (
 	"context"
 
-	"github.com/google/uuid"
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 
@@ -38,23 +37,5 @@ func (h *CategoryHandler) ListCategories(ctx context.Context, req *financecorev1
 		})
 	}
 
-	return resp, nil
-}
-
-func (h *CategoryHandler) GetCategoryByID(ctx context.Context, req *financecorev1.GetCategoryByIDRequest) (*financecorev1.GetCategoryByIDResponse, error) {
-	uuidID, err := uuid.Parse(req.Id)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)
-	}
-
-	category, err := h.ctgUc.GetCategoryByID(ctx, uuidID)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get category by id: %v", err)
-	}
-
-	resp := &financecorev1.GetCategoryByIDResponse{
-		Id:           category.ID.String(),
-		CategoryName: category.CategoryName,
-	}
 	return resp, nil
 }

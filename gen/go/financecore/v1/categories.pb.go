@@ -155,103 +155,6 @@ func (x *ListCategoriesResponse) GetCategories() []*CategoryResponse {
 	return nil
 }
 
-// RPC: Get Category By ID
-type GetCategoryByIDRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetCategoryByIDRequest) Reset() {
-	*x = GetCategoryByIDRequest{}
-	mi := &file_financecore_v1_categories_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetCategoryByIDRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetCategoryByIDRequest) ProtoMessage() {}
-
-func (x *GetCategoryByIDRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_financecore_v1_categories_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetCategoryByIDRequest.ProtoReflect.Descriptor instead.
-func (*GetCategoryByIDRequest) Descriptor() ([]byte, []int) {
-	return file_financecore_v1_categories_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *GetCategoryByIDRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-type GetCategoryByIDResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	CategoryName  string                 `protobuf:"bytes,2,opt,name=category_name,json=categoryName,proto3" json:"category_name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetCategoryByIDResponse) Reset() {
-	*x = GetCategoryByIDResponse{}
-	mi := &file_financecore_v1_categories_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetCategoryByIDResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetCategoryByIDResponse) ProtoMessage() {}
-
-func (x *GetCategoryByIDResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_financecore_v1_categories_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetCategoryByIDResponse.ProtoReflect.Descriptor instead.
-func (*GetCategoryByIDResponse) Descriptor() ([]byte, []int) {
-	return file_financecore_v1_categories_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *GetCategoryByIDResponse) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *GetCategoryByIDResponse) GetCategoryName() string {
-	if x != nil {
-		return x.CategoryName
-	}
-	return ""
-}
-
 var File_financecore_v1_categories_proto protoreflect.FileDescriptor
 
 const file_financecore_v1_categories_proto_rawDesc = "" +
@@ -264,15 +167,9 @@ const file_financecore_v1_categories_proto_rawDesc = "" +
 	"\x16ListCategoriesResponse\x12@\n" +
 	"\n" +
 	"categories\x18\x01 \x03(\v2 .financecore.v1.CategoryResponseR\n" +
-	"categories\"(\n" +
-	"\x16GetCategoryByIDRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"N\n" +
-	"\x17GetCategoryByIDResponse\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
-	"\rcategory_name\x18\x02 \x01(\tR\fcategoryName2\xd6\x01\n" +
+	"categories2r\n" +
 	"\x0fCategoryService\x12_\n" +
-	"\x0eListCategories\x12%.financecore.v1.ListCategoriesRequest\x1a&.financecore.v1.ListCategoriesResponse\x12b\n" +
-	"\x0fGetCategoryByID\x12&.financecore.v1.GetCategoryByIDRequest\x1a'.financecore.v1.GetCategoryByIDResponseBSZQgithub.com/revirathya/revirathya-finance-core/gen/go/financecore/v1;financecorev1b\x06proto3"
+	"\x0eListCategories\x12%.financecore.v1.ListCategoriesRequest\x1a&.financecore.v1.ListCategoriesResponseBSZQgithub.com/revirathya/revirathya-finance-core/gen/go/financecore/v1;financecorev1b\x06proto3"
 
 var (
 	file_financecore_v1_categories_proto_rawDescOnce sync.Once
@@ -286,22 +183,18 @@ func file_financecore_v1_categories_proto_rawDescGZIP() []byte {
 	return file_financecore_v1_categories_proto_rawDescData
 }
 
-var file_financecore_v1_categories_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_financecore_v1_categories_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_financecore_v1_categories_proto_goTypes = []any{
-	(*CategoryResponse)(nil),        // 0: financecore.v1.CategoryResponse
-	(*ListCategoriesRequest)(nil),   // 1: financecore.v1.ListCategoriesRequest
-	(*ListCategoriesResponse)(nil),  // 2: financecore.v1.ListCategoriesResponse
-	(*GetCategoryByIDRequest)(nil),  // 3: financecore.v1.GetCategoryByIDRequest
-	(*GetCategoryByIDResponse)(nil), // 4: financecore.v1.GetCategoryByIDResponse
+	(*CategoryResponse)(nil),       // 0: financecore.v1.CategoryResponse
+	(*ListCategoriesRequest)(nil),  // 1: financecore.v1.ListCategoriesRequest
+	(*ListCategoriesResponse)(nil), // 2: financecore.v1.ListCategoriesResponse
 }
 var file_financecore_v1_categories_proto_depIdxs = []int32{
 	0, // 0: financecore.v1.ListCategoriesResponse.categories:type_name -> financecore.v1.CategoryResponse
 	1, // 1: financecore.v1.CategoryService.ListCategories:input_type -> financecore.v1.ListCategoriesRequest
-	3, // 2: financecore.v1.CategoryService.GetCategoryByID:input_type -> financecore.v1.GetCategoryByIDRequest
-	2, // 3: financecore.v1.CategoryService.ListCategories:output_type -> financecore.v1.ListCategoriesResponse
-	4, // 4: financecore.v1.CategoryService.GetCategoryByID:output_type -> financecore.v1.GetCategoryByIDResponse
-	3, // [3:5] is the sub-list for method output_type
-	1, // [1:3] is the sub-list for method input_type
+	2, // 2: financecore.v1.CategoryService.ListCategories:output_type -> financecore.v1.ListCategoriesResponse
+	2, // [2:3] is the sub-list for method output_type
+	1, // [1:2] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -318,7 +211,7 @@ func file_financecore_v1_categories_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_financecore_v1_categories_proto_rawDesc), len(file_financecore_v1_categories_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

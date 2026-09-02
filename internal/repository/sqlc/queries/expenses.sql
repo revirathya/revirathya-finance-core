@@ -51,11 +51,11 @@ WHERE
 -- name: UpdateExpense :one
 UPDATE app.expenses
 SET
-  user_id = sqlc.arg('user_id'),
-  category_id = sqlc.arg('category_id'),
-  transaction_dt = sqlc.arg('transaction_dt'),
-  description = sqlc.narg('description'),
-  amount = sqlc.arg('amount')
+  user_id = COALESCE(sqlc.arg('user_id'), user_id),
+  category_id = COALESCE(sqlc.arg('category_id'), category_id),
+  transaction_dt = COALESCE(sqlc.arg('transaction_dt'), transaction_dt),
+  description = COALESCE(sqlc.narg('description'), description),
+  amount = COALESCE(sqlc.narg('amount'), amount)
 WHERE
   id = sqlc.arg('id')
 RETURNING *;

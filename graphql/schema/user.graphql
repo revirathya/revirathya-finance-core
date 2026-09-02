@@ -1,0 +1,10 @@
+type User {
+    id: ID!
+    firstName: String!
+    lastName: String
+    telegramChatId: String
+}
+
+extend type Query {
+    user(id: ID!): User
+}

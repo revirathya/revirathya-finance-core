@@ -3,6 +3,7 @@ package graphql
 import (
 	ucCtg "github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 	ucExp "github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
+	ucUsr "github.com/revirathya/revirathya-finance-core/internal/usecase/user"
 )
 
 // This file will not be regenerated automatically.
@@ -13,11 +14,13 @@ import (
 type Resolver struct {
 	ctgUc *ucCtg.CategoryUsecase
 	expUc *ucExp.ExpenseUsecase
+	usrUc *ucUsr.UserUsecase
 }
 
-func NewResolver(ctgUc *ucCtg.CategoryUsecase, expUc *ucExp.ExpenseUsecase) *Resolver {
+func NewResolver(ctgUc *ucCtg.CategoryUsecase, expUc *ucExp.ExpenseUsecase, usrUc *ucUsr.UserUsecase) *Resolver {
 	return &Resolver{
 		ctgUc: ctgUc,
 		expUc: expUc,
+		usrUc: usrUc,
 	}
 }

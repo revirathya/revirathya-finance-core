@@ -47,13 +47,13 @@ func (h *ExpenseHandler) CreateExpense(ctx context.Context, req *financecorev1.C
 		return nil, status.Errorf(codes.InvalidArgument, "invalid amount Decimal format: %v", err)
 	}
 
-	expense, err := h.expUc.CreateExpense(ctx, domain.CreateExpense{
-		UserID:        uuidUserId,
-		CategoryID:    uuidCategoryId,
-		TransactionDt: tmTransactionDt,
-		Description:   req.Description,
-		Amount:        decAmount,
-	})
+	expense, err := h.expUc.CreateExpense(ctx,
+		uuidUserId,
+		uuidCategoryId,
+		tmTransactionDt,
+		req.Description,
+		decAmount,
+	)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create expense: %v", err)
 	}
@@ -70,15 +70,15 @@ func (h *ExpenseHandler) CreateExpense(ctx context.Context, req *financecorev1.C
 }
 
 func (h *ExpenseHandler) GetExpenseByID(ctx context.Context, req *financecorev1.GetExpenseByIDRequest) (*financecorev1.GetExpenseByIDResponse, error) {
-	uuidID, err := uuid.Parse(req.Id)
+	uuidId, err := uuid.Parse(req.Id)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)
 	}
 
-	expense, err := h.expUc.GetExpenseByID(ctx, uuidID)
+	expense, err := h.expUc.GetExpenseByID(ctx, uuidId)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return nil, status.Errorf(codes.NotFound, "expense %s not found", uuidID)
+			return nil, status.Errorf(codes.NotFound, "expense %s not found", uuidId)
 		}
 		return nil, status.Errorf(codes.Internal, "failed to get expense by id: %v", err)
 	}
@@ -135,7 +135,7 @@ func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.Li
 }
 
 func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.UpdateExpenseRequest) (*financecorev1.UpdateExpenseResponse, error) {
-	uuidID, err := uuid.Parse(req.Id)
+	uuidId, err := uuid.Parse(req.Id)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)
 	}
@@ -162,7 +162,7 @@ func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.U
 
 	expense, err := h.expUc.UpdateExpense(
 		ctx,
-		uuidID,
+		uuidId,
 		uuidUserId,
 		uuidCategoryId,
 		tmTransactionDt,
@@ -171,7 +171,7 @@ func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.U
 	)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return nil, status.Errorf(codes.NotFound, "expense %s not found", uuidID)
+			return nil, status.Errorf(codes.NotFound, "expense %s not found", uuidId)
 		}
 		return nil, status.Errorf(codes.Internal, "failed to update expense: %v", err)
 	}
@@ -189,14 +189,14 @@ func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.U
 }
 
 func (h *ExpenseHandler) DeleteExpense(ctx context.Context, req *financecorev1.DeleteExpenseRequest) (*financecorev1.DeleteExpenseResponse, error) {
-	uuidID, err := uuid.Parse(req.Id)
+	uuidId, err := uuid.Parse(req.Id)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)
 	}
 
-	if err := h.expUc.DeleteExpense(ctx, uuidID); err != nil {
+	if err := h.expUc.DeleteExpense(ctx, uuidId); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return nil, status.Errorf(codes.NotFound, "expense %s not found", uuidID)
+			return nil, status.Errorf(codes.NotFound, "expense %s not found", uuidId)
 		}
 		return nil, status.Errorf(codes.Internal, "failed to delete expense: %v", err)
 	}

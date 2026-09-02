@@ -12,7 +12,6 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
 	sqlcgen "github.com/revirathya/revirathya-finance-core/internal/repository/sqlc/gen"
-	"github.com/shopspring/decimal"
 )
 
 type expenseRepositoryImpl struct {
@@ -25,13 +24,13 @@ func NewExpenseRepositoryImpl(pool *pgxpool.Pool) domain.ExpenseRepository {
 	}
 }
 
-func (r *expenseRepositoryImpl) CreateExpense(ctx context.Context, newExpense domain.CreateExpense) (*domain.Expense, error) {
+func (r *expenseRepositoryImpl) CreateExpense(ctx context.Context, input domain.ExpenseForm) (*domain.Expense, error) {
 	args := sqlcgen.CreateExpenseParams{
-		UserID:        database.ToPgxUUID(newExpense.UserID),
-		CategoryID:    database.ToPgxUUID(newExpense.CategoryID),
-		TransactionDt: database.ToPgxDate(newExpense.TransactionDt),
-		Description:   newExpense.Description,
-		Amount:        database.ToPgxNumeric(newExpense.Amount),
+		UserID:        database.ToPgxUUID(input.UserID),
+		CategoryID:    database.ToPgxUUID(input.CategoryID),
+		TransactionDt: database.ToPgxDate(input.TransactionDt),
+		Description:   input.Description,
+		Amount:        database.ToPgxNumeric(input.Amount),
 	}
 
 	row, err := r.query.CreateExpense(ctx, args)
@@ -97,13 +96,13 @@ func (r *expenseRepositoryImpl) ListExpenses(ctx context.Context, userID uuid.UU
 	return results, nil
 }
 
-func (r *expenseRepositoryImpl) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, categoryID uuid.UUID, transactionDt time.Time, description *string, amount decimal.Decimal) (*domain.Expense, error) {
+func (r *expenseRepositoryImpl) UpdateExpense(ctx context.Context, id uuid.UUID, patch domain.ExpenseForm) (*domain.Expense, error) {
 	args := sqlcgen.UpdateExpenseParams{
-		UserID:        database.ToPgxUUID(userID),
-		CategoryID:    database.ToPgxUUID(categoryID),
-		TransactionDt: database.ToPgxDate(transactionDt),
-		Description:   description,
-		Amount:        database.ToPgxNumeric(amount),
+		UserID:        database.ToPgxUUID(patch.UserID),
+		CategoryID:    database.ToPgxUUID(patch.CategoryID),
+		TransactionDt: database.ToPgxDate(patch.TransactionDt),
+		Description:   patch.Description,
+		Amount:        database.ToPgxNumeric(patch.Amount),
 		ID:            database.ToPgxUUID(id),
 	}
 

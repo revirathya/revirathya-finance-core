@@ -8,9 +8,10 @@ import (
 
 // Entity: User
 type User struct {
-	ID        uuid.UUID
-	FirstName string
-	LastName  string
+	ID             uuid.UUID
+	FirstName      string
+	LastName       *string
+	TelegramChatID *string
 }
 
 // Repository: User

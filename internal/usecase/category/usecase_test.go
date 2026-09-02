@@ -15,7 +15,14 @@ import (
 type fakeCategoryRepo struct {
 	categories   []domain.Category
 	categoryByID *domain.Category
+	createResp   *domain.Category
+	updateResp   *domain.Category
 	err          error
+
+	gotCreateInput domain.CategoryForm
+	gotUpdateID    uuid.UUID
+	gotUpdatePatch domain.CategoryForm
+	gotDeleteID    uuid.UUID
 }
 
 func (f *fakeCategoryRepo) ListCategories(ctx context.Context) ([]domain.Category, error) {
@@ -24,6 +31,22 @@ func (f *fakeCategoryRepo) ListCategories(ctx context.Context) ([]domain.Categor
 
 func (f *fakeCategoryRepo) GetCategoryByID(ctx context.Context, id uuid.UUID) (*domain.Category, error) {
 	return f.categoryByID, f.err
+}
+
+func (f *fakeCategoryRepo) CreateCategory(ctx context.Context, input domain.CategoryForm) (*domain.Category, error) {
+	f.gotCreateInput = input
+	return f.createResp, f.err
+}
+
+func (f *fakeCategoryRepo) UpdateCategory(ctx context.Context, id uuid.UUID, patch domain.CategoryForm) (*domain.Category, error) {
+	f.gotUpdateID = id
+	f.gotUpdatePatch = patch
+	return f.updateResp, f.err
+}
+
+func (f *fakeCategoryRepo) DeleteCategory(ctx context.Context, id uuid.UUID) error {
+	f.gotDeleteID = id
+	return f.err
 }
 
 // Test
@@ -89,6 +112,95 @@ func TestGetCategoryByID(t *testing.T) {
 		uc := category.NewCategoryUsecase(repo)
 
 		if _, err := uc.GetCategoryByID(context.Background(), id); err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
+}
+
+func TestCreateCategory(t *testing.T) {
+	want := &domain.Category{ID: uuid.New(), CategoryName: "Food"}
+
+	t.Run("creates and returns category", func(t *testing.T) {
+		repo := &fakeCategoryRepo{createResp: want}
+		uc := category.NewCategoryUsecase(repo)
+
+		got, err := uc.CreateCategory(context.Background(), "Food")
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("got %v, want %v", got, want)
+		}
+		if repo.gotCreateInput.CategoryName != "Food" {
+			t.Fatalf("repo received category_name %q, want %q", repo.gotCreateInput.CategoryName, "Food")
+		}
+	})
+
+	t.Run("propagates repo error", func(t *testing.T) {
+		repo := &fakeCategoryRepo{err: errors.New("db down")}
+		uc := category.NewCategoryUsecase(repo)
+
+		if _, err := uc.CreateCategory(context.Background(), "Food"); err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
+}
+
+func TestUpdateCategory(t *testing.T) {
+	id := uuid.New()
+	want := &domain.Category{ID: id, CategoryName: "Groceries"}
+
+	t.Run("updates and returns category", func(t *testing.T) {
+		repo := &fakeCategoryRepo{updateResp: want}
+		uc := category.NewCategoryUsecase(repo)
+
+		got, err := uc.UpdateCategory(context.Background(), id, "Groceries")
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("got %v, want %v", got, want)
+		}
+		if repo.gotUpdateID != id {
+			t.Fatalf("repo received id %v, want %v", repo.gotUpdateID, id)
+		}
+		if repo.gotUpdatePatch.CategoryName != "Groceries" {
+			t.Fatalf("repo received category_name %q, want %q", repo.gotUpdatePatch.CategoryName, "Groceries")
+		}
+	})
+
+	t.Run("propagates repo error", func(t *testing.T) {
+		repo := &fakeCategoryRepo{err: errors.New("not found")}
+		uc := category.NewCategoryUsecase(repo)
+
+		if _, err := uc.UpdateCategory(context.Background(), id, "Groceries"); err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
+}
+
+func TestDeleteCategory(t *testing.T) {
+	id := uuid.New()
+
+	t.Run("deletes category", func(t *testing.T) {
+		repo := &fakeCategoryRepo{}
+		uc := category.NewCategoryUsecase(repo)
+
+		if err := uc.DeleteCategory(context.Background(), id); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if repo.gotDeleteID != id {
+			t.Fatalf("repo received id %v, want %v", repo.gotDeleteID, id)
+		}
+	})
+
+	t.Run("propagates repo error", func(t *testing.T) {
+		repo := &fakeCategoryRepo{err: errors.New("fk violation")}
+		uc := category.NewCategoryUsecase(repo)
+
+		if err := uc.DeleteCategory(context.Background(), id); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})

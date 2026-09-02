@@ -12,21 +12,116 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
+	"github.com/shopspring/decimal"
 )
 
 // CreateExpense is the resolver for the createExpense field.
 func (r *mutationResolver) CreateExpense(ctx context.Context, input *model.CreateExpenseInput) (*model.Expense, error) {
-	panic(fmt.Errorf("not implemented: CreateExpense - createExpense"))
+	uuidUserId, err := uuid.Parse(input.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid id UUID format: %v", err)
+	}
+
+	uuidCategoryId, err := uuid.Parse(input.CategoryID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid category_id UUID format: %v", err)
+	}
+
+	tmTransactionDt, err := time.Parse("2006-01-02", input.TransactionDt)
+	if err != nil {
+		return nil, fmt.Errorf("invalid transaction_dt Date format: %v", err)
+	}
+
+	decAmount, err := decimal.NewFromString(input.Amount)
+	if err != nil {
+		return nil, fmt.Errorf("invalid amount Decimal format: %w", err)
+	}
+
+	result, err := r.expUc.CreateExpense(
+		ctx,
+		uuidUserId,
+		uuidCategoryId,
+		tmTransactionDt,
+		input.Description,
+		decAmount,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &model.Expense{
+		ID:            result.ID.String(),
+		UserID:        result.UserID.String(),
+		TransactionDt: result.TransactionDt.Format("2006-01-02"),
+		Description:   result.Description,
+		Amount:        result.Amount.String(),
+	}
+	return response, nil
 }
 
 // UpdateExpense is the resolver for the updateExpense field.
 func (r *mutationResolver) UpdateExpense(ctx context.Context, id string, patch *model.UpdateExpenseInput) (*model.Expense, error) {
-	panic(fmt.Errorf("not implemented: UpdateExpense - updateExpense"))
+	uuidId, err := uuid.Parse(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid id UUID format: %v", err)
+	}
+
+	uuidUserId, err := uuid.Parse(patch.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid id UUID format: %v", err)
+	}
+
+	uuidCategoryId, err := uuid.Parse(patch.CategoryID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid category_id UUID format: %v", err)
+	}
+
+	tmTransactionDt, err := time.Parse("2006-01-02", patch.TransactionDt)
+	if err != nil {
+		return nil, fmt.Errorf("invalid transaction_dt Date format: %v", err)
+	}
+
+	decAmount, err := decimal.NewFromString(patch.Amount)
+	if err != nil {
+		return nil, fmt.Errorf("invalid amount Decimal format: %w", err)
+	}
+
+	result, err := r.expUc.UpdateExpense(
+		ctx,
+		uuidId,
+		uuidUserId,
+		uuidCategoryId,
+		tmTransactionDt,
+		patch.Description,
+		decAmount,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &model.Expense{
+		ID:            result.ID.String(),
+		UserID:        result.UserID.String(),
+		TransactionDt: result.TransactionDt.Format("2006-01-02"),
+		Description:   result.Description,
+		Amount:        result.Amount.String(),
+	}
+	return response, nil
 }
 
 // DeleteExpense is the resolver for the deleteExpense field.
-func (r *mutationResolver) DeleteExpense(ctx context.Context, id string) (*model.Expense, error) {
-	panic(fmt.Errorf("not implemented: DeleteExpense - deleteExpense"))
+func (r *mutationResolver) DeleteExpense(ctx context.Context, id string) (*string, error) {
+	uuidId, err := uuid.Parse(id)
+	if err != nil {
+		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
+	}
+
+	if err = r.ctgUc.DeleteCategory(ctx, uuidId); err != nil {
+		return nil, err
+	}
+
+	response := &id
+	return response, nil
 }
 
 // Expense is the resolver for the expense field.
@@ -36,21 +131,21 @@ func (r *queryResolver) Expense(ctx context.Context, id string) (*model.Expense,
 		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
 	}
 
-	expense, err := r.expUc.GetExpenseByID(ctx, uuidId)
+	result, err := r.expUc.GetExpenseByID(ctx, uuidId)
 	if err != nil {
 		return nil, err
 	}
 
-	resp := &model.Expense{
-		ID:            expense.ID.String(),
-		UserID:        expense.UserID.String(),
-		TransactionDt: expense.TransactionDt.Format("2006-01-02"),
-		CategoryID:    expense.CategoryID.String(),
-		CategoryName:  expense.CategoryName,
-		Description:   expense.Description,
-		Amount:        expense.Amount.String(),
+	response := &model.Expense{
+		ID:            result.ID.String(),
+		UserID:        result.UserID.String(),
+		TransactionDt: result.TransactionDt.Format("2006-01-02"),
+		CategoryID:    result.CategoryID.String(),
+		CategoryName:  result.CategoryName,
+		Description:   result.Description,
+		Amount:        result.Amount.String(),
 	}
-	return resp, nil
+	return response, nil
 }
 
 // Expenses is the resolver for the expenses field.
@@ -69,14 +164,14 @@ func (r *queryResolver) Expenses(ctx context.Context, userID string, transaction
 		tmTransactionDtPtr = &tmTransactionDt
 	}
 
-	expenses, err := r.expUc.ListExpenses(ctx, uuidUserId, tmTransactionDtPtr)
+	results, err := r.expUc.ListExpenses(ctx, uuidUserId, tmTransactionDtPtr)
 	if err != nil {
 		return nil, err
 	}
 
-	resp := make([]*model.Expense, 0, len(expenses))
-	for _, e := range expenses {
-		resp = append(resp, &model.Expense{
+	responses := make([]*model.Expense, 0, len(results))
+	for _, e := range results {
+		responses = append(responses, &model.Expense{
 			ID:            e.ID.String(),
 			UserID:        e.UserID.String(),
 			TransactionDt: e.TransactionDt.Format("2006-01-02"),
@@ -86,5 +181,5 @@ func (r *queryResolver) Expenses(ctx context.Context, userID string, transaction
 			Amount:        e.Amount.String(),
 		})
 	}
-	return resp, nil
+	return responses, nil
 }

@@ -10,6 +10,7 @@ import (
 	gqlDlv "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql"
 	ucCtg "github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 	ucExp "github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
+	ucUsr "github.com/revirathya/revirathya-finance-core/internal/usecase/user"
 	ucUtel "github.com/revirathya/revirathya-finance-core/internal/usecase/usercontext"
 	"golang.org/x/sync/errgroup"
 
@@ -18,8 +19,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-func setupGraphQLServer(addr string, ctgUc *ucCtg.CategoryUsecase, expUc *ucExp.ExpenseUsecase) *http.Server {
-	resolver := gqlDlv.NewResolver(ctgUc, expUc)
+func setupGraphQLServer(addr string, ctgUc *ucCtg.CategoryUsecase, expUc *ucExp.ExpenseUsecase, usrUc *ucUsr.UserUsecase) *http.Server {
+	resolver := gqlDlv.NewResolver(ctgUc, expUc, usrUc)
 
 	gqlServer := gqlHdl.NewDefaultServer(gqlSch.NewExecutableSchema(
 		gqlSch.Config{

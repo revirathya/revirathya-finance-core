@@ -11,6 +11,39 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createCategory = `-- name: CreateCategory :one
+INSERT INTO app.categories (
+  category_name
+)
+VALUES (
+  $1
+)
+RETURNING id, category_name, created_at, updated_at
+`
+
+func (q *Queries) CreateCategory(ctx context.Context, categoryName string) (AppCategory, error) {
+	row := q.db.QueryRow(ctx, createCategory, categoryName)
+	var i AppCategory
+	err := row.Scan(
+		&i.ID,
+		&i.CategoryName,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deleteCategory = `-- name: DeleteCategory :exec
+DELETE FROM app.categories
+WHERE
+  id = $1
+`
+
+func (q *Queries) DeleteCategory(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteCategory, id)
+	return err
+}
+
 const getCategoryByID = `-- name: GetCategoryByID :one
 SELECT
   c.id,
@@ -65,4 +98,30 @@ func (q *Queries) ListCategories(ctx context.Context) ([]ListCategoriesRow, erro
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateCategory = `-- name: UpdateCategory :one
+UPDATE app.categories
+SET
+  category_name = COALESCE($1, category_name)
+WHERE
+  id = $2
+RETURNING id, category_name, created_at, updated_at
+`
+
+type UpdateCategoryParams struct {
+	CategoryName string      `json:"category_name"`
+	ID           pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (AppCategory, error) {
+	row := q.db.QueryRow(ctx, updateCategory, arg.CategoryName, arg.ID)
+	var i AppCategory
+	err := row.Scan(
+		&i.ID,
+		&i.CategoryName,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

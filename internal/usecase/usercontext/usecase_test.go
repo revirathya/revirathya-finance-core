@@ -85,7 +85,7 @@ func TestGetUserTelegramContext(t *testing.T) {
 func TestGetUserTelegramContextByTelegramID(t *testing.T) {
 	telegramChatID := "999888777"
 	state := "awaiting_amount"
-	want := &domain.UserTelegramContext{TelegramChatID: telegramChatID, State: &state}
+	want := &domain.UserTelegramContext{TelegramChatID: &telegramChatID, State: &state}
 
 	t.Run("returns context", func(t *testing.T) {
 		repo := &fakeUserContextRepo{getByTelegramIDResp: want}

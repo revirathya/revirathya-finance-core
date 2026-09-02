@@ -21,23 +21,19 @@ type fakeExpenseRepo struct {
 	updateResp *domain.Expense
 	err        error
 
-	gotCreate     domain.CreateExpense
-	gotGetID      uuid.UUID
-	gotListUserID uuid.UUID
-	gotListDt     *time.Time
+	gotCreateInput domain.ExpenseForm
+	gotGetID       uuid.UUID
+	gotListUserID  uuid.UUID
+	gotListDt      *time.Time
 
-	gotUpdateID          uuid.UUID
-	gotUpdateUserID      uuid.UUID
-	gotUpdateCategoryID  uuid.UUID
-	gotUpdateDt          time.Time
-	gotUpdateDescription *string
-	gotUpdateAmount      decimal.Decimal
+	gotUpdateID    uuid.UUID
+	gotUpdatePatch domain.ExpenseForm
 
 	gotDeleteID uuid.UUID
 }
 
-func (f *fakeExpenseRepo) CreateExpense(ctx context.Context, newExpense domain.CreateExpense) (*domain.Expense, error) {
-	f.gotCreate = newExpense
+func (f *fakeExpenseRepo) CreateExpense(ctx context.Context, input domain.ExpenseForm) (*domain.Expense, error) {
+	f.gotCreateInput = input
 	return f.createResp, f.err
 }
 
@@ -52,13 +48,9 @@ func (f *fakeExpenseRepo) ListExpenses(ctx context.Context, userID uuid.UUID, tr
 	return f.listResp, f.err
 }
 
-func (f *fakeExpenseRepo) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, categoryID uuid.UUID, transactionDt time.Time, description *string, amount decimal.Decimal) (*domain.Expense, error) {
+func (f *fakeExpenseRepo) UpdateExpense(ctx context.Context, id uuid.UUID, patch domain.ExpenseForm) (*domain.Expense, error) {
 	f.gotUpdateID = id
-	f.gotUpdateUserID = userID
-	f.gotUpdateCategoryID = categoryID
-	f.gotUpdateDt = transactionDt
-	f.gotUpdateDescription = description
-	f.gotUpdateAmount = amount
+	f.gotUpdatePatch = patch
 	return f.updateResp, f.err
 }
 
@@ -69,15 +61,17 @@ func (f *fakeExpenseRepo) DeleteExpense(ctx context.Context, id uuid.UUID) error
 
 // Tests
 func TestCreateExpense(t *testing.T) {
+	userID, categoryID := uuid.New(), uuid.New()
+	dt := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
+	amount := decimal.NewFromFloat(42.50)
 	description := "Lunch"
-	input := domain.CreateExpense{UserID: uuid.New(), CategoryID: uuid.New(), Description: &description}
 	want := &domain.Expense{ID: uuid.New(), Description: &description}
 
 	t.Run("creates and returns expense", func(t *testing.T) {
 		repo := &fakeExpenseRepo{createResp: want}
 		uc := expense.NewExpenseUsecase(repo)
 
-		got, err := uc.CreateExpense(context.Background(), input)
+		got, err := uc.CreateExpense(context.Background(), userID, categoryID, dt, &description, amount)
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -85,8 +79,16 @@ func TestCreateExpense(t *testing.T) {
 		if !reflect.DeepEqual(got, want) {
 			t.Fatalf("got %v, want %v", got, want)
 		}
-		if !reflect.DeepEqual(repo.gotCreate, input) {
-			t.Fatalf("repo received %v, want %v", repo.gotCreate, input)
+
+		wantInput := domain.ExpenseForm{
+			UserID:        userID,
+			CategoryID:    categoryID,
+			TransactionDt: dt,
+			Description:   &description,
+			Amount:        amount,
+		}
+		if !reflect.DeepEqual(repo.gotCreateInput, wantInput) {
+			t.Fatalf("repo received %v, want %v", repo.gotCreateInput, wantInput)
 		}
 	})
 
@@ -94,7 +96,7 @@ func TestCreateExpense(t *testing.T) {
 		repo := &fakeExpenseRepo{err: errors.New("db down")}
 		uc := expense.NewExpenseUsecase(repo)
 
-		if _, err := uc.CreateExpense(context.Background(), input); err == nil {
+		if _, err := uc.CreateExpense(context.Background(), userID, categoryID, dt, &description, amount); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})
@@ -183,13 +185,13 @@ func TestUpdateExpense(t *testing.T) {
 	id, userID, categoryID := uuid.New(), uuid.New(), uuid.New()
 	dt := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
 	amount := decimal.NewFromFloat(42.50)
+	description := "Dinner"
 	want := &domain.Expense{ID: id, Amount: amount}
 
 	t.Run("updates and returns expense", func(t *testing.T) {
 		repo := &fakeExpenseRepo{updateResp: want}
 		uc := expense.NewExpenseUsecase(repo)
 
-		description := "Dinner"
 		got, err := uc.UpdateExpense(context.Background(), id, userID, categoryID, dt, &description, amount)
 
 		if err != nil {
@@ -198,12 +200,19 @@ func TestUpdateExpense(t *testing.T) {
 		if !reflect.DeepEqual(got, want) {
 			t.Fatalf("got %v, want %v", got, want)
 		}
-		if repo.gotUpdateID != id || repo.gotUpdateUserID != userID || repo.gotUpdateCategoryID != categoryID {
-			t.Fatalf("repo received wrong IDs: id=%v userID=%v categoryID=%v", repo.gotUpdateID, repo.gotUpdateUserID, repo.gotUpdateCategoryID)
+		if repo.gotUpdateID != id {
+			t.Fatalf("repo received id %v, want %v", repo.gotUpdateID, id)
 		}
 
-		if *repo.gotUpdateDescription != description || !repo.gotUpdateAmount.Equal(amount) {
-			t.Fatalf("repo received wrong fields: description=%v amount=%v", repo.gotUpdateDescription, repo.gotUpdateAmount)
+		wantPatch := domain.ExpenseForm{
+			UserID:        userID,
+			CategoryID:    categoryID,
+			TransactionDt: dt,
+			Description:   &description,
+			Amount:        amount,
+		}
+		if !reflect.DeepEqual(repo.gotUpdatePatch, wantPatch) {
+			t.Fatalf("repo received patch %v, want %v", repo.gotUpdatePatch, wantPatch)
 		}
 	})
 
@@ -211,7 +220,6 @@ func TestUpdateExpense(t *testing.T) {
 		repo := &fakeExpenseRepo{err: errors.New("not found")}
 		uc := expense.NewExpenseUsecase(repo)
 
-		description := "Dinner"
 		if _, err := uc.UpdateExpense(context.Background(), id, userID, categoryID, dt, &description, amount); err == nil {
 			t.Fatal("expected error, got nil")
 		}

@@ -44,7 +44,7 @@ func (r *userTelegramContextRepositoryImpl) GetUserTelegramContext(ctx context.C
 }
 
 func (r *userTelegramContextRepositoryImpl) GetUserTelegramContextByTelegramID(ctx context.Context, telegramChatID string) (*domain.UserTelegramContext, error) {
-	row, err := r.query.GetUserTelegramContextByTelegramID(ctx, telegramChatID)
+	row, err := r.query.GetUserTelegramContextByTelegramID(ctx, &telegramChatID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrNotFound

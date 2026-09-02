@@ -10,7 +10,7 @@ import (
 type UserTelegramContext struct {
 	ID                   uuid.UUID
 	UserID               uuid.UUID
-	TelegramChatID       string
+	TelegramChatID       *string
 	Conversation         *string
 	State                *string
 	InteractionChatID    *string

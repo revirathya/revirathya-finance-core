@@ -15,17 +15,50 @@ import (
 
 // CreateCategory is the resolver for the createCategory field.
 func (r *mutationResolver) CreateCategory(ctx context.Context, input *model.CreateCategoryInput) (*model.Category, error) {
-	panic(fmt.Errorf("not implemented: CreateCategory - createCategory"))
+	result, err := r.ctgUc.CreateCategory(ctx, input.CategoryName)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &model.Category{
+		ID:           result.ID.String(),
+		CategoryName: result.CategoryName,
+	}
+	return response, nil
 }
 
 // UpdateCategory is the resolver for the updateCategory field.
 func (r *mutationResolver) UpdateCategory(ctx context.Context, id string, patch *model.UpdateCategoryInput) (*model.Category, error) {
-	panic(fmt.Errorf("not implemented: UpdateCategory - updateCategory"))
+	uuidId, err := uuid.Parse(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid id UUID format: %v", err)
+	}
+
+	result, err := r.ctgUc.UpdateCategory(ctx, uuidId, *patch.CategoryName)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &model.Category{
+		ID:           result.ID.String(),
+		CategoryName: result.CategoryName,
+	}
+	return response, nil
 }
 
 // DeleteCategory is the resolver for the deleteCategory field.
-func (r *mutationResolver) DeleteCategory(ctx context.Context, id string) (string, error) {
-	panic(fmt.Errorf("not implemented: DeleteCategory - deleteCategory"))
+func (r *mutationResolver) DeleteCategory(ctx context.Context, id string) (*string, error) {
+	uuidId, err := uuid.Parse(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid id UUID format: %v", err)
+	}
+
+	if err = r.ctgUc.DeleteCategory(ctx, uuidId); err != nil {
+		return nil, err
+	}
+
+	response := &id
+	return response, nil
 }
 
 // Category is the resolver for the category field.
@@ -35,32 +68,32 @@ func (r *queryResolver) Category(ctx context.Context, id string) (*model.Categor
 		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
 	}
 
-	category, err := r.ctgUc.GetCategoryByID(ctx, uuidId)
+	result, err := r.ctgUc.GetCategoryByID(ctx, uuidId)
 	if err != nil {
 		return nil, err
 	}
 
-	resp := &model.Category{
-		ID:           category.ID.String(),
-		CategoryName: category.CategoryName,
+	response := &model.Category{
+		ID:           result.ID.String(),
+		CategoryName: result.CategoryName,
 	}
-	return resp, nil
+	return response, nil
 }
 
 // Categories is the resolver for the categories field.
 func (r *queryResolver) Categories(ctx context.Context) ([]*model.Category, error) {
-	categories, err := r.ctgUc.ListCategories(ctx)
+	results, err := r.ctgUc.ListCategories(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	resp := make([]*model.Category, 0, len(categories))
-	for _, c := range categories {
-		resp = append(resp, &model.Category{
+	responses := make([]*model.Category, 0, len(results))
+	for _, c := range results {
+		responses = append(responses, &model.Category{
 			ID:           c.ID.String(),
 			CategoryName: c.CategoryName,
 		})
 	}
 
-	return resp, nil
+	return responses, nil
 }
