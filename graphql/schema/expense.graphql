@@ -1,0 +1,38 @@
+type Expense {
+    id: ID!
+    userId: ID!
+    transactionDt: String!
+    categoryId: ID!
+    categoryName: String!
+    description: String
+    amount: String!
+}
+
+input CreateExpenseInput {
+    userId: ID!
+    transactionDt: String!
+    categoryId: ID!
+    categoryName: String!
+    description: String
+    amount: String!
+}
+
+input UpdateExpenseInput {
+    userId: ID!
+    transactionDt: String!
+    categoryId: ID!
+    categoryName: String!
+    description: String
+    amount: String!
+}
+
+extend type Query {
+    expense(id: ID!): Expense
+    expenses(userId: ID!, transactionDt: String): [Expense!]!
+}
+
+extend type Mutation {
+    createExpense(input: CreateExpenseInput): Expense
+    updateExpense(id: ID!, patch: UpdateExpenseInput): Expense
+    deleteExpense(id: ID!): Expense
+}

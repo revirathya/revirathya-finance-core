@@ -8,7 +8,8 @@ GRPC_PROTOS := -proto financecore/v1/categories.proto -proto financecore/v1/expe
 	up down down-v logs \
 	migrate-up migrate-down migrate-force migrate-create migrate-version \
 	sqlc-generate proto-generate proto-lint \
-	grpc-list grpc-describe
+	grpc-list grpc-describe \
+	graphql-init graphql-generate
 
 run:
 	go run ./cmd/api
@@ -68,6 +69,12 @@ proto-generate:
 
 proto-lint:
 	buf lint
+
+graphql-init:
+	go run github.com/99designs/gqlgen init
+
+graphql-generate:
+	go run github.com/99designs/gqlgen generate
 
 ## --- gRPC dev tools (reflection isn't registered, so proto files are passed explicitly) ---
 

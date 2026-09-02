@@ -2,16 +2,12 @@ package main
 
 import (
 	"context"
-	"log"
-	"net"
 	"os"
 	"time"
 
-	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
-	grpcDlv "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
+
 	pgRepo "github.com/revirathya/revirathya-finance-core/internal/repository/postgres"
-	"google.golang.org/grpc"
 
 	ucCtg "github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 	ucExp "github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
@@ -22,6 +18,7 @@ func main() {
 	// Get config
 	dsn := os.Getenv("DATABASE_URL")
 	grpcAddr := os.Getenv("GRPC_ADDR")
+	gqlAddr := os.Getenv("GRAPHQL_ADDR")
 
 	// Get Postgres Pool
 	ctx := context.Background()
@@ -48,23 +45,15 @@ func main() {
 	expUc := ucExp.NewExpenseUsecase(expRepo)
 	utelUc := ucUtel.NewUserTelegramContextUsecase(utelRepo)
 
-	// Setup gRPC
-	ctgHan := grpcDlv.NewCategoryHandler(ctgUc)
-	expHan := grpcDlv.NewExpenseHandler(expUc)
-	utelHan := grpcDlv.NewUserTelegramContextHandler(utelUc)
-
-	grpcServer := grpc.NewServer()
-	financecorev1.RegisterCategoryServiceServer(grpcServer, ctgHan)
-	financecorev1.RegisterExpenseServiceServer(grpcServer, expHan)
-	financecorev1.RegisterUserTelegramContextServiceServer(grpcServer, utelHan)
-
-	lis, err := net.Listen("tcp", grpcAddr)
+	// Setup servers
+	grpcServer, lis, err := setupGRPCServer(grpcAddr, ctgUc, expUc, utelUc)
 	if err != nil {
 		panic(err)
 	}
+	gqlServer := setupGraphQLServer(gqlAddr, ctgUc, expUc)
 
-	log.Printf("gRPC server listening on %s", grpcAddr)
-	if err := grpcServer.Serve(lis); err != nil {
+	g := setupServers(lis, ctx, grpcServer, gqlServer)
+	if err = g.Wait(); err != nil {
 		panic(err)
 	}
 }
