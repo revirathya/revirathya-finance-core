@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
@@ -20,6 +21,7 @@ func main() {
 	dsn := os.Getenv("DATABASE_URL")
 	grpcAddr := os.Getenv("GRPC_ADDR")
 	gqlAddr := os.Getenv("GRAPHQL_ADDR")
+	allowedOrigins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
 
 	// Get Postgres Pool
 	ctx := context.Background()
@@ -53,7 +55,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	gqlServer := setupGraphQLServer(gqlAddr, ctgUc, expUc, usrUc)
+	gqlServer := setupGraphQLServer(gqlAddr, allowedOrigins, ctgUc, expUc, usrUc)
 
 	g := setupServers(lis, ctx, grpcServer, gqlServer)
 	if err = g.Wait(); err != nil {

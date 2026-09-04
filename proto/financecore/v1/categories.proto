@@ -17,7 +17,17 @@ message ListCategoriesResponse {
     repeated CategoryResponse categories = 1;
 }
 
+// RPC: Get Category By ID
+message GetCategoryByIDRequest {
+    string id = 1;
+}
+
+message GetCategoryByIDResponse {
+    string id = 1;
+    string category_name = 2;
+}
 
 service CategoryService {
     rpc ListCategories (ListCategoriesRequest) returns (ListCategoriesResponse);
+    rpc GetCategoryByID (GetCategoryByIDRequest) returns (GetCategoryByIDResponse);
 }

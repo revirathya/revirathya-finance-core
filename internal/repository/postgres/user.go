@@ -34,6 +34,7 @@ func (r *userRepositoryImpl) GetUserByID(ctx context.Context, id uuid.UUID) (*do
 		ID:             database.FromPgxUUID(row.ID),
 		FirstName:      row.FirstName,
 		LastName:       row.LastName,
+		Email:          row.Email,
 		TelegramChatID: row.TelegramChatID,
 	}
 	return result, nil

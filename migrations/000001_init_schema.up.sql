@@ -10,6 +10,7 @@ CREATE TABLE app.users (
   id UUID DEFAULT GEN_RANDOM_UUID(),
   first_name VARCHAR(100) NOT NULL,
   last_name VARCHAR(100),
+  email VARCHAR(100) NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   PRIMARY KEY (id)

@@ -65,6 +65,7 @@ type ComplexityRoot struct {
 	}
 
 	User struct {
+		Email          func(childComplexity int) int
 		FirstName      func(childComplexity int) int
 		ID             func(childComplexity int) int
 		LastName       func(childComplexity int) int
@@ -273,6 +274,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Query.User(childComplexity, args["id"].(string)), true
 
+	case "User.email":
+		if e.ComplexityRoot.User.Email == nil {
+			break
+		}
+
+		return e.ComplexityRoot.User.Email(childComplexity), true
 	case "User.firstName":
 		if e.ComplexityRoot.User.FirstName == nil {
 			break
@@ -422,7 +429,6 @@ input CreateExpenseInput {
     userId: ID!
     transactionDt: String!
     categoryId: ID!
-    categoryName: String!
     description: String
     amount: String!
 }
@@ -431,7 +437,6 @@ input UpdateExpenseInput {
     userId: ID!
     transactionDt: String!
     categoryId: ID!
-    categoryName: String!
     description: String
     amount: String!
 }
@@ -459,6 +464,7 @@ type Mutation {
     id: ID!
     firstName: String!
     lastName: String
+    email: String!
     telegramChatId: String
 }
 
@@ -510,6 +516,8 @@ func (ec *executionContext) childFields_User(ctx context.Context, field graphql.
 		return ec.fieldContext_User_firstName(ctx, field)
 	case "lastName":
 		return ec.fieldContext_User_lastName(ctx, field)
+	case "email":
+		return ec.fieldContext_User_email(ctx, field)
 	case "telegramChatId":
 		return ec.fieldContext_User_telegramChatId(ctx, field)
 	}

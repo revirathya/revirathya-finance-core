@@ -19,7 +19,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-func setupGraphQLServer(addr string, ctgUc *ucCtg.CategoryUsecase, expUc *ucExp.ExpenseUsecase, usrUc *ucUsr.UserUsecase) *http.Server {
+func setupGraphQLServer(
+	addr string,
+	allowedOrigins []string,
+	ctgUc *ucCtg.CategoryUsecase,
+	expUc *ucExp.ExpenseUsecase,
+	usrUc *ucUsr.UserUsecase,
+) *http.Server {
 	resolver := gqlDlv.NewResolver(ctgUc, expUc, usrUc)
 
 	gqlServer := gqlHdl.NewDefaultServer(gqlSch.NewExecutableSchema(
@@ -31,7 +37,7 @@ func setupGraphQLServer(addr string, ctgUc *ucCtg.CategoryUsecase, expUc *ucExp.
 	gqlServer.SetErrorPresenter(gqlDlv.ErrorPresenter)
 
 	mux := http.NewServeMux()
-	mux.Handle("/graphql", gqlServer)
+	mux.Handle("/graphql", withCORS(allowedOrigins, gqlServer))
 
 	if addr == "" {
 		addr = ":8080"

@@ -3,6 +3,7 @@ SELECT
   usr.id,
   usr.first_name,
   usr.last_name,
+  usr.email,
   utel.telegram_chat_id
 FROM
   app.users AS usr

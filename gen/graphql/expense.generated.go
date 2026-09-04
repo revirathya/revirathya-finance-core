@@ -200,7 +200,7 @@ func (ec *executionContext) unmarshalInputCreateExpenseInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"userId", "transactionDt", "categoryId", "categoryName", "description", "amount"}
+	fieldsInOrder := [...]string{"userId", "transactionDt", "categoryId", "description", "amount"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -228,13 +228,6 @@ func (ec *executionContext) unmarshalInputCreateExpenseInput(ctx context.Context
 				return it, err
 			}
 			it.CategoryID = data
-		case "categoryName":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("categoryName"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CategoryName = data
 		case "description":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -265,7 +258,7 @@ func (ec *executionContext) unmarshalInputUpdateExpenseInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"userId", "transactionDt", "categoryId", "categoryName", "description", "amount"}
+	fieldsInOrder := [...]string{"userId", "transactionDt", "categoryId", "description", "amount"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -293,13 +286,6 @@ func (ec *executionContext) unmarshalInputUpdateExpenseInput(ctx context.Context
 				return it, err
 			}
 			it.CategoryID = data
-		case "categoryName":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("categoryName"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CategoryName = data
 		case "description":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)

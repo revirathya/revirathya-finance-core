@@ -15,7 +15,6 @@ type CreateExpenseInput struct {
 	UserID        string  `json:"userId"`
 	TransactionDt string  `json:"transactionDt"`
 	CategoryID    string  `json:"categoryId"`
-	CategoryName  string  `json:"categoryName"`
 	Description   *string `json:"description,omitempty"`
 	Amount        string  `json:"amount"`
 }
@@ -44,7 +43,6 @@ type UpdateExpenseInput struct {
 	UserID        string  `json:"userId"`
 	TransactionDt string  `json:"transactionDt"`
 	CategoryID    string  `json:"categoryId"`
-	CategoryName  string  `json:"categoryName"`
 	Description   *string `json:"description,omitempty"`
 	Amount        string  `json:"amount"`
 }
@@ -53,5 +51,6 @@ type User struct {
 	ID             string  `json:"id"`
 	FirstName      string  `json:"firstName"`
 	LastName       *string `json:"lastName,omitempty"`
+	Email          string  `json:"email"`
 	TelegramChatID *string `json:"telegramChatId,omitempty"`
 }

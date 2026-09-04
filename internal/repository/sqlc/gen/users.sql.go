@@ -16,6 +16,7 @@ SELECT
   usr.id,
   usr.first_name,
   usr.last_name,
+  usr.email,
   utel.telegram_chat_id
 FROM
   app.users AS usr
@@ -31,6 +32,7 @@ type GetUserByIDRow struct {
 	ID             pgtype.UUID `json:"id"`
 	FirstName      string      `json:"first_name"`
 	LastName       *string     `json:"last_name"`
+	Email          string      `json:"email"`
 	TelegramChatID *string     `json:"telegram_chat_id"`
 }
 
@@ -41,6 +43,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDR
 		&i.ID,
 		&i.FirstName,
 		&i.LastName,
+		&i.Email,
 		&i.TelegramChatID,
 	)
 	return i, err

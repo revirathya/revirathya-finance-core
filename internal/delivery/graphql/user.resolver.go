@@ -29,6 +29,7 @@ func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error
 		ID:             result.ID.String(),
 		FirstName:      result.FirstName,
 		LastName:       result.LastName,
+		Email:          result.Email,
 		TelegramChatID: result.TelegramChatID,
 	}
 	return response, nil

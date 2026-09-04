@@ -70,10 +70,10 @@ proto-generate:
 proto-lint:
 	buf lint
 
-graphql-init:
+gql-init:
 	go run github.com/99designs/gqlgen init
 
-graphql-generate:
+gql-generate:
 	go run github.com/99designs/gqlgen generate
 
 ## --- gRPC dev tools (reflection isn't registered, so proto files are passed explicitly) ---

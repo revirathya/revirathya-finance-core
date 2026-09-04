@@ -30,6 +30,7 @@ type AppUser struct {
 	ID        pgtype.UUID        `json:"id"`
 	FirstName string             `json:"first_name"`
 	LastName  *string            `json:"last_name"`
+	Email     string             `json:"email"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
