@@ -17,6 +17,8 @@ services:
 
   finance-core:
     image: revirathya/revirathya-finance-core:latest
+    depends_on:
+      - postgres
     env_file:
       - .env
     ports:
