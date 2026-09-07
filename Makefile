@@ -45,19 +45,19 @@ logs:
 ## --- migrations (golang-migrate) ---
 
 migrate-up:
-	migrate -path migrations -database "$(DATABASE_URL)" up
+	migrate -path migrations -database "$(DATABASE_URI)" up
 
 migrate-down:
-	migrate -path migrations -database "$(DATABASE_URL)" down 1
+	migrate -path migrations -database "$(DATABASE_URI)" down 1
 
 migrate-force:
-	migrate -path migrations -database "$(DATABASE_URL)" force $(version)
+	migrate -path migrations -database "$(DATABASE_URI)" force $(version)
 
 migrate-create:
 	migrate create -ext sql -dir migrations -seq $(name)
 
 migrate-version:
-	migrate -path migrations -database "$(DATABASE_URL)" version
+	migrate -path migrations -database "$(DATABASE_URI)" version
 
 ## --- codegen ---
 
