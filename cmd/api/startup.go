@@ -20,7 +20,7 @@ import (
 )
 
 func setupGraphQLServer(
-	addr string,
+	port string,
 	allowedOrigins []string,
 	ctgUc *ucCtg.CategoryUsecase,
 	expUc *ucExp.ExpenseUsecase,
@@ -39,15 +39,11 @@ func setupGraphQLServer(
 	mux := http.NewServeMux()
 	mux.Handle("/graphql", withCORS(allowedOrigins, gqlServer))
 
-	if addr == "" {
-		addr = ":8080"
-	}
-
-	httpServer := &http.Server{Addr: addr, Handler: mux}
+	httpServer := &http.Server{Addr: port, Handler: mux}
 	return httpServer
 }
 
-func setupGRPCServer(addr string, ctgUc *ucCtg.CategoryUsecase, expUc *ucExp.ExpenseUsecase, utelUc *ucUtel.UserTelegramContextUsecase) (*grpc.Server, net.Listener, error) {
+func setupGRPCServer(port string, ctgUc *ucCtg.CategoryUsecase, expUc *ucExp.ExpenseUsecase, utelUc *ucUtel.UserTelegramContextUsecase) (*grpc.Server, net.Listener, error) {
 	ctgHan := grpcDlv.NewCategoryHandler(ctgUc)
 	expHan := grpcDlv.NewExpenseHandler(expUc)
 	utelHan := grpcDlv.NewUserTelegramContextHandler(utelUc)
@@ -57,7 +53,7 @@ func setupGRPCServer(addr string, ctgUc *ucCtg.CategoryUsecase, expUc *ucExp.Exp
 	grpcFincoreV1.RegisterExpenseServiceServer(grpcServer, expHan)
 	grpcFincoreV1.RegisterUserTelegramContextServiceServer(grpcServer, utelHan)
 
-	lis, err := net.Listen("tcp", addr)
+	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		return nil, nil, err
 	}

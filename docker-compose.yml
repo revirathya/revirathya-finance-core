@@ -15,5 +15,13 @@ services:
       timeout: 5s
       retries: 10
 
+  finance-core:
+    image: revirathya/revirathya-finance-core:latest
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+
 volumes:
   pgdata:

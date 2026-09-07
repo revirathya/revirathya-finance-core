@@ -83,3 +83,10 @@ grpc-list:
 
 grpc-describe:
 	grpcurl -plaintext -import-path proto $(GRPC_PROTOS) $(GRPC_ADDR) describe $(symbol)
+
+## --- docker ---
+docker-build:
+	docker build -t revirathya/revirathya-finance-core:latest .
+
+docker-run:
+	docker run --rm -p 8080:8080 --env-file .env revirathya/revirathya-finance-core:latest

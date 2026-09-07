@@ -2,10 +2,9 @@ package main
 
 import (
 	"context"
-	"os"
-	"strings"
 	"time"
 
+	"github.com/revirathya/revirathya-finance-core/internal/config"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
 
 	pgRepo "github.com/revirathya/revirathya-finance-core/internal/repository/postgres"
@@ -18,14 +17,14 @@ import (
 
 func main() {
 	// Get config
-	dsn := os.Getenv("DATABASE_URL")
-	grpcAddr := os.Getenv("GRPC_ADDR")
-	gqlAddr := os.Getenv("GRAPHQL_ADDR")
-	allowedOrigins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
+	cfg, err := config.Load()
+	if err != nil {
+		panic(err)
+	}
 
 	// Get Postgres Pool
 	ctx := context.Background()
-	pool, err := database.NewDBPool(ctx, dsn)
+	pool, err := database.NewDBPool(ctx, cfg.DatabaseURI)
 	if err != nil {
 		panic(err)
 	}
@@ -51,11 +50,11 @@ func main() {
 	utelUc := ucUtel.NewUserTelegramContextUsecase(utelRepo)
 
 	// Setup servers
-	grpcServer, lis, err := setupGRPCServer(grpcAddr, ctgUc, expUc, utelUc)
+	grpcServer, lis, err := setupGRPCServer(cfg.GRPCPort, ctgUc, expUc, utelUc)
 	if err != nil {
 		panic(err)
 	}
-	gqlServer := setupGraphQLServer(gqlAddr, allowedOrigins, ctgUc, expUc, usrUc)
+	gqlServer := setupGraphQLServer(cfg.GQLPort, cfg.AllowedOrigins, ctgUc, expUc, usrUc)
 
 	g := setupServers(lis, ctx, grpcServer, gqlServer)
 	if err = g.Wait(); err != nil {
