@@ -17,6 +17,7 @@ Core services to managing financial data. Exposes gRPC and GraphQL as APIs backe
 - Docker
 
 ## Quickstart
+
 ```sh
 cp .env.example .env # After copy, manually adjust .env values
 
@@ -34,16 +35,19 @@ make down # Stop services
 |`ALLOWED_ORIGINS`|Comma-separated CORS origins for GraphQL|
 
 ## Migrations
+
 - Local: `make migrate-up` / `make migrate-down` / `make migrate-create=<X>`
 - Docker: built from `migrations.Dockerfile` (`migrate/migrate` + bundled `migrations`)
 
 ## Docker
+
 ```sh
 make docker-build
 docker compose up
 ```
 
 ## Development
+
 ```sh
 make proto-generate # buf: gRPC stubs
 make sqlc-generate  # sqlc: query code

@@ -4,11 +4,12 @@ All notables changes to this project are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-Pre-1.0 - APIs, GraphQL schema, and gRPC contracts may change without notice.
+Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice.
 
 ## [Unreleased]
 
-### [0.0.1] - 2026-08-09
+### [0.0.1] - 2026-09-09
+
 Initial release.
 
 #### Database
@@ -19,7 +20,7 @@ Initial release.
     - `expenses` - expense (transaction) records
 - Dev-only seed migration (`000002_temp_seed`) - inserts sample categories, one user, and one Telegram context. Contains hardcoded data; remove before first real deploy and inject user data manually.
 
-### Categories
+#### Categories
 - Use cases: create, get by ID, list, update, delete
 - GraphQL:
     - Queries: `category`, `categories`
@@ -27,7 +28,7 @@ Initial release.
 - gRPC (`CategoryService`):
     - Read Only: `ListCategories`, `GetCategoryByID`
 
-### Expenses
+#### Expenses
 - Use cases: create, get by ID, list, update, delete
 - GraphQL:
     - Query: `expense`, `expenses`
@@ -36,12 +37,12 @@ Initial release.
     - Read Only: `ListExpenses`,
     - Write: `UpdateExpense`, `DeleteExpense`
 
-### Users
+#### Users
 - Use cases: get by ID
 - GraphQL:
     - Query: `user`
 
-### User Telegram Context
+#### User Telegram Context
 - Use cases: get by user ID, get by telegram ID, update
 - gRPC (`UserTelegramContextService`):
     - Read only: `GetUserTelegramContext`, `GetUserTelegramContextByTelegramID`
