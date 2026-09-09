@@ -9,7 +9,7 @@ GRPC_PROTOS := -proto financecore/v1/categories.proto -proto financecore/v1/expe
 	migrate-up migrate-down migrate-force migrate-create migrate-version \
 	sqlc-generate proto-generate proto-lint \
 	grpc-list grpc-describe \
-	graphql-init graphql-generate
+	gql-init gql-generate
 
 run:
 	go run ./cmd/api

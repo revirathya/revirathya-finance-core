@@ -50,6 +50,64 @@ func (f *fakeCategoryRepo) DeleteCategory(ctx context.Context, id uuid.UUID) err
 }
 
 // Test
+func TestCreateCategory(t *testing.T) {
+	want := &domain.Category{ID: uuid.New(), CategoryName: "Food"}
+
+	t.Run("creates and returns category", func(t *testing.T) {
+		repo := &fakeCategoryRepo{createResp: want}
+		uc := category.NewCategoryUsecase(repo)
+
+		got, err := uc.CreateCategory(context.Background(), "Food")
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("got %v, want %v", got, want)
+		}
+		if repo.gotCreateInput.CategoryName != "Food" {
+			t.Fatalf("repo received category_name %q, want %q", repo.gotCreateInput.CategoryName, "Food")
+		}
+	})
+
+	t.Run("propagates repo error", func(t *testing.T) {
+		repo := &fakeCategoryRepo{err: errors.New("db down")}
+		uc := category.NewCategoryUsecase(repo)
+
+		if _, err := uc.CreateCategory(context.Background(), "Food"); err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
+}
+
+func TestGetCategoryByID(t *testing.T) {
+	id := uuid.New()
+	want := &domain.Category{ID: id, CategoryName: "Food"}
+
+	t.Run("returns category", func(t *testing.T) {
+		repo := &fakeCategoryRepo{categoryByID: want}
+		uc := category.NewCategoryUsecase(repo)
+
+		got, err := uc.GetCategoryByID(context.Background(), id)
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("got %v, want %v", got, want)
+		}
+	})
+
+	t.Run("propagates repo error", func(t *testing.T) {
+		repo := &fakeCategoryRepo{err: errors.New("not found")}
+		uc := category.NewCategoryUsecase(repo)
+
+		if _, err := uc.GetCategoryByID(context.Background(), id); err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
+}
+
 func TestListCategories(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -87,64 +145,6 @@ func TestListCategories(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestGetCategoryByID(t *testing.T) {
-	id := uuid.New()
-	want := &domain.Category{ID: id, CategoryName: "Food"}
-
-	t.Run("returns category", func(t *testing.T) {
-		repo := &fakeCategoryRepo{categoryByID: want}
-		uc := category.NewCategoryUsecase(repo)
-
-		got, err := uc.GetCategoryByID(context.Background(), id)
-
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Fatalf("got %v, want %v", got, want)
-		}
-	})
-
-	t.Run("propagates repo error", func(t *testing.T) {
-		repo := &fakeCategoryRepo{err: errors.New("not found")}
-		uc := category.NewCategoryUsecase(repo)
-
-		if _, err := uc.GetCategoryByID(context.Background(), id); err == nil {
-			t.Fatal("expected error, got nil")
-		}
-	})
-}
-
-func TestCreateCategory(t *testing.T) {
-	want := &domain.Category{ID: uuid.New(), CategoryName: "Food"}
-
-	t.Run("creates and returns category", func(t *testing.T) {
-		repo := &fakeCategoryRepo{createResp: want}
-		uc := category.NewCategoryUsecase(repo)
-
-		got, err := uc.CreateCategory(context.Background(), "Food")
-
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Fatalf("got %v, want %v", got, want)
-		}
-		if repo.gotCreateInput.CategoryName != "Food" {
-			t.Fatalf("repo received category_name %q, want %q", repo.gotCreateInput.CategoryName, "Food")
-		}
-	})
-
-	t.Run("propagates repo error", func(t *testing.T) {
-		repo := &fakeCategoryRepo{err: errors.New("db down")}
-		uc := category.NewCategoryUsecase(repo)
-
-		if _, err := uc.CreateCategory(context.Background(), "Food"); err == nil {
-			t.Fatal("expected error, got nil")
-		}
-	})
 }
 
 func TestUpdateCategory(t *testing.T) {

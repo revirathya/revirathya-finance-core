@@ -26,12 +26,12 @@ func (uc *CategoryUsecase) CreateCategory(ctx context.Context, categoryName stri
 	return uc.ctgRepo.CreateCategory(ctx, input)
 }
 
-func (uc *CategoryUsecase) ListCategories(ctx context.Context) ([]domain.Category, error) {
-	return uc.ctgRepo.ListCategories(ctx)
-}
-
 func (uc *CategoryUsecase) GetCategoryByID(ctx context.Context, id uuid.UUID) (*domain.Category, error) {
 	return uc.ctgRepo.GetCategoryByID(ctx, id)
+}
+
+func (uc *CategoryUsecase) ListCategories(ctx context.Context) ([]domain.Category, error) {
+	return uc.ctgRepo.ListCategories(ctx)
 }
 
 func (uc *CategoryUsecase) UpdateCategory(ctx context.Context, id uuid.UUID, categoryName string) (*domain.Category, error) {

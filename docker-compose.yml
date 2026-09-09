@@ -1,5 +1,5 @@
 services:
-  postgres:
+  finance-db:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: revirathya
@@ -14,6 +14,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+  
+  finance-migration:
+    image: revirathya/revirathya-finance-migration:0.0.1
+    depends_on:
+      finance-db:
+        condition: service_healthy
+    command: ["-database", "${DATABASE_URI}", "up"]
 
   finance-core:
     image: revirathya/revirathya-finance-core:latest

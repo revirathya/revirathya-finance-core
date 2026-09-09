@@ -35,23 +35,6 @@ func (r *categoryRepositoryImpl) CreateCategory(ctx context.Context, input domai
 	return result, nil
 }
 
-func (r *categoryRepositoryImpl) ListCategories(ctx context.Context) ([]domain.Category, error) {
-	rows, err := r.query.ListCategories(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	results := make([]domain.Category, 0, len(rows))
-	for _, row := range rows {
-		results = append(results, domain.Category{
-			ID:           database.FromPgxUUID(row.ID),
-			CategoryName: row.CategoryName,
-		})
-	}
-
-	return results, nil
-}
-
 func (r *categoryRepositoryImpl) GetCategoryByID(ctx context.Context, id uuid.UUID) (*domain.Category, error) {
 	row, err := r.query.GetCategoryByID(ctx, database.ToPgxUUID(id))
 	if err != nil {
@@ -67,6 +50,23 @@ func (r *categoryRepositoryImpl) GetCategoryByID(ctx context.Context, id uuid.UU
 	}
 
 	return result, nil
+}
+
+func (r *categoryRepositoryImpl) ListCategories(ctx context.Context) ([]domain.Category, error) {
+	rows, err := r.query.ListCategories(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]domain.Category, 0, len(rows))
+	for _, row := range rows {
+		results = append(results, domain.Category{
+			ID:           database.FromPgxUUID(row.ID),
+			CategoryName: row.CategoryName,
+		})
+	}
+
+	return results, nil
 }
 
 func (r *categoryRepositoryImpl) UpdateCategory(ctx context.Context, id uuid.UUID, patch domain.CategoryForm) (*domain.Category, error) {
