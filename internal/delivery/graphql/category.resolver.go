@@ -14,7 +14,7 @@ import (
 )
 
 // CreateCategory is the resolver for the createCategory field.
-func (r *mutationResolver) CreateCategory(ctx context.Context, input *model.CreateCategoryInput) (*model.Category, error) {
+func (r *mutationResolver) CreateCategory(ctx context.Context, input model.CreateCategoryInput) (*model.Category, error) {
 	result, err := r.ctgUc.CreateCategory(ctx, input.CategoryName)
 	if err != nil {
 		return nil, err
@@ -28,10 +28,10 @@ func (r *mutationResolver) CreateCategory(ctx context.Context, input *model.Crea
 }
 
 // UpdateCategory is the resolver for the updateCategory field.
-func (r *mutationResolver) UpdateCategory(ctx context.Context, id string, patch *model.UpdateCategoryInput) (*model.Category, error) {
+func (r *mutationResolver) UpdateCategory(ctx context.Context, id string, patch model.UpdateCategoryInput) (*model.Category, error) {
 	uuidId, err := uuid.Parse(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid id UUID format: %v", err)
+		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
 	}
 
 	result, err := r.ctgUc.UpdateCategory(ctx, uuidId, *patch.CategoryName)
@@ -50,7 +50,7 @@ func (r *mutationResolver) UpdateCategory(ctx context.Context, id string, patch 
 func (r *mutationResolver) DeleteCategory(ctx context.Context, id string) (*string, error) {
 	uuidId, err := uuid.Parse(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid id UUID format: %v", err)
+		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
 	}
 
 	if err = r.ctgUc.DeleteCategory(ctx, uuidId); err != nil {

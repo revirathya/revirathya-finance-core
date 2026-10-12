@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
+	"time"
 
 	gqlHdl "github.com/99designs/gqlgen/graphql/handler"
 	gqlSch "github.com/revirathya/revirathya-finance-core/gen/graphql"
@@ -17,6 +19,16 @@ import (
 	grpcFincoreV1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
 	grpcDlv "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+)
+
+const (
+	readHeaderTimeout = 5 * time.Second
+	readTimeout       = 10 * time.Second
+	writeTimeout      = 15 * time.Second
+	idleTimeout       = 60 * time.Second
+	handlerTimeout    = 10 * time.Second // val < writeTimeout
+	shutdownTimeout   = 10 * time.Second
 )
 
 func setupGraphQLServer(
@@ -37,13 +49,29 @@ func setupGraphQLServer(
 	gqlServer.SetErrorPresenter(gqlDlv.ErrorPresenter)
 
 	mux := http.NewServeMux()
-	mux.Handle("/graphql", withCORS(allowedOrigins, gqlServer))
+	mux.Handle(
+		"/graphql",
+		withCORS(allowedOrigins,
+			http.TimeoutHandler(
+				gqlServer,
+				handlerTimeout,
+				`{"errors":[{"message":"request timeout"}]}`,
+			),
+		),
+	)
 
-	httpServer := &http.Server{Addr: port, Handler: mux}
+	httpServer := &http.Server{
+		Addr:              port,
+		Handler:           mux,
+		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
+	}
 	return httpServer
 }
 
-func setupGRPCServer(port string, ctgUc *ucCtg.CategoryUsecase, expUc *ucExp.ExpenseUsecase, utelUc *ucUtel.UserTelegramContextUsecase) (*grpc.Server, net.Listener, error) {
+func setupGRPCServer(port string, enableReflection bool, ctgUc *ucCtg.CategoryUsecase, expUc *ucExp.ExpenseUsecase, utelUc *ucUtel.UserTelegramContextUsecase) (*grpc.Server, net.Listener, error) {
 	ctgHan := grpcDlv.NewCategoryHandler(ctgUc)
 	expHan := grpcDlv.NewExpenseHandler(expUc)
 	utelHan := grpcDlv.NewUserTelegramContextHandler(utelUc)
@@ -57,6 +85,10 @@ func setupGRPCServer(port string, ctgUc *ucCtg.CategoryUsecase, expUc *ucExp.Exp
 	if err != nil {
 		return nil, nil, err
 	}
+
+	if enableReflection {
+		reflection.Register(grpcServer)
+	}
 	return grpcServer, lis, err
 }
 
@@ -67,13 +99,30 @@ func setupServers(lis net.Listener, ctx context.Context, grpcServer *grpc.Server
 	})
 
 	g.Go(func() error {
-		return gqlServer.ListenAndServe()
+		if err := gqlServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
+		return nil
 	})
 
 	g.Go(func() error {
 		<-gctx.Done()
-		grpcServer.GracefulStop()
-		return gqlServer.Shutdown(context.Background())
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		defer cancel()
+
+		stopped := make(chan struct{})
+		go func() {
+			grpcServer.GracefulStop()
+			close(stopped)
+		}()
+		select {
+		case <-stopped:
+		case <-shutdownCtx.Done():
+			grpcServer.Stop()
+		}
+
+		return gqlServer.Shutdown(shutdownCtx)
 	})
 
 	return g

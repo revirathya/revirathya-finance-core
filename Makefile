@@ -2,10 +2,10 @@
 export
 
 GRPC_ADDR ?= localhost:50051
-GRPC_PROTOS := -proto financecore/v1/categories.proto -proto financecore/v1/expenses.proto -proto financecore/v1/user_contexts.proto
+GRPC_PROTOS := -proto financecore/v1/categories.proto -proto financecore/v1/expenses.proto -proto financecore/v1/user_telegram_contexts.proto
 
 .PHONY: run build test vet check tidy \
-	up down down-v logs \
+	docker-build docker-up docker-down docker-logs \
 	migrate-up migrate-down migrate-force migrate-create migrate-version \
 	sqlc-generate proto-generate proto-lint \
 	grpc-list grpc-describe \
@@ -29,18 +29,25 @@ tidy:
 	go mod tidy
 
 ## --- local infra (Postgres via docker-compose) ---
+# make docker-up          -> all services (db, migration, core)
+# make docker-up svc=db   -> only the listed service(s), e.g. svc="db migration"
+# make docker-build svc=migration VERSION=0.0.1 -> build migration service with tag 0.0.1
+# make docker-down args="-v --remove-orphans" -> adding arguments to deletion
 
-up:
-	docker compose up -d
+docker-build: svc ?= core
+docker-build:
+	docker build \
+		-f $(if $(filter migration,$(svc)),migration.Dockerfile,Dockerfile) \
+		-t revirathya/revirathya-finance-$(svc):$(VERSION) .
 
-down:
-	docker compose down
+docker-up:
+	docker compose up -d $(svc)
 
-down-v:
-	docker compose down -v
+docker-down:
+	docker compose down $(args)
 
-logs:
-	docker compose logs -f postgres
+docker-logs:
+	docker compose logs -f $(svc)
 
 ## --- migrations (golang-migrate) ---
 
@@ -83,10 +90,3 @@ grpc-list:
 
 grpc-describe:
 	grpcurl -plaintext -import-path proto $(GRPC_PROTOS) $(GRPC_ADDR) describe $(symbol)
-
-## --- docker ---
-docker-build:
-	docker build -t revirathya/revirathya-finance-core:latest .
-
-docker-run:
-	docker run --rm -p 8080:8080 --env-file .env revirathya/revirathya-finance-core:latest

@@ -215,27 +215,21 @@ func (ec *executionContext) marshalNCategory2ᚖgithubᚗcomᚋrevirathyaᚋrevi
 	return ec._Category(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNCreateCategoryInput2githubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐCreateCategoryInput(ctx context.Context, v any) (model.CreateCategoryInput, error) {
+	res, err := ec.unmarshalInputCreateCategoryInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNUpdateCategoryInput2githubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐUpdateCategoryInput(ctx context.Context, v any) (model.UpdateCategoryInput, error) {
+	res, err := ec.unmarshalInputUpdateCategoryInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalOCategory2ᚖgithubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐCategory(ctx context.Context, sel ast.SelectionSet, v *model.Category) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._Category(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalOCreateCategoryInput2ᚖgithubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐCreateCategoryInput(ctx context.Context, v any) (*model.CreateCategoryInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputCreateCategoryInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOUpdateCategoryInput2ᚖgithubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐUpdateCategoryInput(ctx context.Context, v any) (*model.UpdateCategoryInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputUpdateCategoryInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 // endregion ***************************** type.gotpl *****************************

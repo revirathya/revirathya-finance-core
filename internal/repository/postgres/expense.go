@@ -98,7 +98,6 @@ func (r *expenseRepositoryImpl) ListExpenses(ctx context.Context, userID uuid.UU
 
 func (r *expenseRepositoryImpl) UpdateExpense(ctx context.Context, id uuid.UUID, patch domain.ExpenseForm) (*domain.Expense, error) {
 	args := sqlcgen.UpdateExpenseParams{
-		UserID:        database.ToPgxUUID(patch.UserID),
 		CategoryID:    database.ToPgxUUID(patch.CategoryID),
 		TransactionDt: database.ToPgxDate(patch.TransactionDt),
 		Description:   patch.Description,

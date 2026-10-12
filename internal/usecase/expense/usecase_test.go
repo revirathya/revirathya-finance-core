@@ -182,7 +182,7 @@ func TestListExpenses(t *testing.T) {
 }
 
 func TestUpdateExpense(t *testing.T) {
-	id, userID, categoryID := uuid.New(), uuid.New(), uuid.New()
+	id, categoryID := uuid.New(), uuid.New()
 	dt := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
 	amount := decimal.NewFromFloat(42.50)
 	description := "Dinner"
@@ -192,7 +192,7 @@ func TestUpdateExpense(t *testing.T) {
 		repo := &fakeExpenseRepo{updateResp: want}
 		uc := expense.NewExpenseUsecase(repo)
 
-		got, err := uc.UpdateExpense(context.Background(), id, userID, categoryID, dt, &description, amount)
+		got, err := uc.UpdateExpense(context.Background(), id, categoryID, dt, &description, amount)
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -205,7 +205,6 @@ func TestUpdateExpense(t *testing.T) {
 		}
 
 		wantPatch := domain.ExpenseForm{
-			UserID:        userID,
 			CategoryID:    categoryID,
 			TransactionDt: dt,
 			Description:   &description,
@@ -220,7 +219,7 @@ func TestUpdateExpense(t *testing.T) {
 		repo := &fakeExpenseRepo{err: errors.New("not found")}
 		uc := expense.NewExpenseUsecase(repo)
 
-		if _, err := uc.UpdateExpense(context.Background(), id, userID, categoryID, dt, &description, amount); err == nil {
+		if _, err := uc.UpdateExpense(context.Background(), id, categoryID, dt, &description, amount); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})

@@ -4,30 +4,39 @@ package financecore.v1;
 
 option go_package = "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1;financecorev1";
 
-// Common
+// CategoryService provides read access to expense categories.
+service CategoryService {
+    // Returns all categories, ordered alphabetically by category_name.
+    rpc ListCategories (ListCategoriesRequest) returns (ListCategoriesResponse);
+
+    // Returns a single category by its ID.
+    rpc GetCategoryByID (GetCategoryByIDRequest) returns (GetCategoryByIDResponse);
+}
+
+// A category used to group expenses, e.g. "Food" or "Transport".
 message CategoryResponse {
+    // Category ID (UUID).
     string id = 1;
+
+    // Category name, unique across all categories (max 100 characters).
     string category_name = 2;
 }
 
-// RPC: List Categories
 message ListCategoriesRequest {}
 
 message ListCategoriesResponse {
     repeated CategoryResponse categories = 1;
 }
 
-// RPC: Get Category By ID
 message GetCategoryByIDRequest {
+    // Category ID to fetch. Must be a valid UUID.
     string id = 1;
 }
 
 message GetCategoryByIDResponse {
+    // Category ID (UUID).
     string id = 1;
-    string category_name = 2;
-}
 
-service CategoryService {
-    rpc ListCategories (ListCategoriesRequest) returns (ListCategoriesResponse);
-    rpc GetCategoryByID (GetCategoryByIDRequest) returns (GetCategoryByIDResponse);
+    // Category name, unique across all categories (max 100 characters).
+    string category_name = 2;
 }

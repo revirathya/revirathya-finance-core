@@ -1,36 +1,44 @@
 services:
-  finance-db:
+  db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: revirathya
-      POSTGRES_PASSWORD: revirathya
-      POSTGRES_DB: finance
+      POSTGRES_USER: ${DB_USER:-revirathya}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB: ${DB_NAME:-finance}
     ports:
-      - "5432:5432"
+      - "5532:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U revirathya -d finance"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-revirathya} -d ${DB_NAME:-finance}"]
       interval: 5s
       timeout: 5s
       retries: 10
   
-  finance-migration:
-    image: revirathya/revirathya-finance-migration:0.0.1
+  migration:
+    image: revirathya/revirathya-finance-migration:${VERSION:?VERSION is required}
     depends_on:
-      finance-db:
+      db:
         condition: service_healthy
-    command: ["-database", "${DATABASE_URI}", "up"]
+    command: 
+      - "-database"
+      - "postgres://${DB_USER:-revirathya}:${DB_PASSWORD:?DB_PASSWORD is required}@db:5432/${DB_NAME:-finance}?sslmode=disable"
+      - "up"
 
-  finance-core:
-    image: revirathya/revirathya-finance-core:latest
+  core:
+    image: revirathya/revirathya-finance-core:${VERSION:?VERSION is required}
     depends_on:
-      - postgres
-    env_file:
-      - .env
+      migration:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URI: "postgres://${DB_USER:-revirathya}:${DB_PASSWORD:?DB_PASSWORD is required}@db:5432/${DB_NAME:-finance}?sslmode=disable"
+      GRPC_PORT: "50051"
+      GQL_PORT: "8080"
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      ENABLE_GRPC_REFLECTION: ${ENABLE_GRPC_REFLECTION:-false}
     ports:
-      - "8080:8080"
-      - "50051:50051"
+      - "${GQL_HOST_PORT:-8180}:8080"
+      - "${GRPC_HOST_PORT:-51051}:50051"
 
 volumes:
   pgdata:

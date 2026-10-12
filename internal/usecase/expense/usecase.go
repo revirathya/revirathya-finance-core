@@ -39,9 +39,8 @@ func (uc *ExpenseUsecase) ListExpenses(ctx context.Context, userID uuid.UUID, tr
 	return uc.expRepo.ListExpenses(ctx, userID, transactionDt)
 }
 
-func (uc *ExpenseUsecase) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, categoryID uuid.UUID, transactionDt time.Time, description *string, amount decimal.Decimal) (*domain.Expense, error) {
+func (uc *ExpenseUsecase) UpdateExpense(ctx context.Context, id uuid.UUID, categoryID uuid.UUID, transactionDt time.Time, description *string, amount decimal.Decimal) (*domain.Expense, error) {
 	patch := domain.ExpenseForm{
-		UserID:        userID,
 		CategoryID:    categoryID,
 		TransactionDt: transactionDt,
 		Description:   description,

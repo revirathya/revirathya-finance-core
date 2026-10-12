@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/revirathya/revirathya-finance-core/internal/config"
@@ -23,7 +26,9 @@ func main() {
 	}
 
 	// Get Postgres Pool
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	pool, err := database.NewDBPool(ctx, cfg.DatabaseURI)
 	if err != nil {
 		panic(err)
@@ -50,7 +55,7 @@ func main() {
 	utelUc := ucUtel.NewUserTelegramContextUsecase(utelRepo)
 
 	// Setup servers
-	grpcServer, lis, err := setupGRPCServer(cfg.GRPCPort, ctgUc, expUc, utelUc)
+	grpcServer, lis, err := setupGRPCServer(cfg.GRPCPort, cfg.EnableGRPCReflection, ctgUc, expUc, utelUc)
 	if err != nil {
 		panic(err)
 	}

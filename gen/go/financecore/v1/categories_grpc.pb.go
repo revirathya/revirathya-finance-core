@@ -26,8 +26,12 @@ const (
 // CategoryServiceClient is the client API for CategoryService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// CategoryService provides read access to expense categories.
 type CategoryServiceClient interface {
+	// Returns all categories, ordered alphabetically by category_name.
 	ListCategories(ctx context.Context, in *ListCategoriesRequest, opts ...grpc.CallOption) (*ListCategoriesResponse, error)
+	// Returns a single category by its ID.
 	GetCategoryByID(ctx context.Context, in *GetCategoryByIDRequest, opts ...grpc.CallOption) (*GetCategoryByIDResponse, error)
 }
 
@@ -62,8 +66,12 @@ func (c *categoryServiceClient) GetCategoryByID(ctx context.Context, in *GetCate
 // CategoryServiceServer is the server API for CategoryService service.
 // All implementations must embed UnimplementedCategoryServiceServer
 // for forward compatibility.
+//
+// CategoryService provides read access to expense categories.
 type CategoryServiceServer interface {
+	// Returns all categories, ordered alphabetically by category_name.
 	ListCategories(context.Context, *ListCategoriesRequest) (*ListCategoriesResponse, error)
+	// Returns a single category by its ID.
 	GetCategoryByID(context.Context, *GetCategoryByIDRequest) (*GetCategoryByIDResponse, error)
 	mustEmbedUnimplementedCategoryServiceServer()
 }

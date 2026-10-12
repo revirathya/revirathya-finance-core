@@ -19,11 +19,11 @@ import (
 
 type MutationResolver interface {
 	Ok(ctx context.Context) (*bool, error)
-	CreateCategory(ctx context.Context, input *model.CreateCategoryInput) (*model.Category, error)
-	UpdateCategory(ctx context.Context, id string, patch *model.UpdateCategoryInput) (*model.Category, error)
+	CreateCategory(ctx context.Context, input model.CreateCategoryInput) (*model.Category, error)
+	UpdateCategory(ctx context.Context, id string, patch model.UpdateCategoryInput) (*model.Category, error)
 	DeleteCategory(ctx context.Context, id string) (*string, error)
-	CreateExpense(ctx context.Context, input *model.CreateExpenseInput) (*model.Expense, error)
-	UpdateExpense(ctx context.Context, id string, patch *model.UpdateExpenseInput) (*model.Expense, error)
+	CreateExpense(ctx context.Context, input model.CreateExpenseInput) (*model.Expense, error)
+	UpdateExpense(ctx context.Context, id string, patch model.UpdateExpenseInput) (*model.Expense, error)
 	DeleteExpense(ctx context.Context, id string) (*string, error)
 }
 type QueryResolver interface {
@@ -43,8 +43,8 @@ func (ec *executionContext) field_Mutation_createCategory_args(ctx context.Conte
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
-		func(ctx context.Context, v any) (*model.CreateCategoryInput, error) {
-			return ec.unmarshalOCreateCategoryInput2ᚖgithubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐCreateCategoryInput(ctx, v)
+		func(ctx context.Context, v any) (model.CreateCategoryInput, error) {
+			return ec.unmarshalNCreateCategoryInput2githubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐCreateCategoryInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -57,8 +57,8 @@ func (ec *executionContext) field_Mutation_createExpense_args(ctx context.Contex
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
-		func(ctx context.Context, v any) (*model.CreateExpenseInput, error) {
-			return ec.unmarshalOCreateExpenseInput2ᚖgithubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐCreateExpenseInput(ctx, v)
+		func(ctx context.Context, v any) (model.CreateExpenseInput, error) {
+			return ec.unmarshalNCreateExpenseInput2githubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐCreateExpenseInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -107,8 +107,8 @@ func (ec *executionContext) field_Mutation_updateCategory_args(ctx context.Conte
 	}
 	args["id"] = arg0
 	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "patch",
-		func(ctx context.Context, v any) (*model.UpdateCategoryInput, error) {
-			return ec.unmarshalOUpdateCategoryInput2ᚖgithubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐUpdateCategoryInput(ctx, v)
+		func(ctx context.Context, v any) (model.UpdateCategoryInput, error) {
+			return ec.unmarshalNUpdateCategoryInput2githubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐUpdateCategoryInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -129,8 +129,8 @@ func (ec *executionContext) field_Mutation_updateExpense_args(ctx context.Contex
 	}
 	args["id"] = arg0
 	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "patch",
-		func(ctx context.Context, v any) (*model.UpdateExpenseInput, error) {
-			return ec.unmarshalOUpdateExpenseInput2ᚖgithubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐUpdateExpenseInput(ctx, v)
+		func(ctx context.Context, v any) (model.UpdateExpenseInput, error) {
+			return ec.unmarshalNUpdateExpenseInput2githubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐUpdateExpenseInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -254,7 +254,7 @@ func (ec *executionContext) _Mutation_createCategory(ctx context.Context, field 
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().CreateCategory(ctx, fc.Args["input"].(*model.CreateCategoryInput))
+			return ec.Resolvers.Mutation().CreateCategory(ctx, fc.Args["input"].(model.CreateCategoryInput))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *model.Category) graphql.Marshaler {
@@ -298,7 +298,7 @@ func (ec *executionContext) _Mutation_updateCategory(ctx context.Context, field 
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().UpdateCategory(ctx, fc.Args["id"].(string), fc.Args["patch"].(*model.UpdateCategoryInput))
+			return ec.Resolvers.Mutation().UpdateCategory(ctx, fc.Args["id"].(string), fc.Args["patch"].(model.UpdateCategoryInput))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *model.Category) graphql.Marshaler {
@@ -386,7 +386,7 @@ func (ec *executionContext) _Mutation_createExpense(ctx context.Context, field g
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().CreateExpense(ctx, fc.Args["input"].(*model.CreateExpenseInput))
+			return ec.Resolvers.Mutation().CreateExpense(ctx, fc.Args["input"].(model.CreateExpenseInput))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *model.Expense) graphql.Marshaler {
@@ -430,7 +430,7 @@ func (ec *executionContext) _Mutation_updateExpense(ctx context.Context, field g
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().UpdateExpense(ctx, fc.Args["id"].(string), fc.Args["patch"].(*model.UpdateExpenseInput))
+			return ec.Resolvers.Mutation().UpdateExpense(ctx, fc.Args["id"].(string), fc.Args["patch"].(model.UpdateExpenseInput))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *model.Expense) graphql.Marshaler {

@@ -30,12 +30,25 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// Service
+// ExpenseService manages users' expense records.
+//
+// Formats used by all RPCs:
+//   - IDs are UUIDs.
+//   - transaction_dt is a date in YYYY-MM-DD format.
+//   - amount is a decimal string with up to 2 decimal places, e.g. "12500.50".
 type ExpenseServiceClient interface {
+	// Creates an expense and returns it.
 	CreateExpense(ctx context.Context, in *CreateExpenseRequest, opts ...grpc.CallOption) (*CreateExpenseResponse, error)
+	// Returns a single expense by its ID, including its category name.
 	GetExpenseByID(ctx context.Context, in *GetExpenseByIDRequest, opts ...grpc.CallOption) (*GetExpenseByIDResponse, error)
+	// Returns a user's expenses, newest transaction_dt first, optionally
+	// filtered to a single date.
 	ListExpenses(ctx context.Context, in *ListExpensesRequest, opts ...grpc.CallOption) (*ListExpensesResponse, error)
+	// Updates an expense and returns it. All fields except description are
+	// required; if description is omitted, the existing value is kept.
+	// The expense's owner (user_id) cannot be changed.
 	UpdateExpense(ctx context.Context, in *UpdateExpenseRequest, opts ...grpc.CallOption) (*UpdateExpenseResponse, error)
+	// Deletes an expense by its ID.
 	DeleteExpense(ctx context.Context, in *DeleteExpenseRequest, opts ...grpc.CallOption) (*DeleteExpenseResponse, error)
 }
 
@@ -101,12 +114,25 @@ func (c *expenseServiceClient) DeleteExpense(ctx context.Context, in *DeleteExpe
 // All implementations must embed UnimplementedExpenseServiceServer
 // for forward compatibility.
 //
-// Service
+// ExpenseService manages users' expense records.
+//
+// Formats used by all RPCs:
+//   - IDs are UUIDs.
+//   - transaction_dt is a date in YYYY-MM-DD format.
+//   - amount is a decimal string with up to 2 decimal places, e.g. "12500.50".
 type ExpenseServiceServer interface {
+	// Creates an expense and returns it.
 	CreateExpense(context.Context, *CreateExpenseRequest) (*CreateExpenseResponse, error)
+	// Returns a single expense by its ID, including its category name.
 	GetExpenseByID(context.Context, *GetExpenseByIDRequest) (*GetExpenseByIDResponse, error)
+	// Returns a user's expenses, newest transaction_dt first, optionally
+	// filtered to a single date.
 	ListExpenses(context.Context, *ListExpensesRequest) (*ListExpensesResponse, error)
+	// Updates an expense and returns it. All fields except description are
+	// required; if description is omitted, the existing value is kept.
+	// The expense's owner (user_id) cannot be changed.
 	UpdateExpense(context.Context, *UpdateExpenseRequest) (*UpdateExpenseResponse, error)
+	// Deletes an expense by its ID.
 	DeleteExpense(context.Context, *DeleteExpenseRequest) (*DeleteExpenseResponse, error)
 	mustEmbedUnimplementedExpenseServiceServer()
 }

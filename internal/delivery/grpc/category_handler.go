@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
@@ -25,7 +26,7 @@ func NewCategoryHandler(ctgUc *category.CategoryUsecase) *CategoryHandler {
 func (h *CategoryHandler) ListCategories(ctx context.Context, req *financecorev1.ListCategoriesRequest) (*financecorev1.ListCategoriesResponse, error) {
 	categories, err := h.ctgUc.ListCategories(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to list categories: %v", err)
+		return nil, toStatus("list categories", err)
 	}
 
 	resp := &financecorev1.ListCategoriesResponse{
@@ -44,12 +45,12 @@ func (h *CategoryHandler) ListCategories(ctx context.Context, req *financecorev1
 func (h *CategoryHandler) GetCategoryByID(ctx context.Context, req *financecorev1.GetCategoryByIDRequest) (*financecorev1.GetCategoryByIDResponse, error) {
 	uuidId, err := uuid.Parse(req.Id)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "invalid id UUID format: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)
 	}
 
 	category, err := h.ctgUc.GetCategoryByID(ctx, uuidId)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to list categories: %v", err)
+		return nil, toStatus(fmt.Sprintf("get category by id %s", uuidId.String()), err)
 	}
 
 	response := &financecorev1.GetCategoryByIDResponse{

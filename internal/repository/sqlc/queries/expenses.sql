@@ -46,12 +46,12 @@ INNER JOIN app.categories AS ctg
   ON exp.category_id = ctg.id
 WHERE
   exp.user_id = sqlc.arg('user_id')
-  AND (sqlc.narg('transaction_dt')::DATE IS NULL OR exp.transaction_dt = sqlc.narg('transaction_dt')::DATE);
+  AND (sqlc.narg('transaction_dt')::DATE IS NULL OR exp.transaction_dt = sqlc.narg('transaction_dt')::DATE)
+ORDER BY exp.transaction_dt DESC;
 
 -- name: UpdateExpense :one
 UPDATE app.expenses
 SET
-  user_id = COALESCE(sqlc.arg('user_id'), user_id),
   category_id = COALESCE(sqlc.arg('category_id'), category_id),
   transaction_dt = COALESCE(sqlc.arg('transaction_dt'), transaction_dt),
   description = COALESCE(sqlc.narg('description'), description),

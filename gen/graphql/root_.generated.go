@@ -46,13 +46,13 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CreateCategory func(childComplexity int, input *model.CreateCategoryInput) int
-		CreateExpense  func(childComplexity int, input *model.CreateExpenseInput) int
+		CreateCategory func(childComplexity int, input model.CreateCategoryInput) int
+		CreateExpense  func(childComplexity int, input model.CreateExpenseInput) int
 		DeleteCategory func(childComplexity int, id string) int
 		DeleteExpense  func(childComplexity int, id string) int
 		Ok             func(childComplexity int) int
-		UpdateCategory func(childComplexity int, id string, patch *model.UpdateCategoryInput) int
-		UpdateExpense  func(childComplexity int, id string, patch *model.UpdateExpenseInput) int
+		UpdateCategory func(childComplexity int, id string, patch model.UpdateCategoryInput) int
+		UpdateExpense  func(childComplexity int, id string, patch model.UpdateExpenseInput) int
 	}
 
 	Query struct {
@@ -153,7 +153,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Mutation.CreateCategory(childComplexity, args["input"].(*model.CreateCategoryInput)), true
+		return e.ComplexityRoot.Mutation.CreateCategory(childComplexity, args["input"].(model.CreateCategoryInput)), true
 	case "Mutation.createExpense":
 		if e.ComplexityRoot.Mutation.CreateExpense == nil {
 			break
@@ -164,7 +164,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Mutation.CreateExpense(childComplexity, args["input"].(*model.CreateExpenseInput)), true
+		return e.ComplexityRoot.Mutation.CreateExpense(childComplexity, args["input"].(model.CreateExpenseInput)), true
 	case "Mutation.deleteCategory":
 		if e.ComplexityRoot.Mutation.DeleteCategory == nil {
 			break
@@ -203,7 +203,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Mutation.UpdateCategory(childComplexity, args["id"].(string), args["patch"].(*model.UpdateCategoryInput)), true
+		return e.ComplexityRoot.Mutation.UpdateCategory(childComplexity, args["id"].(string), args["patch"].(model.UpdateCategoryInput)), true
 	case "Mutation.updateExpense":
 		if e.ComplexityRoot.Mutation.UpdateExpense == nil {
 			break
@@ -214,7 +214,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Mutation.UpdateExpense(childComplexity, args["id"].(string), args["patch"].(*model.UpdateExpenseInput)), true
+		return e.ComplexityRoot.Mutation.UpdateExpense(childComplexity, args["id"].(string), args["patch"].(model.UpdateExpenseInput)), true
 
 	case "Query.categories":
 		if e.ComplexityRoot.Query.Categories == nil {
@@ -411,8 +411,8 @@ extend type Query {
 }
 
 extend type Mutation {
-    createCategory(input: CreateCategoryInput): Category
-    updateCategory(id: ID!, patch: UpdateCategoryInput): Category
+    createCategory(input: CreateCategoryInput!): Category
+    updateCategory(id: ID!, patch: UpdateCategoryInput!): Category
     deleteCategory(id: ID!): ID
 }`, BuiltIn: false},
 	{Name: "../../graphql/schema/expense.graphql", Input: `type Expense {
@@ -434,7 +434,6 @@ input CreateExpenseInput {
 }
 
 input UpdateExpenseInput {
-    userId: ID!
     transactionDt: String!
     categoryId: ID!
     description: String
@@ -447,13 +446,11 @@ extend type Query {
 }
 
 extend type Mutation {
-    createExpense(input: CreateExpenseInput): Expense
-    updateExpense(id: ID!, patch: UpdateExpenseInput): Expense
+    createExpense(input: CreateExpenseInput!): Expense
+    updateExpense(id: ID!, patch: UpdateExpenseInput!): Expense
     deleteExpense(id: ID!): ID
 }`, BuiltIn: false},
-	{Name: "../../graphql/schema/schema.graphql", Input: `directive @goField(forceResolver: Boolean, name: String) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
-
-type Query {
+	{Name: "../../graphql/schema/schema.graphql", Input: `type Query {
     ok: Boolean
 }
 

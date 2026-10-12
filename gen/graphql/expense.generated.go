@@ -258,20 +258,13 @@ func (ec *executionContext) unmarshalInputUpdateExpenseInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"userId", "transactionDt", "categoryId", "description", "amount"}
+	fieldsInOrder := [...]string{"transactionDt", "categoryId", "description", "amount"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "userId":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-			data, err := ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.UserID = data
 		case "transactionDt":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("transactionDt"))
 			data, err := ec.unmarshalNString2string(ctx, v)
@@ -385,6 +378,11 @@ func (ec *executionContext) _Expense(ctx context.Context, sel ast.SelectionSet, 
 
 // region    ***************************** type.gotpl *****************************
 
+func (ec *executionContext) unmarshalNCreateExpenseInput2githubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐCreateExpenseInput(ctx context.Context, v any) (model.CreateExpenseInput, error) {
+	res, err := ec.unmarshalInputCreateExpenseInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNExpense2ᚕᚖgithubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐExpenseᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Expense) graphql.Marshaler {
 	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
 		fc := graphql.GetFieldContext(ctx)
@@ -411,12 +409,9 @@ func (ec *executionContext) marshalNExpense2ᚖgithubᚗcomᚋrevirathyaᚋrevir
 	return ec._Expense(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOCreateExpenseInput2ᚖgithubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐCreateExpenseInput(ctx context.Context, v any) (*model.CreateExpenseInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputCreateExpenseInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
+func (ec *executionContext) unmarshalNUpdateExpenseInput2githubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐUpdateExpenseInput(ctx context.Context, v any) (model.UpdateExpenseInput, error) {
+	res, err := ec.unmarshalInputUpdateExpenseInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalOExpense2ᚖgithubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐExpense(ctx context.Context, sel ast.SelectionSet, v *model.Expense) graphql.Marshaler {
@@ -424,14 +419,6 @@ func (ec *executionContext) marshalOExpense2ᚖgithubᚗcomᚋrevirathyaᚋrevir
 		return graphql.Null
 	}
 	return ec._Expense(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalOUpdateExpenseInput2ᚖgithubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐUpdateExpenseInput(ctx context.Context, v any) (*model.UpdateExpenseInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputUpdateExpenseInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 // endregion ***************************** type.gotpl *****************************

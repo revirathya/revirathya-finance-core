@@ -3,8 +3,10 @@ package graphql
 import (
 	"context"
 	"errors"
+	"log/slog"
 
 	"github.com/99designs/gqlgen/graphql"
+	"github.com/99designs/gqlgen/graphql/errcode"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
@@ -17,15 +19,20 @@ func (e invalidInputError) Unwrap() error { return e.err }
 func ErrorPresenter(ctx context.Context, err error) *gqlerror.Error {
 	gqlErr := graphql.DefaultErrorPresenter(ctx, err)
 
+	if code, _ := gqlErr.Extensions["code"].(string); code == errcode.ValidationFailed || code == errcode.ParseFailed {
+		return gqlErr
+	}
+
 	switch {
 	case errors.Is(err, domain.ErrNotFound):
 		gqlErr.Message = "resource not found"
-		gqlErr.Extensions = map[string]interface{}{"code": "NOT_FOUND"}
+		gqlErr.Extensions = map[string]any{"code": "NOT_FOUND"}
 	case errors.As(err, &invalidInputError{}):
-		gqlErr.Extensions = map[string]interface{}{"code": "BAD_USER_INPUT"}
+		gqlErr.Extensions = map[string]any{"code": "BAD_USER_INPUT"}
 	default:
 		gqlErr.Message = "internal error"
-		gqlErr.Extensions = map[string]interface{}{"code": "INTERNAL"}
+		gqlErr.Extensions = map[string]any{"code": "INTERNAL"}
+		slog.Error("graphql request failed", "path", graphql.GetPath(ctx), "err", err)
 	}
 
 	return gqlErr

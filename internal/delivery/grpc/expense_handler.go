@@ -2,7 +2,7 @@ package grpc
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,7 +10,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
-	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
 	"github.com/shopspring/decimal"
 )
@@ -55,7 +54,7 @@ func (h *ExpenseHandler) CreateExpense(ctx context.Context, req *financecorev1.C
 		decAmount,
 	)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create expense: %v", err)
+		return nil, toStatus("create expense", err)
 	}
 
 	resp := &financecorev1.CreateExpenseResponse{
@@ -77,10 +76,7 @@ func (h *ExpenseHandler) GetExpenseByID(ctx context.Context, req *financecorev1.
 
 	expense, err := h.expUc.GetExpenseByID(ctx, uuidId)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			return nil, status.Errorf(codes.NotFound, "expense %s not found", uuidId)
-		}
-		return nil, status.Errorf(codes.Internal, "failed to get expense by id: %v", err)
+		return nil, toStatus(fmt.Sprintf("get expense %s", uuidId.String()), err)
 	}
 
 	resp := &financecorev1.GetExpenseByIDResponse{
@@ -113,7 +109,7 @@ func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.Li
 
 	expenses, err := h.expUc.ListExpenses(ctx, uuidUserID, ntmTransactionDt)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to list expenses: %v", err)
+		return nil, toStatus("list expenses", err)
 	}
 
 	resp := &financecorev1.ListExpensesResponse{
@@ -140,11 +136,6 @@ func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.U
 		return nil, status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)
 	}
 
-	uuidUserId, err := uuid.Parse(req.UserId)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id UUID format: %v", err)
-	}
-
 	uuidCategoryId, err := uuid.Parse(req.CategoryId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid category_id UUID format: %v", err)
@@ -163,17 +154,13 @@ func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.U
 	expense, err := h.expUc.UpdateExpense(
 		ctx,
 		uuidId,
-		uuidUserId,
 		uuidCategoryId,
 		tmTransactionDt,
 		req.Description,
 		decAmount,
 	)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			return nil, status.Errorf(codes.NotFound, "expense %s not found", uuidId)
-		}
-		return nil, status.Errorf(codes.Internal, "failed to update expense: %v", err)
+		return nil, toStatus(fmt.Sprintf("update expense %s", uuidId.String()), err)
 	}
 
 	resp := &financecorev1.UpdateExpenseResponse{
@@ -195,10 +182,7 @@ func (h *ExpenseHandler) DeleteExpense(ctx context.Context, req *financecorev1.D
 	}
 
 	if err := h.expUc.DeleteExpense(ctx, uuidId); err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			return nil, status.Errorf(codes.NotFound, "expense %s not found", uuidId)
-		}
-		return nil, status.Errorf(codes.Internal, "failed to delete expense: %v", err)
+		return nil, toStatus(fmt.Sprintf("delete expense %s", uuidId.String()), err)
 	}
 
 	return &financecorev1.DeleteExpenseResponse{}, nil

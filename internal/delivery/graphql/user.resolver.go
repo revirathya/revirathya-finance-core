@@ -17,7 +17,7 @@ import (
 func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error) {
 	uuidId, err := uuid.Parse(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid id UUID format: %v", err)
+		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
 	}
 
 	result, err := r.usrUc.GetUserByID(ctx, uuidId)

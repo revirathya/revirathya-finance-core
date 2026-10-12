@@ -17,7 +17,6 @@ input CreateExpenseInput {
 }
 
 input UpdateExpenseInput {
-    userId: ID!
     transactionDt: String!
     categoryId: ID!
     description: String
@@ -30,7 +29,7 @@ extend type Query {
 }
 
 extend type Mutation {
-    createExpense(input: CreateExpenseInput): Expense
-    updateExpense(id: ID!, patch: UpdateExpenseInput): Expense
+    createExpense(input: CreateExpenseInput!): Expense
+    updateExpense(id: ID!, patch: UpdateExpenseInput!): Expense
     deleteExpense(id: ID!): ID
 }

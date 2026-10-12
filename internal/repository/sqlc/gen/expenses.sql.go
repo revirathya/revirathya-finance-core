@@ -128,6 +128,7 @@ INNER JOIN app.categories AS ctg
 WHERE
   exp.user_id = $1
   AND ($2::DATE IS NULL OR exp.transaction_dt = $2::DATE)
+ORDER BY exp.transaction_dt DESC
 `
 
 type ListExpensesParams struct {
@@ -176,18 +177,16 @@ func (q *Queries) ListExpenses(ctx context.Context, arg ListExpensesParams) ([]L
 const updateExpense = `-- name: UpdateExpense :one
 UPDATE app.expenses
 SET
-  user_id = COALESCE($1, user_id),
-  category_id = COALESCE($2, category_id),
-  transaction_dt = COALESCE($3, transaction_dt),
-  description = COALESCE($4, description),
-  amount = COALESCE($5, amount)
+  category_id = COALESCE($1, category_id),
+  transaction_dt = COALESCE($2, transaction_dt),
+  description = COALESCE($3, description),
+  amount = COALESCE($4, amount)
 WHERE
-  id = $6
+  id = $5
 RETURNING id, user_id, category_id, transaction_dt, description, amount, created_at, updated_at
 `
 
 type UpdateExpenseParams struct {
-	UserID        pgtype.UUID    `json:"user_id"`
 	CategoryID    pgtype.UUID    `json:"category_id"`
 	TransactionDt pgtype.Date    `json:"transaction_dt"`
 	Description   *string        `json:"description"`
@@ -197,7 +196,6 @@ type UpdateExpenseParams struct {
 
 func (q *Queries) UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (AppExpense, error) {
 	row := q.db.QueryRow(ctx, updateExpense,
-		arg.UserID,
 		arg.CategoryID,
 		arg.TransactionDt,
 		arg.Description,

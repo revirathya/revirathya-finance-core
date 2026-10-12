@@ -16,25 +16,25 @@ import (
 )
 
 // CreateExpense is the resolver for the createExpense field.
-func (r *mutationResolver) CreateExpense(ctx context.Context, input *model.CreateExpenseInput) (*model.Expense, error) {
+func (r *mutationResolver) CreateExpense(ctx context.Context, input model.CreateExpenseInput) (*model.Expense, error) {
 	uuidUserId, err := uuid.Parse(input.UserID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid id UUID format: %v", err)
+		return nil, invalidInputError{fmt.Errorf("invalid user_id UUID format: %w", err)}
 	}
 
 	uuidCategoryId, err := uuid.Parse(input.CategoryID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid category_id UUID format: %v", err)
+		return nil, invalidInputError{fmt.Errorf("invalid category_id UUID format: %w", err)}
 	}
 
 	tmTransactionDt, err := time.Parse("2006-01-02", input.TransactionDt)
 	if err != nil {
-		return nil, fmt.Errorf("invalid transaction_dt Date format: %v", err)
+		return nil, invalidInputError{fmt.Errorf("invalid transaction_dt Date format: %w", err)}
 	}
 
 	decAmount, err := decimal.NewFromString(input.Amount)
 	if err != nil {
-		return nil, fmt.Errorf("invalid amount Decimal format: %w", err)
+		return nil, invalidInputError{fmt.Errorf("invalid amount Decimal format: %w", err)}
 	}
 
 	result, err := r.expUc.CreateExpense(
@@ -60,36 +60,30 @@ func (r *mutationResolver) CreateExpense(ctx context.Context, input *model.Creat
 }
 
 // UpdateExpense is the resolver for the updateExpense field.
-func (r *mutationResolver) UpdateExpense(ctx context.Context, id string, patch *model.UpdateExpenseInput) (*model.Expense, error) {
+func (r *mutationResolver) UpdateExpense(ctx context.Context, id string, patch model.UpdateExpenseInput) (*model.Expense, error) {
 	uuidId, err := uuid.Parse(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid id UUID format: %v", err)
-	}
-
-	uuidUserId, err := uuid.Parse(patch.UserID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid id UUID format: %v", err)
+		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
 	}
 
 	uuidCategoryId, err := uuid.Parse(patch.CategoryID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid category_id UUID format: %v", err)
+		return nil, invalidInputError{fmt.Errorf("invalid category_id UUID format: %w", err)}
 	}
 
 	tmTransactionDt, err := time.Parse("2006-01-02", patch.TransactionDt)
 	if err != nil {
-		return nil, fmt.Errorf("invalid transaction_dt Date format: %v", err)
+		return nil, invalidInputError{fmt.Errorf("invalid transaction_dt Date format: %w", err)}
 	}
 
 	decAmount, err := decimal.NewFromString(patch.Amount)
 	if err != nil {
-		return nil, fmt.Errorf("invalid amount Decimal format: %w", err)
+		return nil, invalidInputError{fmt.Errorf("invalid amount Decimal format: %w", err)}
 	}
 
 	result, err := r.expUc.UpdateExpense(
 		ctx,
 		uuidId,
-		uuidUserId,
 		uuidCategoryId,
 		tmTransactionDt,
 		patch.Description,
