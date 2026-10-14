@@ -1,4 +1,4 @@
-package telegrambindingcode
+package telegrambindcode
 
 import (
 	"context"

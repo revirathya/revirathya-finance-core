@@ -1,0 +1,9 @@
+type TelegramBindCode {
+    code: String!
+    expiresAt: String!
+}
+
+extend type Mutation {
+    createTelegramBindCode: TelegramBindCode!
+    unbindTelegram: User!
+}

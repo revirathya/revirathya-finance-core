@@ -41,6 +41,11 @@ type Mutation struct {
 type Query struct {
 }
 
+type TelegramBindCode struct {
+	Code      string `json:"code"`
+	ExpiresAt string `json:"expiresAt"`
+}
+
 type UpdateCategoryInput struct {
 	CategoryName *string `json:"categoryName,omitempty"`
 }

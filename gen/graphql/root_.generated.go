@@ -52,15 +52,17 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CreateCategory  func(childComplexity int, input model.CreateCategoryInput) int
-		CreateExpense   func(childComplexity int, input model.CreateExpenseInput) int
-		DeleteCategory  func(childComplexity int, id string) int
-		DeleteExpense   func(childComplexity int, id string) int
-		LoginWithGoogle func(childComplexity int, idToken string) int
-		Ok              func(childComplexity int) int
-		UpdateCategory  func(childComplexity int, id string, patch model.UpdateCategoryInput) int
-		UpdateExpense   func(childComplexity int, id string, patch model.UpdateExpenseInput) int
-		UpdateUser      func(childComplexity int, input model.UpdateUserInput) int
+		CreateCategory         func(childComplexity int, input model.CreateCategoryInput) int
+		CreateExpense          func(childComplexity int, input model.CreateExpenseInput) int
+		CreateTelegramBindCode func(childComplexity int) int
+		DeleteCategory         func(childComplexity int, id string) int
+		DeleteExpense          func(childComplexity int, id string) int
+		LoginWithGoogle        func(childComplexity int, idToken string) int
+		Ok                     func(childComplexity int) int
+		UnbindTelegram         func(childComplexity int) int
+		UpdateCategory         func(childComplexity int, id string, patch model.UpdateCategoryInput) int
+		UpdateExpense          func(childComplexity int, id string, patch model.UpdateExpenseInput) int
+		UpdateUser             func(childComplexity int, input model.UpdateUserInput) int
 	}
 
 	Query struct {
@@ -70,6 +72,11 @@ type ComplexityRoot struct {
 		Expenses   func(childComplexity int, userID string, transactionDt *string) int
 		Me         func(childComplexity int) int
 		Ok         func(childComplexity int) int
+	}
+
+	TelegramBindCode struct {
+		Code      func(childComplexity int) int
+		ExpiresAt func(childComplexity int) int
 	}
 
 	User struct {
@@ -192,6 +199,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.CreateExpense(childComplexity, args["input"].(model.CreateExpenseInput)), true
+	case "Mutation.createTelegramBindCode":
+		if e.ComplexityRoot.Mutation.CreateTelegramBindCode == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Mutation.CreateTelegramBindCode(childComplexity), true
 	case "Mutation.deleteCategory":
 		if e.ComplexityRoot.Mutation.DeleteCategory == nil {
 			break
@@ -231,6 +244,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.Ok(childComplexity), true
+	case "Mutation.unbindTelegram":
+		if e.ComplexityRoot.Mutation.UnbindTelegram == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Mutation.UnbindTelegram(childComplexity), true
 	case "Mutation.updateCategory":
 		if e.ComplexityRoot.Mutation.UpdateCategory == nil {
 			break
@@ -317,6 +336,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Ok(childComplexity), true
+
+	case "TelegramBindCode.code":
+		if e.ComplexityRoot.TelegramBindCode.Code == nil {
+			break
+		}
+
+		return e.ComplexityRoot.TelegramBindCode.Code(childComplexity), true
+	case "TelegramBindCode.expiresAt":
+		if e.ComplexityRoot.TelegramBindCode.ExpiresAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.TelegramBindCode.ExpiresAt(childComplexity), true
 
 	case "User.email":
 		if e.ComplexityRoot.User.Email == nil {
@@ -502,6 +534,15 @@ extend type Mutation {
 type Mutation {
     ok: Boolean
 }`, BuiltIn: false},
+	{Name: "../../graphql/schema/telegram.graphql", Input: `type TelegramBindCode {
+    code: String!
+    expiresAt: String!
+}
+
+extend type Mutation {
+    createTelegramBindCode: TelegramBindCode!
+    unbindTelegram: User!
+}`, BuiltIn: false},
 	{Name: "../../graphql/schema/user.graphql", Input: `type User {
     id: ID!
     firstName: String!
@@ -577,6 +618,16 @@ func (ec *executionContext) childFields_Expense(ctx context.Context, field graph
 		return ec.fieldContext_Expense_amount(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Expense", field.Name)
+}
+
+func (ec *executionContext) childFields_TelegramBindCode(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "code":
+		return ec.fieldContext_TelegramBindCode_code(ctx, field)
+	case "expiresAt":
+		return ec.fieldContext_TelegramBindCode_expiresAt(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type TelegramBindCode", field.Name)
 }
 
 func (ec *executionContext) childFields_User(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {

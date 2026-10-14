@@ -1,4 +1,4 @@
-package telegrambindingcode_test
+package telegrambindcode_test
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
-	"github.com/revirathya/revirathya-finance-core/internal/usecase/telegrambindingcode"
+	"github.com/revirathya/revirathya-finance-core/internal/usecase/telegrambindcode"
 )
 
 // Fake
@@ -59,7 +59,7 @@ func TestCreateBindCode(t *testing.T) {
 
 	t.Run("returns a formatted code and stores only its hash", func(t *testing.T) {
 		repo := &fakeBindCodeRepo{}
-		uc := telegrambindingcode.NewTelegramBindCodeUsecase(repo)
+		uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
 		before := time.Now()
 		code, expiresAt, err := uc.CreateBindCode(context.Background(), userID)
@@ -87,7 +87,7 @@ func TestCreateBindCode(t *testing.T) {
 
 	t.Run("stored hash matches the hash BindTelegram computes for the same code", func(t *testing.T) {
 		repo := &fakeBindCodeRepo{bindUser: &domain.User{ID: userID}}
-		uc := telegrambindingcode.NewTelegramBindCodeUsecase(repo)
+		uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
 		code, _, err := uc.CreateBindCode(context.Background(), userID)
 		if err != nil {
@@ -103,7 +103,7 @@ func TestCreateBindCode(t *testing.T) {
 
 	t.Run("generates different codes", func(t *testing.T) {
 		repo := &fakeBindCodeRepo{}
-		uc := telegrambindingcode.NewTelegramBindCodeUsecase(repo)
+		uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
 		seen := make(map[string]bool)
 		for range 200 {
@@ -123,7 +123,7 @@ func TestCreateBindCode(t *testing.T) {
 
 	t.Run("propagates repo error without returning a code", func(t *testing.T) {
 		repo := &fakeBindCodeRepo{createErr: errors.New("db down")}
-		uc := telegrambindingcode.NewTelegramBindCodeUsecase(repo)
+		uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
 		code, _, err := uc.CreateBindCode(context.Background(), userID)
 		if err == nil {
@@ -142,7 +142,7 @@ func TestBindTelegram(t *testing.T) {
 	canonicalHash := func(t *testing.T) string {
 		t.Helper()
 		repo := &fakeBindCodeRepo{bindUser: user}
-		uc := telegrambindingcode.NewTelegramBindCodeUsecase(repo)
+		uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 		if _, err := uc.BindTelegram(context.Background(), canonical, "123456789"); err != nil {
 			t.Fatalf("bind %q: unexpected error: %v", canonical, err)
 		}
@@ -151,7 +151,7 @@ func TestBindTelegram(t *testing.T) {
 
 	t.Run("binds and returns the user", func(t *testing.T) {
 		repo := &fakeBindCodeRepo{bindUser: user}
-		uc := telegrambindingcode.NewTelegramBindCodeUsecase(repo)
+		uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
 		got, err := uc.BindTelegram(context.Background(), canonical, "123456789")
 
@@ -178,7 +178,7 @@ func TestBindTelegram(t *testing.T) {
 	t.Run("accepts only the exact XXXX-XXXX uppercase format", func(t *testing.T) {
 		for _, input := range []string{"k7qx-3mpa", "K7qx-3MPA", "K7QX3MPA", "K7QX 3MPA", " K7QX-3MPA", "K7QX-3MPA "} {
 			repo := &fakeBindCodeRepo{bindUser: user}
-			uc := telegrambindingcode.NewTelegramBindCodeUsecase(repo)
+			uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
 			if _, err := uc.BindTelegram(context.Background(), input, "123456789"); !errors.Is(err, domain.ErrInvalidInput) {
 				t.Fatalf("bind %q: got %v, want domain.ErrInvalidInput", input, err)
@@ -192,7 +192,7 @@ func TestBindTelegram(t *testing.T) {
 	t.Run("rejects malformed codes without calling the repo", func(t *testing.T) {
 		for _, input := range []string{"", "K7QX", "K7QX-3MPA-X", "K7QX-3MP!", "K7QX-3MP0", "K7QX-3MPI", "K7QX-3MPL"} {
 			repo := &fakeBindCodeRepo{bindUser: user}
-			uc := telegrambindingcode.NewTelegramBindCodeUsecase(repo)
+			uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
 			if _, err := uc.BindTelegram(context.Background(), input, "123456789"); !errors.Is(err, domain.ErrInvalidInput) {
 				t.Fatalf("bind %q: got %v, want domain.ErrInvalidInput", input, err)
@@ -205,7 +205,7 @@ func TestBindTelegram(t *testing.T) {
 
 	t.Run("rejects empty telegram ID without calling the repo", func(t *testing.T) {
 		repo := &fakeBindCodeRepo{bindUser: user}
-		uc := telegrambindingcode.NewTelegramBindCodeUsecase(repo)
+		uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
 		if _, err := uc.BindTelegram(context.Background(), canonical, ""); !errors.Is(err, domain.ErrInvalidInput) {
 			t.Fatalf("got %v, want domain.ErrInvalidInput", err)
@@ -217,7 +217,7 @@ func TestBindTelegram(t *testing.T) {
 
 	t.Run("unknown, expired or used code is invalid input", func(t *testing.T) {
 		repo := &fakeBindCodeRepo{bindErr: domain.ErrNotFound}
-		uc := telegrambindingcode.NewTelegramBindCodeUsecase(repo)
+		uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
 		if _, err := uc.BindTelegram(context.Background(), canonical, "123456789"); !errors.Is(err, domain.ErrInvalidInput) {
 			t.Fatalf("got %v, want domain.ErrInvalidInput", err)
@@ -226,7 +226,7 @@ func TestBindTelegram(t *testing.T) {
 
 	t.Run("telegram account bound to another user is a conflict", func(t *testing.T) {
 		repo := &fakeBindCodeRepo{bindErr: domain.ErrConflict}
-		uc := telegrambindingcode.NewTelegramBindCodeUsecase(repo)
+		uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
 		if _, err := uc.BindTelegram(context.Background(), canonical, "123456789"); !errors.Is(err, domain.ErrConflict) {
 			t.Fatalf("got %v, want domain.ErrConflict", err)
@@ -236,7 +236,7 @@ func TestBindTelegram(t *testing.T) {
 	t.Run("propagates other repo errors", func(t *testing.T) {
 		dbErr := errors.New("db down")
 		repo := &fakeBindCodeRepo{bindErr: dbErr}
-		uc := telegrambindingcode.NewTelegramBindCodeUsecase(repo)
+		uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
 		if _, err := uc.BindTelegram(context.Background(), canonical, "123456789"); !errors.Is(err, dbErr) {
 			t.Fatalf("got %v, want %v", err, dbErr)
@@ -249,7 +249,7 @@ func TestUnbindTelegram(t *testing.T) {
 
 	t.Run("unbinds the user", func(t *testing.T) {
 		repo := &fakeBindCodeRepo{}
-		uc := telegrambindingcode.NewTelegramBindCodeUsecase(repo)
+		uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
 		if err := uc.UnbindTelegram(context.Background(), userID); err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -261,7 +261,7 @@ func TestUnbindTelegram(t *testing.T) {
 
 	t.Run("propagates repo error", func(t *testing.T) {
 		repo := &fakeBindCodeRepo{unbindErr: errors.New("db down")}
-		uc := telegrambindingcode.NewTelegramBindCodeUsecase(repo)
+		uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
 		if err := uc.UnbindTelegram(context.Background(), userID); err == nil {
 			t.Fatal("expected error, got nil")

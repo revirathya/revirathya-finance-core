@@ -25,6 +25,8 @@ type MutationResolver interface {
 	CreateExpense(ctx context.Context, input model.CreateExpenseInput) (*model.Expense, error)
 	UpdateExpense(ctx context.Context, id string, patch model.UpdateExpenseInput) (*model.Expense, error)
 	DeleteExpense(ctx context.Context, id string) (*string, error)
+	CreateTelegramBindCode(ctx context.Context) (*model.TelegramBindCode, error)
+	UnbindTelegram(ctx context.Context) (*model.User, error)
 	LoginWithGoogle(ctx context.Context, idToken string) (*model.AuthPayload, error)
 	UpdateUser(ctx context.Context, input model.UpdateUserInput) (*model.User, error)
 }
@@ -524,6 +526,70 @@ func (ec *executionContext) fieldContext_Mutation_deleteExpense(ctx context.Cont
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_createTelegramBindCode(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_createTelegramBindCode(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Mutation().CreateTelegramBindCode(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.TelegramBindCode) graphql.Marshaler {
+			return ec.marshalNTelegramBindCode2ᚖgithubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐTelegramBindCode(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_createTelegramBindCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_TelegramBindCode(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_unbindTelegram(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_unbindTelegram(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Mutation().UnbindTelegram(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.User) graphql.Marshaler {
+			return ec.marshalNUser2ᚖgithubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐUser(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_unbindTelegram(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_User(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_loginWithGoogle(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -986,6 +1052,20 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 				return ec._Mutation_deleteExpense(ctx, field)
 			})
 			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "createTelegramBindCode":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createTelegramBindCode(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "unbindTelegram":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_unbindTelegram(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		case "loginWithGoogle":

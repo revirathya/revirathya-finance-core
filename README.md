@@ -168,6 +168,12 @@ make grpc-list GRPC_ADDR=localhost:51051         # Docker mode
 make grpc-describe symbol=financecore.v1.CategoryService
 ```
 
+## GraphQL authentication
+
+GraphQL requests are authenticated with a session token (`Authorization: Bearer <token>`), obtained from the
+`loginWithGoogle` mutation with a Google ID token. To get one from Postman without the Web Console, see
+[docs/postman-google-login.md](docs/postman-google-login.md).
+
 ## Development
 
 ```sh

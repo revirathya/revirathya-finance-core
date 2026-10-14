@@ -5,6 +5,7 @@ import (
 	ucAuth "github.com/revirathya/revirathya-finance-core/internal/usecase/auth"
 	ucCtg "github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 	ucExp "github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
+	ucTbc "github.com/revirathya/revirathya-finance-core/internal/usecase/telegrambindcode"
 	ucUsr "github.com/revirathya/revirathya-finance-core/internal/usecase/user"
 )
 
@@ -18,6 +19,7 @@ type Resolver struct {
 	authUc *ucAuth.AuthUsecase
 	ctgUc  *ucCtg.CategoryUsecase
 	expUc  *ucExp.ExpenseUsecase
+	tbcUc  *ucTbc.TelegramBindCodeUsecase
 	usrUc  *ucUsr.UserUsecase
 }
 
@@ -26,6 +28,7 @@ func NewResolver(
 	authUc *ucAuth.AuthUsecase,
 	ctgUc *ucCtg.CategoryUsecase,
 	expUc *ucExp.ExpenseUsecase,
+	tbcUc *ucTbc.TelegramBindCodeUsecase,
 	usrUc *ucUsr.UserUsecase,
 ) *Resolver {
 	return &Resolver{
@@ -33,6 +36,7 @@ func NewResolver(
 		authUc: authUc,
 		ctgUc:  ctgUc,
 		expUc:  expUc,
+		tbcUc:  tbcUc,
 		usrUc:  usrUc,
 	}
 }

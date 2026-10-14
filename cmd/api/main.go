@@ -17,6 +17,7 @@ import (
 	ucAuth "github.com/revirathya/revirathya-finance-core/internal/usecase/auth"
 	ucCtg "github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 	ucExp "github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
+	ucTbc "github.com/revirathya/revirathya-finance-core/internal/usecase/telegrambindcode"
 	ucUsr "github.com/revirathya/revirathya-finance-core/internal/usecase/user"
 	ucUtel "github.com/revirathya/revirathya-finance-core/internal/usecase/usercontext"
 )
@@ -48,6 +49,7 @@ func main() {
 	// Gen Repository
 	ctgRepo := pgRepo.NewCategoryRepositoryImpl(pool)
 	expRepo := pgRepo.NewExpenseRepositoryImpl(pool)
+	tbcRepo := pgRepo.NewTelegramBindCodeRepositoryImpl(pool)
 	usrRepo := pgRepo.NewUserRepositoryImpl(pool)
 	utelRepo := pgRepo.NewUserTelegramContextRepositoryImpl(pool)
 
@@ -56,11 +58,12 @@ func main() {
 	tokens := appAuth.NewTokenManager(cfg.JwtSecret, cfg.JwtTtl)
 
 	// Gen Usecase
+	authUc := ucAuth.NewAuthUsecase(verifier, usrRepo)
 	ctgUc := ucCtg.NewCategoryUsecase(ctgRepo)
 	expUc := ucExp.NewExpenseUsecase(expRepo)
+	tbcUc := ucTbc.NewTelegramBindCodeUsecase(tbcRepo)
 	usrUc := ucUsr.NewUserUsecase(usrRepo)
 	utelUc := ucUtel.NewUserTelegramContextUsecase(utelRepo)
-	authUc := ucAuth.NewAuthUsecase(verifier, usrRepo)
 
 	// Setup servers
 	grpcServer, lis, err := setupGRPCServer(
@@ -81,6 +84,7 @@ func main() {
 		authUc,
 		ctgUc,
 		expUc,
+		tbcUc,
 		usrUc,
 	)
 

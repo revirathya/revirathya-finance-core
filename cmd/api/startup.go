@@ -14,6 +14,7 @@ import (
 	ucAuth "github.com/revirathya/revirathya-finance-core/internal/usecase/auth"
 	ucCtg "github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 	ucExp "github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
+	ucTbc "github.com/revirathya/revirathya-finance-core/internal/usecase/telegrambindcode"
 	ucUsr "github.com/revirathya/revirathya-finance-core/internal/usecase/user"
 	ucUtel "github.com/revirathya/revirathya-finance-core/internal/usecase/usercontext"
 	"golang.org/x/sync/errgroup"
@@ -41,9 +42,10 @@ func setupGraphQLServer(
 	authUc *ucAuth.AuthUsecase,
 	ctgUc *ucCtg.CategoryUsecase,
 	expUc *ucExp.ExpenseUsecase,
+	tbcUc *ucTbc.TelegramBindCodeUsecase,
 	usrUc *ucUsr.UserUsecase,
 ) *http.Server {
-	resolver := gqlDlv.NewResolver(tokens, authUc, ctgUc, expUc, usrUc)
+	resolver := gqlDlv.NewResolver(tokens, authUc, ctgUc, expUc, tbcUc, usrUc)
 
 	gqlServer := gqlHdl.NewDefaultServer(gqlSch.NewExecutableSchema(
 		gqlSch.Config{
