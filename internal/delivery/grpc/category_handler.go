@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
+	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
 	grpcErr "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/error"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 	"google.golang.org/grpc/codes"
@@ -24,7 +25,12 @@ func NewCategoryHandler(ctgUc *category.CategoryUsecase) *CategoryHandler {
 }
 
 func (h *CategoryHandler) ListCategories(ctx context.Context, req *financecorev1.ListCategoriesRequest) (*financecorev1.ListCategoriesResponse, error) {
-	categories, err := h.ctgUc.ListCategories(ctx)
+	userID, err := appAuth.UserIDFrom(ctx)
+	if err != nil {
+		return nil, grpcErr.ToStatus("list categories", err)
+	}
+
+	categories, err := h.ctgUc.ListCategories(ctx, userID)
 	if err != nil {
 		return nil, grpcErr.ToStatus("list categories", err)
 	}
@@ -48,7 +54,12 @@ func (h *CategoryHandler) GetCategoryByID(ctx context.Context, req *financecorev
 		return nil, status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)
 	}
 
-	category, err := h.ctgUc.GetCategoryByID(ctx, uuidId)
+	userID, err := appAuth.UserIDFrom(ctx)
+	if err != nil {
+		return nil, grpcErr.ToStatus("get category by id", err)
+	}
+
+	category, err := h.ctgUc.GetCategoryByID(ctx, uuidId, userID)
 	if err != nil {
 		return nil, grpcErr.ToStatus(fmt.Sprintf("get category by id %s", uuidId.String()), err)
 	}

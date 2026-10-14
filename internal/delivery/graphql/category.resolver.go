@@ -11,11 +11,17 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
+	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
 )
 
 // CreateCategory is the resolver for the createCategory field.
 func (r *mutationResolver) CreateCategory(ctx context.Context, input model.CreateCategoryInput) (*model.Category, error) {
-	result, err := r.ctgUc.CreateCategory(ctx, input.CategoryName)
+	userID, err := appAuth.UserIDFrom(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := r.ctgUc.CreateCategory(ctx, userID, input.CategoryName)
 	if err != nil {
 		return nil, err
 	}
@@ -29,12 +35,17 @@ func (r *mutationResolver) CreateCategory(ctx context.Context, input model.Creat
 
 // UpdateCategory is the resolver for the updateCategory field.
 func (r *mutationResolver) UpdateCategory(ctx context.Context, id string, patch model.UpdateCategoryInput) (*model.Category, error) {
-	uuidId, err := uuid.Parse(id)
+	uuidID, err := uuid.Parse(id)
 	if err != nil {
 		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
 	}
 
-	result, err := r.ctgUc.UpdateCategory(ctx, uuidId, *patch.CategoryName)
+	userID, err := appAuth.UserIDFrom(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := r.ctgUc.UpdateCategory(ctx, uuidID, userID, patch.CategoryName)
 	if err != nil {
 		return nil, err
 	}
@@ -48,12 +59,17 @@ func (r *mutationResolver) UpdateCategory(ctx context.Context, id string, patch 
 
 // DeleteCategory is the resolver for the deleteCategory field.
 func (r *mutationResolver) DeleteCategory(ctx context.Context, id string) (*string, error) {
-	uuidId, err := uuid.Parse(id)
+	uuidID, err := uuid.Parse(id)
 	if err != nil {
 		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
 	}
 
-	if err = r.ctgUc.DeleteCategory(ctx, uuidId); err != nil {
+	userID, err := appAuth.UserIDFrom(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = r.ctgUc.DeleteCategory(ctx, uuidID, userID); err != nil {
 		return nil, err
 	}
 
@@ -63,12 +79,17 @@ func (r *mutationResolver) DeleteCategory(ctx context.Context, id string) (*stri
 
 // Category is the resolver for the category field.
 func (r *queryResolver) Category(ctx context.Context, id string) (*model.Category, error) {
-	uuidId, err := uuid.Parse(id)
+	uuidID, err := uuid.Parse(id)
 	if err != nil {
 		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
 	}
 
-	result, err := r.ctgUc.GetCategoryByID(ctx, uuidId)
+	userID, err := appAuth.UserIDFrom(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := r.ctgUc.GetCategoryByID(ctx, uuidID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +103,12 @@ func (r *queryResolver) Category(ctx context.Context, id string) (*model.Categor
 
 // Categories is the resolver for the categories field.
 func (r *queryResolver) Categories(ctx context.Context) ([]*model.Category, error) {
-	results, err := r.ctgUc.ListCategories(ctx)
+	userID, err := appAuth.UserIDFrom(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	results, err := r.ctgUc.ListCategories(ctx, userID)
 	if err != nil {
 		return nil, err
 	}

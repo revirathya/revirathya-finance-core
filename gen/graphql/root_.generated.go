@@ -479,7 +479,7 @@ input CreateCategoryInput {
 }
 
 input UpdateCategoryInput {
-    categoryName: String
+    categoryName: String!
 }
 
 extend type Query {

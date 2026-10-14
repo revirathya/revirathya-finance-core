@@ -74,7 +74,7 @@ Docker and Make come from your OS: Docker Desktop (macOS/Windows) or Docker Engi
 ## Quickstart
 
 ```sh
-cp .env.example .env # After copy, set VERSION, DB_PASSWORD and DATABASE_URI
+cp .env.example .env # After copy, set the Required values (see Configuration)
 ```
 
 There are two ways to run locally:
@@ -91,7 +91,7 @@ make run                # Run the app (gRPC :50051, GraphQL :8080/graphql)
 
 ```sh
 make docker-build                 # Build the app image (revirathya-finance-core:$VERSION)
-make docker-build svc=migration   # Build the migration image (revirathya-finance-migration:$VERSION)
+make docker-build svc=migration   # Build the migration image (revirathya-finance-migration:$MIGRATION_VERSION)
 make docker-up                    # Start db -> migration -> core
 ```
 
@@ -116,7 +116,8 @@ through `args="..."` instead.
 |:--|:--|:--|:--|
 |`svc`|`docker-build`|`core`|Image to build: `core` (`Dockerfile`) or `migration` (`migration.Dockerfile`)|
 |`svc`|`docker-up`, `docker-logs`|all services|Service(s) to start or follow, e.g. `svc=db` or `svc="db migration"`|
-|`VERSION`|`docker-build`, `docker-up`|from `.env`|Image tag; override for one-off builds, e.g. `make docker-build VERSION=0.0.2`. Pass the same value to `docker-up` so compose runs the image you built.|
+|`VERSION`|`docker-build`, `docker-up`|from `.env`|Tag of the `core` image; override for one-off builds, e.g. `make docker-build VERSION=0.0.2`. Pass the same value to `docker-up` so compose runs the image you built.|
+|`MIGRATION_VERSION`|`docker-build svc=migration`, `docker-up`|from `.env`|Tag of the `migration` image; override the same way, e.g. `make docker-build svc=migration MIGRATION_VERSION=0.0.2`.|
 |`args`|`docker-down`|none|Extra flags for `docker compose down`, e.g. `args="-v --remove-orphans"`|
 
 ## Configuration
@@ -127,7 +128,8 @@ Copy `.env.example` to `.env`. Only the required variables must be set; prefer t
 
 |Var|Description|
 |:--|:--|
-|`VERSION`|Image tag for `core` and `migration` (e.g. `0.0.1`). Used by `make docker-build` and docker-compose. Compose checks it for every command, even `make docker-up svc=db`.|
+|`VERSION`|Image tag for `core` (e.g. `0.0.1`). Used by `make docker-build` and docker-compose. Compose checks it for every command, even `make docker-up svc=db`.|
+|`MIGRATION_VERSION`|Image tag for `migration` (e.g. `0.0.1`), versioned separately because the image only changes when `migrations/` does. Used by `make docker-build svc=migration` and docker-compose, which also checks it for every command.|
 |`DB_PASSWORD`|Postgres password, used by the `db` container and the Docker-mode connection string|
 |`DATABASE_URI`|Postgres DSN for **local mode** (`make run`, `make migrate-*`), e.g. `postgres://revirathya:<password>@localhost:5532/finance?sslmode=disable`. Its port must match `DB_HOST_PORT`. Docker mode ignores it and builds its own DSN pointing at `db:5432`.|
 

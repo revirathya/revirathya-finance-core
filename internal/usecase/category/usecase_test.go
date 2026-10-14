@@ -25,26 +25,26 @@ type fakeCategoryRepo struct {
 	gotDeleteID    uuid.UUID
 }
 
-func (f *fakeCategoryRepo) ListCategories(ctx context.Context) ([]domain.Category, error) {
+func (f *fakeCategoryRepo) ListCategories(ctx context.Context, userID uuid.UUID) ([]domain.Category, error) {
 	return f.categories, f.err
 }
 
-func (f *fakeCategoryRepo) GetCategoryByID(ctx context.Context, id uuid.UUID) (*domain.Category, error) {
+func (f *fakeCategoryRepo) GetCategoryByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Category, error) {
 	return f.categoryByID, f.err
 }
 
-func (f *fakeCategoryRepo) CreateCategory(ctx context.Context, input domain.CategoryForm) (*domain.Category, error) {
+func (f *fakeCategoryRepo) CreateCategory(ctx context.Context, userID uuid.UUID, input domain.CategoryForm) (*domain.Category, error) {
 	f.gotCreateInput = input
 	return f.createResp, f.err
 }
 
-func (f *fakeCategoryRepo) UpdateCategory(ctx context.Context, id uuid.UUID, patch domain.CategoryForm) (*domain.Category, error) {
+func (f *fakeCategoryRepo) UpdateCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.CategoryForm) (*domain.Category, error) {
 	f.gotUpdateID = id
 	f.gotUpdatePatch = patch
 	return f.updateResp, f.err
 }
 
-func (f *fakeCategoryRepo) DeleteCategory(ctx context.Context, id uuid.UUID) error {
+func (f *fakeCategoryRepo) DeleteCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
 	f.gotDeleteID = id
 	return f.err
 }
@@ -54,10 +54,11 @@ func TestCreateCategory(t *testing.T) {
 	want := &domain.Category{ID: uuid.New(), CategoryName: "Food"}
 
 	t.Run("creates and returns category", func(t *testing.T) {
+		userID := uuid.New()
 		repo := &fakeCategoryRepo{createResp: want}
 		uc := category.NewCategoryUsecase(repo)
 
-		got, err := uc.CreateCategory(context.Background(), "Food")
+		got, err := uc.CreateCategory(context.Background(), userID, "Food")
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -71,10 +72,11 @@ func TestCreateCategory(t *testing.T) {
 	})
 
 	t.Run("propagates repo error", func(t *testing.T) {
+		userID := uuid.New()
 		repo := &fakeCategoryRepo{err: errors.New("db down")}
 		uc := category.NewCategoryUsecase(repo)
 
-		if _, err := uc.CreateCategory(context.Background(), "Food"); err == nil {
+		if _, err := uc.CreateCategory(context.Background(), userID, "Food"); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})
@@ -82,13 +84,14 @@ func TestCreateCategory(t *testing.T) {
 
 func TestGetCategoryByID(t *testing.T) {
 	id := uuid.New()
+	userID := uuid.New()
 	want := &domain.Category{ID: id, CategoryName: "Food"}
 
 	t.Run("returns category", func(t *testing.T) {
 		repo := &fakeCategoryRepo{categoryByID: want}
 		uc := category.NewCategoryUsecase(repo)
 
-		got, err := uc.GetCategoryByID(context.Background(), id)
+		got, err := uc.GetCategoryByID(context.Background(), id, userID)
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -102,7 +105,7 @@ func TestGetCategoryByID(t *testing.T) {
 		repo := &fakeCategoryRepo{err: errors.New("not found")}
 		uc := category.NewCategoryUsecase(repo)
 
-		if _, err := uc.GetCategoryByID(context.Background(), id); err == nil {
+		if _, err := uc.GetCategoryByID(context.Background(), id, userID); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})
@@ -133,10 +136,11 @@ func TestListCategories(t *testing.T) {
 		},
 	}
 
+	userID := uuid.New()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			uc := category.NewCategoryUsecase(tt.repo)
-			got, err := uc.ListCategories(context.Background())
+			got, err := uc.ListCategories(context.Background(), userID)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("err = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -152,10 +156,11 @@ func TestUpdateCategory(t *testing.T) {
 	want := &domain.Category{ID: id, CategoryName: "Groceries"}
 
 	t.Run("updates and returns category", func(t *testing.T) {
+		userID := uuid.New()
 		repo := &fakeCategoryRepo{updateResp: want}
 		uc := category.NewCategoryUsecase(repo)
 
-		got, err := uc.UpdateCategory(context.Background(), id, "Groceries")
+		got, err := uc.UpdateCategory(context.Background(), id, userID, "Groceries")
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -172,10 +177,11 @@ func TestUpdateCategory(t *testing.T) {
 	})
 
 	t.Run("propagates repo error", func(t *testing.T) {
+		userID := uuid.New()
 		repo := &fakeCategoryRepo{err: errors.New("not found")}
 		uc := category.NewCategoryUsecase(repo)
 
-		if _, err := uc.UpdateCategory(context.Background(), id, "Groceries"); err == nil {
+		if _, err := uc.UpdateCategory(context.Background(), id, userID, "Groceries"); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})
@@ -185,10 +191,11 @@ func TestDeleteCategory(t *testing.T) {
 	id := uuid.New()
 
 	t.Run("deletes category", func(t *testing.T) {
+		userID := uuid.New()
 		repo := &fakeCategoryRepo{}
 		uc := category.NewCategoryUsecase(repo)
 
-		if err := uc.DeleteCategory(context.Background(), id); err != nil {
+		if err := uc.DeleteCategory(context.Background(), id, userID); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if repo.gotDeleteID != id {
@@ -197,10 +204,11 @@ func TestDeleteCategory(t *testing.T) {
 	})
 
 	t.Run("propagates repo error", func(t *testing.T) {
+		userID := uuid.New()
 		repo := &fakeCategoryRepo{err: errors.New("fk violation")}
 		uc := category.NewCategoryUsecase(repo)
 
-		if err := uc.DeleteCategory(context.Background(), id); err == nil {
+		if err := uc.DeleteCategory(context.Background(), id, userID); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})

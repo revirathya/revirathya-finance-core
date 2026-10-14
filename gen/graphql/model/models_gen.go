@@ -47,7 +47,7 @@ type TelegramBindCode struct {
 }
 
 type UpdateCategoryInput struct {
-	CategoryName *string `json:"categoryName,omitempty"`
+	CategoryName string `json:"categoryName"`
 }
 
 type UpdateExpenseInput struct {

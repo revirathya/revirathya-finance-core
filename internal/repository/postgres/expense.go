@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
@@ -35,6 +36,11 @@ func (r *expenseRepositoryImpl) CreateExpense(ctx context.Context, input domain.
 
 	row, err := r.query.CreateExpense(ctx, args)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if (errors.As(err, &pgErr)) && (pgErr.Code == "23503") {
+			// Using other user's category
+			return nil, domain.ErrInvalidInput
+		}
 		return nil, err
 	}
 
@@ -107,7 +113,13 @@ func (r *expenseRepositoryImpl) UpdateExpense(ctx context.Context, id uuid.UUID,
 
 	row, err := r.query.UpdateExpense(ctx, args)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if (errors.As(err, &pgErr)) && (pgErr.Code == "23503") {
+			// Using other user's category
+			return nil, domain.ErrInvalidInput
+		}
 		if errors.Is(err, pgx.ErrNoRows) {
+			// Not found to-be-updated expense
 			return nil, domain.ErrNotFound
 		}
 		return nil, err

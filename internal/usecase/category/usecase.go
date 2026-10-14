@@ -19,28 +19,28 @@ func NewCategoryUsecase(ctgRepo domain.CategoryRepository) *CategoryUsecase {
 	}
 }
 
-func (uc *CategoryUsecase) CreateCategory(ctx context.Context, categoryName string) (*domain.Category, error) {
+func (uc *CategoryUsecase) CreateCategory(ctx context.Context, userID uuid.UUID, categoryName string) (*domain.Category, error) {
 	input := domain.CategoryForm{
 		CategoryName: categoryName,
 	}
-	return uc.ctgRepo.CreateCategory(ctx, input)
+	return uc.ctgRepo.CreateCategory(ctx, userID, input)
 }
 
-func (uc *CategoryUsecase) GetCategoryByID(ctx context.Context, id uuid.UUID) (*domain.Category, error) {
-	return uc.ctgRepo.GetCategoryByID(ctx, id)
+func (uc *CategoryUsecase) GetCategoryByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Category, error) {
+	return uc.ctgRepo.GetCategoryByID(ctx, id, userID)
 }
 
-func (uc *CategoryUsecase) ListCategories(ctx context.Context) ([]domain.Category, error) {
-	return uc.ctgRepo.ListCategories(ctx)
+func (uc *CategoryUsecase) ListCategories(ctx context.Context, userID uuid.UUID) ([]domain.Category, error) {
+	return uc.ctgRepo.ListCategories(ctx, userID)
 }
 
-func (uc *CategoryUsecase) UpdateCategory(ctx context.Context, id uuid.UUID, categoryName string) (*domain.Category, error) {
+func (uc *CategoryUsecase) UpdateCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID, categoryName string) (*domain.Category, error) {
 	patch := domain.CategoryForm{
 		CategoryName: categoryName,
 	}
-	return uc.ctgRepo.UpdateCategory(ctx, id, patch)
+	return uc.ctgRepo.UpdateCategory(ctx, id, userID, patch)
 }
 
-func (uc *CategoryUsecase) DeleteCategory(ctx context.Context, id uuid.UUID) error {
-	return uc.ctgRepo.DeleteCategory(ctx, id)
+func (uc *CategoryUsecase) DeleteCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+	return uc.ctgRepo.DeleteCategory(ctx, id, userID)
 }

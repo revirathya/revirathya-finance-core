@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
@@ -22,21 +23,37 @@ func NewCategoryRepositoryImpl(pool *pgxpool.Pool) domain.CategoryRepository {
 	}
 }
 
-func (r *categoryRepositoryImpl) CreateCategory(ctx context.Context, input domain.CategoryForm) (*domain.Category, error) {
-	row, err := r.query.CreateCategory(ctx, input.CategoryName)
+func (r *categoryRepositoryImpl) CreateCategory(ctx context.Context, userID uuid.UUID, input domain.CategoryForm) (*domain.Category, error) {
+	args := sqlcgen.CreateCategoryParams{
+		UserID:       database.ToPgxUUID(userID),
+		CategoryName: input.CategoryName,
+	}
+
+	row, err := r.query.CreateCategory(ctx, args)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if (errors.As(err, &pgErr)) && (pgErr.Code == "23505") {
+			// Duplicate names for current user
+			return nil, domain.ErrConflict
+		}
 		return nil, err
 	}
 
 	result := &domain.Category{
 		ID:           database.FromPgxUUID(row.ID),
+		UserID:       database.FromPgxUUID(row.UserID),
 		CategoryName: row.CategoryName,
 	}
 	return result, nil
 }
 
-func (r *categoryRepositoryImpl) GetCategoryByID(ctx context.Context, id uuid.UUID) (*domain.Category, error) {
-	row, err := r.query.GetCategoryByID(ctx, database.ToPgxUUID(id))
+func (r *categoryRepositoryImpl) GetCategoryByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Category, error) {
+	args := sqlcgen.GetCategoryByIDParams{
+		ID:     database.ToPgxUUID(id),
+		UserID: database.ToPgxUUID(userID),
+	}
+
+	row, err := r.query.GetCategoryByID(ctx, args)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrNotFound
@@ -46,14 +63,15 @@ func (r *categoryRepositoryImpl) GetCategoryByID(ctx context.Context, id uuid.UU
 
 	result := &domain.Category{
 		ID:           database.FromPgxUUID(row.ID),
+		UserID:       database.FromPgxUUID(row.UserID),
 		CategoryName: row.CategoryName,
 	}
 
 	return result, nil
 }
 
-func (r *categoryRepositoryImpl) ListCategories(ctx context.Context) ([]domain.Category, error) {
-	rows, err := r.query.ListCategories(ctx)
+func (r *categoryRepositoryImpl) ListCategories(ctx context.Context, userID uuid.UUID) ([]domain.Category, error) {
+	rows, err := r.query.ListCategories(ctx, database.ToPgxUUID(userID))
 	if err != nil {
 		return nil, err
 	}
@@ -62,6 +80,7 @@ func (r *categoryRepositoryImpl) ListCategories(ctx context.Context) ([]domain.C
 	for _, row := range rows {
 		results = append(results, domain.Category{
 			ID:           database.FromPgxUUID(row.ID),
+			UserID:       database.FromPgxUUID(row.UserID),
 			CategoryName: row.CategoryName,
 		})
 	}
@@ -69,27 +88,52 @@ func (r *categoryRepositoryImpl) ListCategories(ctx context.Context) ([]domain.C
 	return results, nil
 }
 
-func (r *categoryRepositoryImpl) UpdateCategory(ctx context.Context, id uuid.UUID, patch domain.CategoryForm) (*domain.Category, error) {
+func (r *categoryRepositoryImpl) UpdateCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.CategoryForm) (*domain.Category, error) {
 	args := sqlcgen.UpdateCategoryParams{
-		ID:           database.ToPgxUUID(id),
 		CategoryName: patch.CategoryName,
+		ID:           database.ToPgxUUID(id),
+		UserID:       database.ToPgxUUID(userID),
 	}
 
 	row, err := r.query.UpdateCategory(ctx, args)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if (errors.As(err, &pgErr)) && (pgErr.Code == "23505") {
+			// Duplicate name
+			return nil, domain.ErrConflict
+		}
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrNotFound
+		}
 		return nil, err
 	}
 
 	result := &domain.Category{
 		ID:           database.FromPgxUUID(row.ID),
+		UserID:       database.FromPgxUUID(row.UserID),
 		CategoryName: row.CategoryName,
 	}
 	return result, nil
 }
 
-func (r *categoryRepositoryImpl) DeleteCategory(ctx context.Context, id uuid.UUID) error {
-	if err := r.query.DeleteCategory(ctx, database.ToPgxUUID(id)); err != nil {
+func (r *categoryRepositoryImpl) DeleteCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+	args := sqlcgen.DeleteCategoryParams{
+		ID:     database.ToPgxUUID(id),
+		UserID: database.ToPgxUUID(userID),
+	}
+
+	rows, err := r.query.DeleteCategory(ctx, args)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if (errors.As(err, &pgErr)) && (pgErr.Code == "23503") {
+			// Remove used category
+			return domain.ErrConflict
+		}
 		return err
+	}
+	if rows == 0 {
+		// Not removing any category -> wrong ID / other user's category
+		return domain.ErrNotFound
 	}
 	return nil
 }
