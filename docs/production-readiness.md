@@ -134,7 +134,7 @@ Last reviewed: 2026-10-11
   - [ ] `go test -race ./...`
   - [ ] `buf lint`
   - [ ] `buf breaking --against main`
-  - [ ] `govulncheck`
+  - [ ] `govulncheck` (deferred, see section 5)
   - [ ] Generated-code drift check: `buf generate && sqlc generate && gqlgen generate && git diff --exit-code`
 - [ ] **Tests.**
   - [ ] Repository integration tests against real Postgres (testcontainers-go).
@@ -225,6 +225,9 @@ files into client repos by hand.
 
 - [ ] **Set method to clear `description`.** Omitting `description` in `UpdateExpense` keeps the current value
   (`COALESCE`), so there's no way to clear it. Add an explicit way, e.g. a dedicated RPC/mutation or a field mask.
+- [ ] **Enable `govulncheck` in CI before the first deploy.** It's commented out in
+  [`.github/workflows/ci.yaml`](../.github/workflows/ci.yaml) until a deployment target exists. Uncomment it, pin
+  the latest release, and fix any reported vulnerabilities before the service goes live.
 
 ## 6. Suggested order
 
