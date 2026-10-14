@@ -19,6 +19,11 @@ func WithPrincipal(ctx context.Context, p Principal) context.Context {
 	return context.WithValue(ctx, principalKey{}, p)
 }
 
+// WithTelegramUserID returns a copy of ctx carrying telegramID.
+func WithTelegramUserID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, "telegramID", id)
+}
+
 // UserIDFrom returns authenticated user's ID, or domain.ErrUnauthenticated (if missing principal)
 func UserIDFrom(ctx context.Context) (uuid.UUID, error) {
 	p, ok := ctx.Value(principalKey{}).(Principal)
@@ -26,4 +31,12 @@ func UserIDFrom(ctx context.Context) (uuid.UUID, error) {
 		return uuid.Nil, domain.ErrUnauthenticated
 	}
 	return p.UserID, nil
+}
+
+func TelegramUserIDFrom(ctx context.Context) (string, error) {
+	telegramID, ok := ctx.Value("telegramID").(string)
+	if !ok {
+		return "", domain.ErrUnauthenticated
+	}
+	return telegramID, nil
 }

@@ -40,6 +40,14 @@ func ToNullablePgxDate(val *time.Time) pgtype.Date {
 	return res
 }
 
+// Timestamp
+func ToPgxTimestamp(val time.Time) pgtype.Timestamptz {
+	return pgtype.Timestamptz{
+		Valid: true,
+		Time:  val,
+	}
+}
+
 // Numeric
 func FromPgxNumeric(val pgtype.Numeric) decimal.Decimal {
 	return decimal.NewFromBigInt(val.Int, val.Exp)

@@ -24,6 +24,7 @@ func TestToStatus(t *testing.T) {
 		{"unauthenticated", domain.ErrUnauthenticated, codes.Unauthenticated, "authentication required"},
 		{"forbidden", domain.ErrForbidden, codes.PermissionDenied, "get expense 1: permission denied"},
 		{"conflict", domain.ErrConflict, codes.AlreadyExists, "get expense 1: resource already exists"},
+		{"invalid input", domain.ErrInvalidInput, codes.InvalidArgument, "invalid argument"},
 		{"unknown error is hidden", errors.New(`pq: relation "app.expenses" does not exist`), codes.Internal, "internal error"},
 	}
 

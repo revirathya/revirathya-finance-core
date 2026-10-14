@@ -11,9 +11,12 @@ import (
 )
 
 type Querier interface {
+	ConsumeBindCode(ctx context.Context, codeHash string) (pgtype.UUID, error)
+	CreateBindCode(ctx context.Context, arg CreateBindCodeParams) error
 	CreateCategory(ctx context.Context, categoryName string) (AppCategory, error)
 	CreateExpense(ctx context.Context, arg CreateExpenseParams) (AppExpense, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (pgtype.UUID, error)
+	DeleteBindCodes(ctx context.Context, userID pgtype.UUID) error
 	DeleteCategory(ctx context.Context, id pgtype.UUID) error
 	DeleteExpense(ctx context.Context, id pgtype.UUID) error
 	GetCategoryByID(ctx context.Context, id pgtype.UUID) (GetCategoryByIDRow, error)
@@ -24,10 +27,12 @@ type Querier interface {
 	GetUserTelegramContextByTelegramID(ctx context.Context, telegramChatID *string) (GetUserTelegramContextByTelegramIDRow, error)
 	ListCategories(ctx context.Context) ([]ListCategoriesRow, error)
 	ListExpenses(ctx context.Context, arg ListExpensesParams) ([]ListExpensesRow, error)
+	UnbindTelegramBinding(ctx context.Context, userID pgtype.UUID) error
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (AppCategory, error)
 	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (AppExpense, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (pgtype.UUID, error)
 	UpdateUserTelegramContext(ctx context.Context, arg UpdateUserTelegramContextParams) (AppUserTelegramContext, error)
+	UpsertTelegramBinding(ctx context.Context, arg UpsertTelegramBindingParams) (pgtype.UUID, error)
 }
 
 var _ Querier = (*Queries)(nil)

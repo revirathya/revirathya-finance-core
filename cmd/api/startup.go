@@ -7,13 +7,17 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
+
 	gqlHdl "github.com/99designs/gqlgen/graphql/handler"
 	gqlSch "github.com/revirathya/revirathya-finance-core/gen/graphql"
 	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
 	gqlDlv "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/ratelimit"
 	ucAuth "github.com/revirathya/revirathya-finance-core/internal/usecase/auth"
 	ucCtg "github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 	ucExp "github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
+	ucTbc "github.com/revirathya/revirathya-finance-core/internal/usecase/telegrambindcode"
 	ucUsr "github.com/revirathya/revirathya-finance-core/internal/usecase/user"
 	ucUtel "github.com/revirathya/revirathya-finance-core/internal/usecase/usercontext"
 	"golang.org/x/sync/errgroup"
@@ -41,9 +45,10 @@ func setupGraphQLServer(
 	authUc *ucAuth.AuthUsecase,
 	ctgUc *ucCtg.CategoryUsecase,
 	expUc *ucExp.ExpenseUsecase,
+	tbcUc *ucTbc.TelegramBindCodeUsecase,
 	usrUc *ucUsr.UserUsecase,
 ) *http.Server {
-	resolver := gqlDlv.NewResolver(tokens, authUc, ctgUc, expUc, usrUc)
+	resolver := gqlDlv.NewResolver(tokens, authUc, ctgUc, expUc, tbcUc, usrUc)
 
 	gqlServer := gqlHdl.NewDefaultServer(gqlSch.NewExecutableSchema(
 		gqlSch.Config{
@@ -85,14 +90,31 @@ func setupGRPCServer(
 	apiKey string,
 	ctgUc *ucCtg.CategoryUsecase,
 	expUc *ucExp.ExpenseUsecase,
+	tbcUc *ucTbc.TelegramBindCodeUsecase,
 	utelUc *ucUtel.UserTelegramContextUsecase,
 ) (*grpc.Server, net.Listener, error) {
+	bindLimiter := ratelimit.NewLimiter(10, 5*time.Minute)
+
 	ctgHan := grpcDlv.NewCategoryHandler(ctgUc)
 	expHan := grpcDlv.NewExpenseHandler(expUc)
-	utelHan := grpcDlv.NewUserTelegramContextHandler(utelUc)
+	utelHan := grpcDlv.NewUserTelegramContextHandler(tbcUc, utelUc, bindLimiter)
+
+	lookup := func(ctx context.Context, telegramID string) (uuid.UUID, error) {
+		utel, err := utelUc.GetUserTelegramContextByTelegramID(ctx, telegramID)
+		if err != nil {
+			return uuid.Nil, err
+		}
+		return utel.UserID, nil
+	}
 
 	grpcServer := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(grpcAuth.APIKeyAuth(apiKey)),
+		grpc.ChainUnaryInterceptor(
+			grpcAuth.APIKeyAuth(apiKey),
+			grpcAuth.TelegramUser(
+				lookup,
+				grpcFincoreV1.UserTelegramContextService_BindTelegramAccount_FullMethodName,
+			),
+		),
 	)
 	grpcFincoreV1.RegisterCategoryServiceServer(grpcServer, ctgHan)
 	grpcFincoreV1.RegisterExpenseServiceServer(grpcServer, expHan)

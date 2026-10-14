@@ -26,6 +26,16 @@ type AppExpense struct {
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
+type AppTelegramBindCode struct {
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	CodeHash  string             `json:"code_hash"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	UsedAt    pgtype.Timestamptz `json:"used_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
 type AppUser struct {
 	ID        pgtype.UUID        `json:"id"`
 	FirstName string             `json:"first_name"`

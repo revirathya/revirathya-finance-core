@@ -44,6 +44,11 @@ func ErrorPresenter(ctx context.Context, err error) *gqlerror.Error {
 		gqlErr.Extensions = map[string]any{
 			"code": "CONFLICT",
 		}
+	case errors.Is(err, domain.ErrInvalidInput):
+		gqlErr.Message = "invalid argument"
+		gqlErr.Extensions = map[string]any{
+			"code": "BAD_USER_INPUT",
+		}
 	default:
 		gqlErr.Message = "internal error"
 		gqlErr.Extensions = map[string]any{"code": "INTERNAL"}
