@@ -19,5 +19,5 @@ extend type Query {
 extend type Mutation {
     createCategory(input: CreateCategoryInput!): Category
     updateCategory(id: ID!, patch: UpdateCategoryInput!): Category
-    deleteCategory(id: ID!): ID
+    deleteCategory(id: ID!): ID!
 }

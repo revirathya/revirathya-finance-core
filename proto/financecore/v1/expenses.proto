@@ -55,17 +55,14 @@ message ExpenseResponse {
 }
 
 message CreateExpenseRequest {
-    // ID of the user who owns the expense (UUID).
-    string user_id = 1;
-
     // Category ID (UUID). Must reference an existing category.
-    string category_id = 2;
+    string category_id = 1;
 
     // Transaction date (YYYY-MM-DD).
-    string transaction_dt = 3;
+    string transaction_dt = 2;
 
     // Free-text note about the expense.
-    optional string description = 4;
+    optional string description = 3;
 
     // Amount as a decimal string with up to 2 decimal places, e.g. "12500.50".
     string amount = 5;
@@ -92,9 +89,6 @@ message CreateExpenseResponse {
 }
 
 message ListExpensesRequest {
-    // ID of the user whose expenses to list (UUID).
-    string user_id = 1;
-
     // If set, only returns expenses on this date (YYYY-MM-DD).
     optional string transaction_dt = 2;
 }

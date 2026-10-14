@@ -12,16 +12,19 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
+	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/shopspring/decimal"
 )
 
 // CreateExpense is the resolver for the createExpense field.
 func (r *mutationResolver) CreateExpense(ctx context.Context, input model.CreateExpenseInput) (*model.Expense, error) {
-	uuidUserId, err := uuid.Parse(input.UserID)
+	// Get user from context
+	userID, err := appAuth.UserIDFrom(ctx)
 	if err != nil {
-		return nil, invalidInputError{fmt.Errorf("invalid user_id UUID format: %w", err)}
+		return nil, err
 	}
 
+	// Parse input
 	uuidCategoryId, err := uuid.Parse(input.CategoryID)
 	if err != nil {
 		return nil, invalidInputError{fmt.Errorf("invalid category_id UUID format: %w", err)}
@@ -37,9 +40,10 @@ func (r *mutationResolver) CreateExpense(ctx context.Context, input model.Create
 		return nil, invalidInputError{fmt.Errorf("invalid amount Decimal format: %w", err)}
 	}
 
-	result, err := r.expUc.CreateExpense(
+	// Create expense
+	expense, err := r.expUc.CreateExpense(
 		ctx,
-		uuidUserId,
+		userID,
 		uuidCategoryId,
 		tmTransactionDt,
 		input.Description,
@@ -50,17 +54,24 @@ func (r *mutationResolver) CreateExpense(ctx context.Context, input model.Create
 	}
 
 	response := &model.Expense{
-		ID:            result.ID.String(),
-		UserID:        result.UserID.String(),
-		TransactionDt: result.TransactionDt.Format("2006-01-02"),
-		Description:   result.Description,
-		Amount:        result.Amount.String(),
+		ID:            expense.ID.String(),
+		UserID:        expense.UserID.String(),
+		TransactionDt: expense.TransactionDt.Format("2006-01-02"),
+		Description:   expense.Description,
+		Amount:        expense.Amount.String(),
 	}
 	return response, nil
 }
 
 // UpdateExpense is the resolver for the updateExpense field.
 func (r *mutationResolver) UpdateExpense(ctx context.Context, id string, patch model.UpdateExpenseInput) (*model.Expense, error) {
+	// Get user from context
+	userID, err := appAuth.UserIDFrom(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse input
 	uuidId, err := uuid.Parse(id)
 	if err != nil {
 		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
@@ -81,9 +92,10 @@ func (r *mutationResolver) UpdateExpense(ctx context.Context, id string, patch m
 		return nil, invalidInputError{fmt.Errorf("invalid amount Decimal format: %w", err)}
 	}
 
-	result, err := r.expUc.UpdateExpense(
+	expense, err := r.expUc.UpdateExpense(
 		ctx,
 		uuidId,
+		userID,
 		uuidCategoryId,
 		tmTransactionDt,
 		patch.Description,
@@ -94,61 +106,77 @@ func (r *mutationResolver) UpdateExpense(ctx context.Context, id string, patch m
 	}
 
 	response := &model.Expense{
-		ID:            result.ID.String(),
-		UserID:        result.UserID.String(),
-		TransactionDt: result.TransactionDt.Format("2006-01-02"),
-		Description:   result.Description,
-		Amount:        result.Amount.String(),
+		ID:            expense.ID.String(),
+		UserID:        expense.UserID.String(),
+		TransactionDt: expense.TransactionDt.Format("2006-01-02"),
+		Description:   expense.Description,
+		Amount:        expense.Amount.String(),
 	}
 	return response, nil
 }
 
 // DeleteExpense is the resolver for the deleteExpense field.
-func (r *mutationResolver) DeleteExpense(ctx context.Context, id string) (*string, error) {
+func (r *mutationResolver) DeleteExpense(ctx context.Context, id string) (string, error) {
+	// Get user from context
+	userID, err := appAuth.UserIDFrom(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	// Parse input
 	uuidId, err := uuid.Parse(id)
 	if err != nil {
-		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
+		return "", invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
 	}
 
-	if err = r.expUc.DeleteExpense(ctx, uuidId); err != nil {
-		return nil, err
+	// Delete expense
+	if err = r.expUc.DeleteExpense(ctx, uuidId, userID); err != nil {
+		return "", err
 	}
-
-	response := &id
-	return response, nil
+	return id, nil
 }
 
 // Expense is the resolver for the expense field.
 func (r *queryResolver) Expense(ctx context.Context, id string) (*model.Expense, error) {
+	// Get user from context
+	userID, err := appAuth.UserIDFrom(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse input
 	uuidId, err := uuid.Parse(id)
 	if err != nil {
 		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
 	}
 
-	result, err := r.expUc.GetExpenseByID(ctx, uuidId)
+	// Get expense by ID
+	expense, err := r.expUc.GetExpenseByID(ctx, uuidId, userID)
 	if err != nil {
 		return nil, err
 	}
 
 	response := &model.Expense{
-		ID:            result.ID.String(),
-		UserID:        result.UserID.String(),
-		TransactionDt: result.TransactionDt.Format("2006-01-02"),
-		CategoryID:    result.CategoryID.String(),
-		CategoryName:  result.CategoryName,
-		Description:   result.Description,
-		Amount:        result.Amount.String(),
+		ID:            expense.ID.String(),
+		UserID:        expense.UserID.String(),
+		TransactionDt: expense.TransactionDt.Format("2006-01-02"),
+		CategoryID:    expense.CategoryID.String(),
+		CategoryName:  expense.CategoryName,
+		Description:   expense.Description,
+		Amount:        expense.Amount.String(),
 	}
 	return response, nil
 }
 
 // Expenses is the resolver for the expenses field.
-func (r *queryResolver) Expenses(ctx context.Context, userID string, transactionDt *string) ([]*model.Expense, error) {
-	uuidUserId, err := uuid.Parse(userID)
+func (r *queryResolver) Expenses(ctx context.Context, transactionDt *string) ([]*model.Expense, error) {
+	// Get user from context
+	userID, err := appAuth.UserIDFrom(ctx)
 	if err != nil {
-		return nil, invalidInputError{fmt.Errorf("invalid user_id UUID format: %w", err)}
+		return nil, err
 	}
 
+	// Parse input
 	var tmTransactionDtPtr *time.Time
 	if transactionDt != nil {
 		tmTransactionDt, err := time.Parse("2006-01-02", *transactionDt)
@@ -158,21 +186,22 @@ func (r *queryResolver) Expenses(ctx context.Context, userID string, transaction
 		tmTransactionDtPtr = &tmTransactionDt
 	}
 
-	results, err := r.expUc.ListExpenses(ctx, uuidUserId, tmTransactionDtPtr)
+	// List expenses
+	expenses, err := r.expUc.ListExpenses(ctx, userID, tmTransactionDtPtr)
 	if err != nil {
 		return nil, err
 	}
 
-	responses := make([]*model.Expense, 0, len(results))
-	for _, e := range results {
+	responses := make([]*model.Expense, 0, len(expenses))
+	for _, expense := range expenses {
 		responses = append(responses, &model.Expense{
-			ID:            e.ID.String(),
-			UserID:        e.UserID.String(),
-			TransactionDt: e.TransactionDt.Format("2006-01-02"),
-			CategoryID:    e.CategoryID.String(),
-			CategoryName:  e.CategoryName,
-			Description:   e.Description,
-			Amount:        e.Amount.String(),
+			ID:            expense.ID.String(),
+			UserID:        expense.UserID.String(),
+			TransactionDt: expense.TransactionDt.Format("2006-01-02"),
+			CategoryID:    expense.CategoryID.String(),
+			CategoryName:  expense.CategoryName,
+			Description:   expense.Description,
+			Amount:        expense.Amount.String(),
 		})
 	}
 	return responses, nil

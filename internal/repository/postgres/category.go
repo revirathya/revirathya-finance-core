@@ -122,7 +122,7 @@ func (r *categoryRepositoryImpl) DeleteCategory(ctx context.Context, id uuid.UUI
 		UserID: database.ToPgxUUID(userID),
 	}
 
-	rows, err := r.query.DeleteCategory(ctx, args)
+	rowCnt, err := r.query.DeleteCategory(ctx, args)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if (errors.As(err, &pgErr)) && (pgErr.Code == "23503") {
@@ -131,7 +131,7 @@ func (r *categoryRepositoryImpl) DeleteCategory(ctx context.Context, id uuid.UUI
 		}
 		return err
 	}
-	if rows == 0 {
+	if rowCnt == 0 {
 		// Not removing any category -> wrong ID / other user's category
 		return domain.ErrNotFound
 	}

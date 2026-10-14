@@ -10,32 +10,26 @@ service UserTelegramContextService {
     // Returns the Telegram context of a user, looked up by user ID.
     rpc GetUserTelegramContext (GetUserTelegramContextRequest) returns (GetUserTelegramContextResponse);
 
-    // Returns the Telegram context linked to a Telegram chat ID.
-    rpc GetUserTelegramContextByTelegramID (GetUserTelegramContextByTelegramIDRequest) returns (GetUserTelegramContextByTelegramIDResponse);
-
     // Updates a user's Telegram context and returns it. Only the fields that
     // are set are changed; omitted fields keep their current value.
     // telegram_chat_id cannot be changed through this RPC.
     rpc UpdateUserTelegramContext (UpdateUserTelegramContextRequest) returns (UpdateUserTelegramContextResponse);
 
     // Binds the calling Telegram account (from "x-telegram-user-id" metadata) to the
-// user who created the code in the Web Console.
-//
-// Errors:
-//   - INVALID_ARGUMENT: the code is malformed, unknown, expired or already used.
-//   - ALREADY_EXISTS: this Telegram account is already bound to another user.
-//   - RESOURCE_EXHAUSTED: too many attempts; try again later.
-rpc BindTelegramAccount (BindTelegramAccountRequest) returns (BindTelegramAccountResponse);
+    // user who created the code in the Web Console.
+    //
+    // Errors:
+    //   - INVALID_ARGUMENT: the code is malformed, unknown, expired or already used.
+    //   - ALREADY_EXISTS: this Telegram account is already bound to another user.
+    //   - RESOURCE_EXHAUSTED: too many attempts; try again later.
+    rpc BindTelegramAccount (BindTelegramAccountRequest) returns (BindTelegramAccountResponse);
 }
 
 // Field meanings shared by the messages below. The values of conversation,
 // state and the interaction IDs are defined by the bot; this service stores
 // them as-is (max 100 characters each).
 
-message GetUserTelegramContextRequest {
-    // User ID (UUID).
-    string user_id = 1;
-}
+message GetUserTelegramContextRequest {}
 
 message GetUserTelegramContextResponse {
     // Context ID (UUID).
@@ -60,49 +54,18 @@ message GetUserTelegramContextResponse {
     optional string interaction_message_id = 7;
 }
 
-message GetUserTelegramContextByTelegramIDRequest {
-    // Telegram chat ID to look up.
-    string telegram_chat_id = 1;
-}
-
-message GetUserTelegramContextByTelegramIDResponse {
-    // Context ID (UUID).
-    string id = 1;
-
-    // User ID (UUID).
-    string user_id = 2;
-
-    // Telegram chat ID linked to the user. Unique across users.
-    optional string telegram_chat_id = 3;
-
-    // Active bot conversation.
-    optional string conversation = 4;
-
-    // Current state within the conversation.
-    optional string state = 5;
-
-    // Chat ID of the message the bot is currently interacting with.
-    optional string interaction_chat_id = 6;
-
-    // ID of the message the bot is currently interacting with.
-    optional string interaction_message_id = 7;
-}
-
 message UpdateUserTelegramContextRequest {
-    // ID of the user whose context to update (UUID).
-    string user_id = 1;
-
     // Active bot conversation. If omitted, the current value is kept.
-    optional string conversation = 2;
+    optional string conversation = 1;
 
     // Current state within the conversation. If omitted, the current value is kept.
-    optional string state = 3;
+    optional string state = 2;
 
     // Chat ID of the message the bot is interacting with. If omitted, the current value is kept.
-    optional string interaction_chat_id = 4;
+    optional string interaction_chat_id = 3;
 
     // ID of the message the bot is interacting with. If omitted, the current value is kept.
-    optional string interaction_message_id = 5;
+    optional string interaction_message_id = 4;
 }
 
 message UpdateUserTelegramContextResponse {

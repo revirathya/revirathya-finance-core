@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
+	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
 	grpcErr "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/error"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
 	"github.com/shopspring/decimal"
@@ -27,11 +28,13 @@ func NewExpenseHandler(expUc *expense.ExpenseUsecase) *ExpenseHandler {
 }
 
 func (h *ExpenseHandler) CreateExpense(ctx context.Context, req *financecorev1.CreateExpenseRequest) (*financecorev1.CreateExpenseResponse, error) {
-	uuidUserId, err := uuid.Parse(req.UserId)
+	// Get user from context
+	userID, err := appAuth.UserIDFrom(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id UUID format: %v", err)
+		return nil, grpcErr.ToStatus("create expense", err)
 	}
 
+	// Parse input
 	uuidCategoryId, err := uuid.Parse(req.CategoryId)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid category_id UUID format: %v", err)
@@ -47,8 +50,9 @@ func (h *ExpenseHandler) CreateExpense(ctx context.Context, req *financecorev1.C
 		return nil, status.Errorf(codes.InvalidArgument, "invalid amount Decimal format: %v", err)
 	}
 
+	// Create expense
 	expense, err := h.expUc.CreateExpense(ctx,
-		uuidUserId,
+		userID,
 		uuidCategoryId,
 		tmTransactionDt,
 		req.Description,
@@ -70,12 +74,20 @@ func (h *ExpenseHandler) CreateExpense(ctx context.Context, req *financecorev1.C
 }
 
 func (h *ExpenseHandler) GetExpenseByID(ctx context.Context, req *financecorev1.GetExpenseByIDRequest) (*financecorev1.GetExpenseByIDResponse, error) {
+	// Get user from context
+	userID, err := appAuth.UserIDFrom(ctx)
+	if err != nil {
+		return nil, grpcErr.ToStatus("get expense by id", err)
+	}
+
+	// Parse input
 	uuidId, err := uuid.Parse(req.Id)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)
 	}
 
-	expense, err := h.expUc.GetExpenseByID(ctx, uuidId)
+	// Get expense by ID
+	expense, err := h.expUc.GetExpenseByID(ctx, uuidId, userID)
 	if err != nil {
 		return nil, grpcErr.ToStatus(fmt.Sprintf("get expense %s", uuidId.String()), err)
 	}
@@ -94,11 +106,13 @@ func (h *ExpenseHandler) GetExpenseByID(ctx context.Context, req *financecorev1.
 }
 
 func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.ListExpensesRequest) (*financecorev1.ListExpensesResponse, error) {
-	uuidUserID, err := uuid.Parse(req.UserId)
+	// Get user from context
+	userID, err := appAuth.UserIDFrom(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid user id UUID format: %v", err)
+		return nil, grpcErr.ToStatus("list expenses", err)
 	}
 
+	// Parse input
 	var ntmTransactionDt *time.Time
 	if req.TransactionDt != nil {
 		tmTransactionDt, err := time.Parse("2006-01-02", *req.TransactionDt)
@@ -108,7 +122,8 @@ func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.Li
 		ntmTransactionDt = &tmTransactionDt
 	}
 
-	expenses, err := h.expUc.ListExpenses(ctx, uuidUserID, ntmTransactionDt)
+	// List expenses
+	expenses, err := h.expUc.ListExpenses(ctx, userID, ntmTransactionDt)
 	if err != nil {
 		return nil, grpcErr.ToStatus("list expenses", err)
 	}
@@ -116,15 +131,15 @@ func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.Li
 	resp := &financecorev1.ListExpensesResponse{
 		Expenses: make([]*financecorev1.ExpenseResponse, 0, len(expenses)),
 	}
-	for _, e := range expenses {
+	for _, expense := range expenses {
 		resp.Expenses = append(resp.Expenses, &financecorev1.ExpenseResponse{
-			Id:            e.ID.String(),
-			UserId:        e.UserID.String(),
-			CategoryId:    e.CategoryID.String(),
-			CategoryName:  e.CategoryName,
-			TransactionDt: e.TransactionDt.Format("2006-01-02"),
-			Description:   e.Description,
-			Amount:        e.Amount.String(),
+			Id:            expense.ID.String(),
+			UserId:        expense.UserID.String(),
+			CategoryId:    expense.CategoryID.String(),
+			CategoryName:  expense.CategoryName,
+			TransactionDt: expense.TransactionDt.Format("2006-01-02"),
+			Description:   expense.Description,
+			Amount:        expense.Amount.String(),
 		})
 	}
 
@@ -132,6 +147,13 @@ func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.Li
 }
 
 func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.UpdateExpenseRequest) (*financecorev1.UpdateExpenseResponse, error) {
+	// Get user from context
+	userID, err := appAuth.UserIDFrom(ctx)
+	if err != nil {
+		return nil, grpcErr.ToStatus("update expense", err)
+	}
+
+	// Parse input
 	uuidId, err := uuid.Parse(req.Id)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)
@@ -152,9 +174,11 @@ func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.U
 		return nil, status.Errorf(codes.InvalidArgument, "invalid amount Decimal format: %v", err)
 	}
 
+	// Update expense
 	expense, err := h.expUc.UpdateExpense(
 		ctx,
 		uuidId,
+		userID,
 		uuidCategoryId,
 		tmTransactionDt,
 		req.Description,
@@ -177,12 +201,20 @@ func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.U
 }
 
 func (h *ExpenseHandler) DeleteExpense(ctx context.Context, req *financecorev1.DeleteExpenseRequest) (*financecorev1.DeleteExpenseResponse, error) {
+	// Get user from context
+	userID, err := appAuth.UserIDFrom(ctx)
+	if err != nil {
+		return nil, grpcErr.ToStatus("delete expense", err)
+	}
+
+	// Parse input
 	uuidId, err := uuid.Parse(req.Id)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)
 	}
 
-	if err := h.expUc.DeleteExpense(ctx, uuidId); err != nil {
+	// Delete expense
+	if err := h.expUc.DeleteExpense(ctx, uuidId, userID); err != nil {
 		return nil, grpcErr.ToStatus(fmt.Sprintf("delete expense %s", uuidId.String()), err)
 	}
 

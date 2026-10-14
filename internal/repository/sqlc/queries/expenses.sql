@@ -29,7 +29,8 @@ FROM
 INNER JOIN app.categories AS ctg
   ON exp.category_id = ctg.id
 WHERE
-  exp.id = sqlc.arg('id');
+  exp.id = sqlc.arg('id')
+  AND exp.user_id = sqlc.arg('user_id');
 
 -- name: ListExpenses :many
 SELECT
@@ -58,9 +59,11 @@ SET
   amount = COALESCE(sqlc.narg('amount'), amount)
 WHERE
   id = sqlc.arg('id')
+  AND user_id = sqlc.arg('user_id')
 RETURNING *;
 
--- name: DeleteExpense :exec
+-- name: DeleteExpense :execrows
 DELETE FROM app.expenses
 WHERE
-  id = sqlc.arg('id');
+  id = sqlc.arg('id')
+  AND user_id = sqlc.arg('user_id');

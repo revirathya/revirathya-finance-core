@@ -18,9 +18,9 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (pgtype.UUID, error)
 	DeleteBindCodes(ctx context.Context, userID pgtype.UUID) error
 	DeleteCategory(ctx context.Context, arg DeleteCategoryParams) (int64, error)
-	DeleteExpense(ctx context.Context, id pgtype.UUID) error
+	DeleteExpense(ctx context.Context, arg DeleteExpenseParams) (int64, error)
 	GetCategoryByID(ctx context.Context, arg GetCategoryByIDParams) (GetCategoryByIDRow, error)
-	GetExpenseByID(ctx context.Context, id pgtype.UUID) (GetExpenseByIDRow, error)
+	GetExpenseByID(ctx context.Context, arg GetExpenseByIDParams) (GetExpenseByIDRow, error)
 	GetUserByGoogleSub(ctx context.Context, googleSub *string) (GetUserByGoogleSubRow, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error)
 	GetUserTelegramContext(ctx context.Context, userID pgtype.UUID) (GetUserTelegramContextRow, error)

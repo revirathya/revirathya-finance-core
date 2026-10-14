@@ -58,23 +58,22 @@ func (r *mutationResolver) UpdateCategory(ctx context.Context, id string, patch 
 }
 
 // DeleteCategory is the resolver for the deleteCategory field.
-func (r *mutationResolver) DeleteCategory(ctx context.Context, id string) (*string, error) {
+func (r *mutationResolver) DeleteCategory(ctx context.Context, id string) (string, error) {
 	uuidID, err := uuid.Parse(id)
 	if err != nil {
-		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
+		return "", invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
 	}
 
 	userID, err := appAuth.UserIDFrom(ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	if err = r.ctgUc.DeleteCategory(ctx, uuidID, userID); err != nil {
-		return nil, err
+		return "", err
 	}
 
-	response := &id
-	return response, nil
+	return id, nil
 }
 
 // Category is the resolver for the category field.

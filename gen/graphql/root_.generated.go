@@ -69,7 +69,7 @@ type ComplexityRoot struct {
 		Categories func(childComplexity int) int
 		Category   func(childComplexity int, id string) int
 		Expense    func(childComplexity int, id string) int
-		Expenses   func(childComplexity int, userID string, transactionDt *string) int
+		Expenses   func(childComplexity int, transactionDt *string) int
 		Me         func(childComplexity int) int
 		Ok         func(childComplexity int) int
 	}
@@ -322,7 +322,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.Expenses(childComplexity, args["userId"].(string), args["transactionDt"].(*string)), true
+		return e.ComplexityRoot.Query.Expenses(childComplexity, args["transactionDt"].(*string)), true
 
 	case "Query.me":
 		if e.ComplexityRoot.Query.Me == nil {
@@ -490,7 +490,7 @@ extend type Query {
 extend type Mutation {
     createCategory(input: CreateCategoryInput!): Category
     updateCategory(id: ID!, patch: UpdateCategoryInput!): Category
-    deleteCategory(id: ID!): ID
+    deleteCategory(id: ID!): ID!
 }`, BuiltIn: false},
 	{Name: "../../graphql/schema/expense.graphql", Input: `type Expense {
     id: ID!
@@ -503,7 +503,6 @@ extend type Mutation {
 }
 
 input CreateExpenseInput {
-    userId: ID!
     transactionDt: String!
     categoryId: ID!
     description: String
@@ -519,13 +518,13 @@ input UpdateExpenseInput {
 
 extend type Query {
     expense(id: ID!): Expense
-    expenses(userId: ID!, transactionDt: String): [Expense!]!
+    expenses(transactionDt: String): [Expense!]!
 }
 
 extend type Mutation {
     createExpense(input: CreateExpenseInput!): Expense
     updateExpense(id: ID!, patch: UpdateExpenseInput!): Expense
-    deleteExpense(id: ID!): ID
+    deleteExpense(id: ID!): ID!
 }`, BuiltIn: false},
 	{Name: "../../graphql/schema/schema.graphql", Input: `type Query {
     ok: Boolean
