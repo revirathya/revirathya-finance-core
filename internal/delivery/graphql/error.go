@@ -29,6 +29,21 @@ func ErrorPresenter(ctx context.Context, err error) *gqlerror.Error {
 		gqlErr.Extensions = map[string]any{"code": "NOT_FOUND"}
 	case errors.As(err, &invalidInputError{}):
 		gqlErr.Extensions = map[string]any{"code": "BAD_USER_INPUT"}
+	case errors.Is(err, domain.ErrUnauthenticated):
+		gqlErr.Message = "authentication required"
+		gqlErr.Extensions = map[string]any{
+			"code": "UNAUTHENTICATED",
+		}
+	case errors.Is(err, domain.ErrForbidden):
+		gqlErr.Message = "permission denied"
+		gqlErr.Extensions = map[string]any{
+			"code": "FORBIDDEN",
+		}
+	case errors.Is(err, domain.ErrConflict):
+		gqlErr.Message = "resource already exists"
+		gqlErr.Extensions = map[string]any{
+			"code": "CONFLICT",
+		}
 	default:
 		gqlErr.Message = "internal error"
 		gqlErr.Extensions = map[string]any{"code": "INTERNAL"}

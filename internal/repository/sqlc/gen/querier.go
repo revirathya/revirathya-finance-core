@@ -13,10 +13,12 @@ import (
 type Querier interface {
 	CreateCategory(ctx context.Context, categoryName string) (AppCategory, error)
 	CreateExpense(ctx context.Context, arg CreateExpenseParams) (AppExpense, error)
+	CreateUser(ctx context.Context, arg CreateUserParams) (pgtype.UUID, error)
 	DeleteCategory(ctx context.Context, id pgtype.UUID) error
 	DeleteExpense(ctx context.Context, id pgtype.UUID) error
 	GetCategoryByID(ctx context.Context, id pgtype.UUID) (GetCategoryByIDRow, error)
 	GetExpenseByID(ctx context.Context, id pgtype.UUID) (GetExpenseByIDRow, error)
+	GetUserByGoogleSub(ctx context.Context, googleSub *string) (GetUserByGoogleSubRow, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error)
 	GetUserTelegramContext(ctx context.Context, userID pgtype.UUID) (GetUserTelegramContextRow, error)
 	GetUserTelegramContextByTelegramID(ctx context.Context, telegramChatID *string) (GetUserTelegramContextByTelegramIDRow, error)
@@ -24,6 +26,7 @@ type Querier interface {
 	ListExpenses(ctx context.Context, arg ListExpensesParams) ([]ListExpensesRow, error)
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (AppCategory, error)
 	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (AppExpense, error)
+	UpdateUser(ctx context.Context, arg UpdateUserParams) (pgtype.UUID, error)
 	UpdateUserTelegramContext(ctx context.Context, arg UpdateUserTelegramContextParams) (AppUserTelegramContext, error)
 }
 

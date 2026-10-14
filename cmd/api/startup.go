@@ -9,7 +9,9 @@ import (
 
 	gqlHdl "github.com/99designs/gqlgen/graphql/handler"
 	gqlSch "github.com/revirathya/revirathya-finance-core/gen/graphql"
+	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
 	gqlDlv "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql"
+	ucAuth "github.com/revirathya/revirathya-finance-core/internal/usecase/auth"
 	ucCtg "github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 	ucExp "github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
 	ucUsr "github.com/revirathya/revirathya-finance-core/internal/usecase/user"
@@ -18,6 +20,7 @@ import (
 
 	grpcFincoreV1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
 	grpcDlv "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
+	grpcAuth "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -34,11 +37,13 @@ const (
 func setupGraphQLServer(
 	port string,
 	allowedOrigins []string,
+	tokens *appAuth.TokenManager,
+	authUc *ucAuth.AuthUsecase,
 	ctgUc *ucCtg.CategoryUsecase,
 	expUc *ucExp.ExpenseUsecase,
 	usrUc *ucUsr.UserUsecase,
 ) *http.Server {
-	resolver := gqlDlv.NewResolver(ctgUc, expUc, usrUc)
+	resolver := gqlDlv.NewResolver(tokens, authUc, ctgUc, expUc, usrUc)
 
 	gqlServer := gqlHdl.NewDefaultServer(gqlSch.NewExecutableSchema(
 		gqlSch.Config{
@@ -51,11 +56,14 @@ func setupGraphQLServer(
 	mux := http.NewServeMux()
 	mux.Handle(
 		"/graphql",
-		withCORS(allowedOrigins,
-			http.TimeoutHandler(
-				gqlServer,
-				handlerTimeout,
-				`{"errors":[{"message":"request timeout"}]}`,
+		withCORS(
+			allowedOrigins,
+			gqlDlv.WithAuth(tokens,
+				http.TimeoutHandler(
+					gqlServer,
+					handlerTimeout,
+					`{"errors":[{"message":"request timeout"}]}`,
+				),
 			),
 		),
 	)
@@ -71,12 +79,21 @@ func setupGraphQLServer(
 	return httpServer
 }
 
-func setupGRPCServer(port string, enableReflection bool, ctgUc *ucCtg.CategoryUsecase, expUc *ucExp.ExpenseUsecase, utelUc *ucUtel.UserTelegramContextUsecase) (*grpc.Server, net.Listener, error) {
+func setupGRPCServer(
+	port string,
+	enableReflection bool,
+	apiKey string,
+	ctgUc *ucCtg.CategoryUsecase,
+	expUc *ucExp.ExpenseUsecase,
+	utelUc *ucUtel.UserTelegramContextUsecase,
+) (*grpc.Server, net.Listener, error) {
 	ctgHan := grpcDlv.NewCategoryHandler(ctgUc)
 	expHan := grpcDlv.NewExpenseHandler(expUc)
 	utelHan := grpcDlv.NewUserTelegramContextHandler(utelUc)
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(grpcAuth.APIKeyAuth(apiKey)),
+	)
 	grpcFincoreV1.RegisterCategoryServiceServer(grpcServer, ctgHan)
 	grpcFincoreV1.RegisterExpenseServiceServer(grpcServer, expHan)
 	grpcFincoreV1.RegisterUserTelegramContextServiceServer(grpcServer, utelHan)

@@ -33,6 +33,7 @@ type AppUser struct {
 	Email     string             `json:"email"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	GoogleSub *string            `json:"google_sub"`
 }
 
 type AppUserTelegramContext struct {

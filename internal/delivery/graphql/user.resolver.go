@@ -8,29 +8,89 @@ package graphql
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
-	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
+	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
 )
 
-// User is the resolver for the user field.
-func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error) {
-	uuidId, err := uuid.Parse(id)
+// LoginWithGoogle is the resolver for the loginWithGoogle field.
+func (r *mutationResolver) LoginWithGoogle(ctx context.Context, idToken string) (*model.AuthPayload, error) {
+	user, err := r.authUc.LoginWithGoogle(ctx, idToken)
 	if err != nil {
-		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
+		return nil, err
 	}
 
-	result, err := r.usrUc.GetUserByID(ctx, uuidId)
+	token, expiresAt, err := r.tokens.Issue(user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &model.AuthPayload{
+		Token:     token,
+		ExpiresAt: expiresAt.Format(time.RFC3339),
+		User: &model.User{
+			ID:             user.ID.String(),
+			FirstName:      user.FirstName,
+			LastName:       user.LastName,
+			Email:          user.Email,
+			TelegramChatID: user.TelegramChatID,
+		},
+	}
+	return response, nil
+}
+
+// UpdateUser is the resolver for the updateUser field.
+func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUserInput) (*model.User, error) {
+	userID, err := appAuth.UserIDFrom(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	firstName := strings.TrimSpace(input.FirstName)
+	if firstName == "" {
+		return nil, invalidInputError{fmt.Errorf("first_name is required")}
+	}
+
+	lastName := input.LastName
+	if (lastName != nil) && (*lastName == "") {
+		lastName = nil
+	}
+
+	user, err := r.usrUc.UpdateUser(ctx, userID, firstName, lastName)
 	if err != nil {
 		return nil, err
 	}
 
 	response := &model.User{
-		ID:             result.ID.String(),
-		FirstName:      result.FirstName,
-		LastName:       result.LastName,
-		Email:          result.Email,
-		TelegramChatID: result.TelegramChatID,
+		ID:             user.ID.String(),
+		FirstName:      user.FirstName,
+		LastName:       user.LastName,
+		Email:          user.Email,
+		TelegramChatID: user.TelegramChatID,
+	}
+	return response, nil
+}
+
+// Me is the resolver for the me field.
+func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
+	userID, err := appAuth.UserIDFrom(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := r.usrUc.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &model.User{
+		ID:             user.ID.String(),
+		FirstName:      user.FirstName,
+		LastName:       user.LastName,
+		Email:          user.Email,
+		TelegramChatID: user.TelegramChatID,
 	}
 	return response, nil
 }

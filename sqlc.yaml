@@ -3,6 +3,7 @@ sql:
   - engine: "postgresql"
     schema:
       - "migrations/000001_init_schema.up.sql"
+      - "migrations/000002_add_user_auth.up.sql"
     queries: "internal/repository/sqlc/queries"
     gen:
       go:

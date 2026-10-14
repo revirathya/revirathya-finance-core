@@ -1,5 +1,5 @@
 # ----- Builder -----
-FROM golang:1.25-bookworm AS builder
+FROM golang:1.26-bookworm AS builder
 
 # Install gRPC & GraphQL tool
 RUN go install github.com/bufbuild/buf/cmd/buf@v1.72.0 && \

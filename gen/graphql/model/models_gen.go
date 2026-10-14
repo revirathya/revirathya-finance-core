@@ -2,6 +2,12 @@
 
 package model
 
+type AuthPayload struct {
+	Token     string `json:"token"`
+	ExpiresAt string `json:"expiresAt"`
+	User      *User  `json:"user"`
+}
+
 type Category struct {
 	ID           string `json:"id"`
 	CategoryName string `json:"categoryName"`
@@ -44,6 +50,11 @@ type UpdateExpenseInput struct {
 	CategoryID    string  `json:"categoryId"`
 	Description   *string `json:"description,omitempty"`
 	Amount        string  `json:"amount"`
+}
+
+type UpdateUserInput struct {
+	FirstName string  `json:"firstName"`
+	LastName  *string `json:"lastName,omitempty"`
 }
 
 type User struct {

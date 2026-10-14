@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
+	grpcErr "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/error"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
 	"github.com/shopspring/decimal"
 )
@@ -54,7 +55,7 @@ func (h *ExpenseHandler) CreateExpense(ctx context.Context, req *financecorev1.C
 		decAmount,
 	)
 	if err != nil {
-		return nil, toStatus("create expense", err)
+		return nil, grpcErr.ToStatus("create expense", err)
 	}
 
 	resp := &financecorev1.CreateExpenseResponse{
@@ -76,7 +77,7 @@ func (h *ExpenseHandler) GetExpenseByID(ctx context.Context, req *financecorev1.
 
 	expense, err := h.expUc.GetExpenseByID(ctx, uuidId)
 	if err != nil {
-		return nil, toStatus(fmt.Sprintf("get expense %s", uuidId.String()), err)
+		return nil, grpcErr.ToStatus(fmt.Sprintf("get expense %s", uuidId.String()), err)
 	}
 
 	resp := &financecorev1.GetExpenseByIDResponse{
@@ -109,7 +110,7 @@ func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.Li
 
 	expenses, err := h.expUc.ListExpenses(ctx, uuidUserID, ntmTransactionDt)
 	if err != nil {
-		return nil, toStatus("list expenses", err)
+		return nil, grpcErr.ToStatus("list expenses", err)
 	}
 
 	resp := &financecorev1.ListExpensesResponse{
@@ -160,7 +161,7 @@ func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.U
 		decAmount,
 	)
 	if err != nil {
-		return nil, toStatus(fmt.Sprintf("update expense %s", uuidId.String()), err)
+		return nil, grpcErr.ToStatus(fmt.Sprintf("update expense %s", uuidId.String()), err)
 	}
 
 	resp := &financecorev1.UpdateExpenseResponse{
@@ -182,7 +183,7 @@ func (h *ExpenseHandler) DeleteExpense(ctx context.Context, req *financecorev1.D
 	}
 
 	if err := h.expUc.DeleteExpense(ctx, uuidId); err != nil {
-		return nil, toStatus(fmt.Sprintf("delete expense %s", uuidId.String()), err)
+		return nil, grpcErr.ToStatus(fmt.Sprintf("delete expense %s", uuidId.String()), err)
 	}
 
 	return &financecorev1.DeleteExpenseResponse{}, nil

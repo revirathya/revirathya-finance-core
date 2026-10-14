@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
+	grpcErr "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/error"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/category"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -26,7 +26,7 @@ func NewCategoryHandler(ctgUc *category.CategoryUsecase) *CategoryHandler {
 func (h *CategoryHandler) ListCategories(ctx context.Context, req *financecorev1.ListCategoriesRequest) (*financecorev1.ListCategoriesResponse, error) {
 	categories, err := h.ctgUc.ListCategories(ctx)
 	if err != nil {
-		return nil, toStatus("list categories", err)
+		return nil, grpcErr.ToStatus("list categories", err)
 	}
 
 	resp := &financecorev1.ListCategoriesResponse{
@@ -50,7 +50,7 @@ func (h *CategoryHandler) GetCategoryByID(ctx context.Context, req *financecorev
 
 	category, err := h.ctgUc.GetCategoryByID(ctx, uuidId)
 	if err != nil {
-		return nil, toStatus(fmt.Sprintf("get category by id %s", uuidId.String()), err)
+		return nil, grpcErr.ToStatus(fmt.Sprintf("get category by id %s", uuidId.String()), err)
 	}
 
 	response := &financecorev1.GetCategoryByIDResponse{

@@ -9,9 +9,12 @@ import (
 
 	"github.com/revirathya/revirathya-finance-core/internal/config"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/google"
 
 	pgRepo "github.com/revirathya/revirathya-finance-core/internal/repository/postgres"
 
+	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
+	ucAuth "github.com/revirathya/revirathya-finance-core/internal/usecase/auth"
 	ucCtg "github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 	ucExp "github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
 	ucUsr "github.com/revirathya/revirathya-finance-core/internal/usecase/user"
@@ -48,18 +51,38 @@ func main() {
 	usrRepo := pgRepo.NewUserRepositoryImpl(pool)
 	utelRepo := pgRepo.NewUserTelegramContextRepositoryImpl(pool)
 
+	// Setup Auth service
+	verifier := google.NewGoogleVerifier(cfg.GoogleClientID)
+	tokens := appAuth.NewTokenManager(cfg.JwtSecret, cfg.JwtTtl)
+
 	// Gen Usecase
 	ctgUc := ucCtg.NewCategoryUsecase(ctgRepo)
 	expUc := ucExp.NewExpenseUsecase(expRepo)
 	usrUc := ucUsr.NewUserUsecase(usrRepo)
 	utelUc := ucUtel.NewUserTelegramContextUsecase(utelRepo)
+	authUc := ucAuth.NewAuthUsecase(verifier, usrRepo)
 
 	// Setup servers
-	grpcServer, lis, err := setupGRPCServer(cfg.GRPCPort, cfg.EnableGRPCReflection, ctgUc, expUc, utelUc)
+	grpcServer, lis, err := setupGRPCServer(
+		cfg.GrpcPort,
+		cfg.EnableGRPCReflection,
+		cfg.GrpcApiKey,
+		ctgUc,
+		expUc,
+		utelUc,
+	)
 	if err != nil {
 		panic(err)
 	}
-	gqlServer := setupGraphQLServer(cfg.GQLPort, cfg.AllowedOrigins, ctgUc, expUc, usrUc)
+	gqlServer := setupGraphQLServer(
+		cfg.GqlPort,
+		cfg.AllowedOrigins,
+		tokens,
+		authUc,
+		ctgUc,
+		expUc,
+		usrUc,
+	)
 
 	g := setupServers(lis, ctx, grpcServer, gqlServer)
 	if err = g.Wait(); err != nil {

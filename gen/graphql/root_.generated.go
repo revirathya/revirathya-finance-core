@@ -30,6 +30,12 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	AuthPayload struct {
+		ExpiresAt func(childComplexity int) int
+		Token     func(childComplexity int) int
+		User      func(childComplexity int) int
+	}
+
 	Category struct {
 		CategoryName func(childComplexity int) int
 		ID           func(childComplexity int) int
@@ -46,13 +52,15 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CreateCategory func(childComplexity int, input model.CreateCategoryInput) int
-		CreateExpense  func(childComplexity int, input model.CreateExpenseInput) int
-		DeleteCategory func(childComplexity int, id string) int
-		DeleteExpense  func(childComplexity int, id string) int
-		Ok             func(childComplexity int) int
-		UpdateCategory func(childComplexity int, id string, patch model.UpdateCategoryInput) int
-		UpdateExpense  func(childComplexity int, id string, patch model.UpdateExpenseInput) int
+		CreateCategory  func(childComplexity int, input model.CreateCategoryInput) int
+		CreateExpense   func(childComplexity int, input model.CreateExpenseInput) int
+		DeleteCategory  func(childComplexity int, id string) int
+		DeleteExpense   func(childComplexity int, id string) int
+		LoginWithGoogle func(childComplexity int, idToken string) int
+		Ok              func(childComplexity int) int
+		UpdateCategory  func(childComplexity int, id string, patch model.UpdateCategoryInput) int
+		UpdateExpense   func(childComplexity int, id string, patch model.UpdateExpenseInput) int
+		UpdateUser      func(childComplexity int, input model.UpdateUserInput) int
 	}
 
 	Query struct {
@@ -60,8 +68,8 @@ type ComplexityRoot struct {
 		Category   func(childComplexity int, id string) int
 		Expense    func(childComplexity int, id string) int
 		Expenses   func(childComplexity int, userID string, transactionDt *string) int
+		Me         func(childComplexity int) int
 		Ok         func(childComplexity int) int
-		User       func(childComplexity int, id string) int
 	}
 
 	User struct {
@@ -86,6 +94,25 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 	ec := newExecutionContext(nil, e, nil)
 	_ = ec
 	switch typeName + "." + field {
+
+	case "AuthPayload.expiresAt":
+		if e.ComplexityRoot.AuthPayload.ExpiresAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AuthPayload.ExpiresAt(childComplexity), true
+	case "AuthPayload.token":
+		if e.ComplexityRoot.AuthPayload.Token == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AuthPayload.Token(childComplexity), true
+	case "AuthPayload.user":
+		if e.ComplexityRoot.AuthPayload.User == nil {
+			break
+		}
+
+		return e.ComplexityRoot.AuthPayload.User(childComplexity), true
 
 	case "Category.categoryName":
 		if e.ComplexityRoot.Category.CategoryName == nil {
@@ -187,6 +214,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.DeleteExpense(childComplexity, args["id"].(string)), true
+	case "Mutation.loginWithGoogle":
+		if e.ComplexityRoot.Mutation.LoginWithGoogle == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_loginWithGoogle_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.LoginWithGoogle(childComplexity, args["idToken"].(string)), true
 	case "Mutation.ok":
 		if e.ComplexityRoot.Mutation.Ok == nil {
 			break
@@ -215,6 +253,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.UpdateExpense(childComplexity, args["id"].(string), args["patch"].(model.UpdateExpenseInput)), true
+	case "Mutation.updateUser":
+		if e.ComplexityRoot.Mutation.UpdateUser == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateUser_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.UpdateUser(childComplexity, args["input"].(model.UpdateUserInput)), true
 
 	case "Query.categories":
 		if e.ComplexityRoot.Query.Categories == nil {
@@ -256,23 +305,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Query.Expenses(childComplexity, args["userId"].(string), args["transactionDt"].(*string)), true
 
+	case "Query.me":
+		if e.ComplexityRoot.Query.Me == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.Me(childComplexity), true
 	case "Query.ok":
 		if e.ComplexityRoot.Query.Ok == nil {
 			break
 		}
 
 		return e.ComplexityRoot.Query.Ok(childComplexity), true
-	case "Query.user":
-		if e.ComplexityRoot.Query.User == nil {
-			break
-		}
-
-		args, err := ec.field_Query_user_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.Query.User(childComplexity, args["id"].(string)), true
 
 	case "User.email":
 		if e.ComplexityRoot.User.Email == nil {
@@ -317,6 +361,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCreateExpenseInput,
 		ec.unmarshalInputUpdateCategoryInput,
 		ec.unmarshalInputUpdateExpenseInput,
+		ec.unmarshalInputUpdateUserInput,
 	)
 	first := true
 
@@ -465,15 +510,44 @@ type Mutation {
     telegramChatId: String
 }
 
+type AuthPayload {
+    token: String!
+    expiresAt: String! # REF 3339
+    user: User!
+}
+
+input UpdateUserInput {
+    firstName: String!
+    lastName: String
+}
+
 extend type Query {
-    user(id: ID!): User
-}`, BuiltIn: false},
+    me: User
+}
+
+extend type Mutation {
+    loginWithGoogle(idToken: String!): AuthPayload!
+    updateUser(input: UpdateUserInput!): User!
+}
+`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
 // childFields_* functions provide shared child field context lookups.
 // Each function is generated once per unique object type, deduplicating the
 // switch statements that were previously inlined in every fieldContext_* function.
+
+func (ec *executionContext) childFields_AuthPayload(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "token":
+		return ec.fieldContext_AuthPayload_token(ctx, field)
+	case "expiresAt":
+		return ec.fieldContext_AuthPayload_expiresAt(ctx, field)
+	case "user":
+		return ec.fieldContext_AuthPayload_user(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type AuthPayload", field.Name)
+}
 
 func (ec *executionContext) childFields_Category(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {

@@ -1,6 +1,8 @@
 package graphql
 
 import (
+	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
+	ucAuth "github.com/revirathya/revirathya-finance-core/internal/usecase/auth"
 	ucCtg "github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 	ucExp "github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
 	ucUsr "github.com/revirathya/revirathya-finance-core/internal/usecase/user"
@@ -12,15 +14,25 @@ import (
 // here.
 
 type Resolver struct {
-	ctgUc *ucCtg.CategoryUsecase
-	expUc *ucExp.ExpenseUsecase
-	usrUc *ucUsr.UserUsecase
+	tokens *appAuth.TokenManager
+	authUc *ucAuth.AuthUsecase
+	ctgUc  *ucCtg.CategoryUsecase
+	expUc  *ucExp.ExpenseUsecase
+	usrUc  *ucUsr.UserUsecase
 }
 
-func NewResolver(ctgUc *ucCtg.CategoryUsecase, expUc *ucExp.ExpenseUsecase, usrUc *ucUsr.UserUsecase) *Resolver {
+func NewResolver(
+	tokens *appAuth.TokenManager,
+	authUc *ucAuth.AuthUsecase,
+	ctgUc *ucCtg.CategoryUsecase,
+	expUc *ucExp.ExpenseUsecase,
+	usrUc *ucUsr.UserUsecase,
+) *Resolver {
 	return &Resolver{
-		ctgUc: ctgUc,
-		expUc: expUc,
-		usrUc: usrUc,
+		tokens: tokens,
+		authUc: authUc,
+		ctgUc:  ctgUc,
+		expUc:  expUc,
+		usrUc:  usrUc,
 	}
 }

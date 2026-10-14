@@ -11,6 +11,79 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createUser = `-- name: CreateUser :one
+INSERT INTO app.users (
+  first_name,
+  last_name,
+  email,
+  google_sub
+)
+VALUES (
+  $1,
+  $2,
+  $3,
+  $4
+)
+RETURNING id
+`
+
+type CreateUserParams struct {
+	FirstName string  `json:"first_name"`
+	LastName  *string `json:"last_name"`
+	Email     string  `json:"email"`
+	GoogleSub *string `json:"google_sub"`
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, createUser,
+		arg.FirstName,
+		arg.LastName,
+		arg.Email,
+		arg.GoogleSub,
+	)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const getUserByGoogleSub = `-- name: GetUserByGoogleSub :one
+SELECT
+  usr.id,
+  usr.first_name,
+  usr.last_name,
+  usr.email,
+  utel.telegram_chat_id
+FROM
+  app.users AS usr
+LEFT JOIN
+  app.user_telegram_contexts AS utel
+  ON
+    usr.id = utel.user_id
+WHERE
+  usr.google_sub = $1
+`
+
+type GetUserByGoogleSubRow struct {
+	ID             pgtype.UUID `json:"id"`
+	FirstName      string      `json:"first_name"`
+	LastName       *string     `json:"last_name"`
+	Email          string      `json:"email"`
+	TelegramChatID *string     `json:"telegram_chat_id"`
+}
+
+func (q *Queries) GetUserByGoogleSub(ctx context.Context, googleSub *string) (GetUserByGoogleSubRow, error) {
+	row := q.db.QueryRow(ctx, getUserByGoogleSub, googleSub)
+	var i GetUserByGoogleSubRow
+	err := row.Scan(
+		&i.ID,
+		&i.FirstName,
+		&i.LastName,
+		&i.Email,
+		&i.TelegramChatID,
+	)
+	return i, err
+}
+
 const getUserByID = `-- name: GetUserByID :one
 SELECT
   usr.id,
@@ -20,7 +93,7 @@ SELECT
   utel.telegram_chat_id
 FROM
   app.users AS usr
-INNER JOIN
+LEFT JOIN
   app.user_telegram_contexts AS utel
   ON
     usr.id = utel.user_id
@@ -47,4 +120,27 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDR
 		&i.TelegramChatID,
 	)
 	return i, err
+}
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE app.users
+SET
+  first_name = $1,
+  last_name = $2
+WHERE
+  id = $3
+RETURNING id
+`
+
+type UpdateUserParams struct {
+	FirstName string      `json:"first_name"`
+	LastName  *string     `json:"last_name"`
+	ID        pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, updateUser, arg.FirstName, arg.LastName, arg.ID)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
 }

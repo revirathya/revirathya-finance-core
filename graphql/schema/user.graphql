@@ -6,6 +6,22 @@ type User {
     telegramChatId: String
 }
 
+type AuthPayload {
+    token: String!
+    expiresAt: String! # REF 3339
+    user: User!
+}
+
+input UpdateUserInput {
+    firstName: String!
+    lastName: String
+}
+
 extend type Query {
-    user(id: ID!): User
+    me: User
+}
+
+extend type Mutation {
+    loginWithGoogle(idToken: String!): AuthPayload!
+    updateUser(input: UpdateUserInput!): User!
 }

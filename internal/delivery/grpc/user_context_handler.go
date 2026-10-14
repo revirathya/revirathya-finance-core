@@ -6,7 +6,9 @@ import (
 
 	"github.com/google/uuid"
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
+	grpcErr "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/error"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/usercontext"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -30,7 +32,7 @@ func (h *UserTelegramContextHandler) GetUserTelegramContext(ctx context.Context,
 
 	user_context, err := h.utelUc.GetUserTelegramContext(ctx, uuidUserID)
 	if err != nil {
-		return nil, toStatus(fmt.Sprintf("get user telegram context %s", uuidUserID.String()), err)
+		return nil, grpcErr.ToStatus(fmt.Sprintf("get user telegram context %s", uuidUserID.String()), err)
 	}
 
 	resp := &financecorev1.GetUserTelegramContextResponse{
@@ -48,7 +50,7 @@ func (h *UserTelegramContextHandler) GetUserTelegramContext(ctx context.Context,
 func (h *UserTelegramContextHandler) GetUserTelegramContextByTelegramID(ctx context.Context, req *financecorev1.GetUserTelegramContextByTelegramIDRequest) (*financecorev1.GetUserTelegramContextByTelegramIDResponse, error) {
 	user_context, err := h.utelUc.GetUserTelegramContextByTelegramID(ctx, req.TelegramChatId)
 	if err != nil {
-		return nil, toStatus(fmt.Sprintf("get user telegram context by telegram id %s", req.TelegramChatId), err)
+		return nil, grpcErr.ToStatus(fmt.Sprintf("get user telegram context by telegram id %s", req.TelegramChatId), err)
 	}
 
 	resp := &financecorev1.GetUserTelegramContextByTelegramIDResponse{
@@ -78,7 +80,7 @@ func (h *UserTelegramContextHandler) UpdateUserTelegramContext(ctx context.Conte
 		req.InteractionMessageId,
 	)
 	if err != nil {
-		return nil, toStatus(fmt.Sprintf("update user telegram context %s", uuidUserID.String()), err)
+		return nil, grpcErr.ToStatus(fmt.Sprintf("update user telegram context %s", uuidUserID.String()), err)
 	}
 
 	resp := &financecorev1.UpdateUserTelegramContextResponse{
