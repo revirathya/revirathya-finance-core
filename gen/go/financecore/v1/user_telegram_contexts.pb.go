@@ -22,9 +22,7 @@ const (
 )
 
 type GetUserTelegramContextRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// User ID (UUID).
-	UserId        string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -57,13 +55,6 @@ func (x *GetUserTelegramContextRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use GetUserTelegramContextRequest.ProtoReflect.Descriptor instead.
 func (*GetUserTelegramContextRequest) Descriptor() ([]byte, []int) {
 	return file_financecore_v1_user_telegram_contexts_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *GetUserTelegramContextRequest) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
 }
 
 type GetUserTelegramContextResponse struct {
@@ -165,169 +156,23 @@ func (x *GetUserTelegramContextResponse) GetInteractionMessageId() string {
 	return ""
 }
 
-type GetUserTelegramContextByTelegramIDRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Telegram chat ID to look up.
-	TelegramChatId string `protobuf:"bytes,1,opt,name=telegram_chat_id,json=telegramChatId,proto3" json:"telegram_chat_id,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *GetUserTelegramContextByTelegramIDRequest) Reset() {
-	*x = GetUserTelegramContextByTelegramIDRequest{}
-	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetUserTelegramContextByTelegramIDRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetUserTelegramContextByTelegramIDRequest) ProtoMessage() {}
-
-func (x *GetUserTelegramContextByTelegramIDRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetUserTelegramContextByTelegramIDRequest.ProtoReflect.Descriptor instead.
-func (*GetUserTelegramContextByTelegramIDRequest) Descriptor() ([]byte, []int) {
-	return file_financecore_v1_user_telegram_contexts_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *GetUserTelegramContextByTelegramIDRequest) GetTelegramChatId() string {
-	if x != nil {
-		return x.TelegramChatId
-	}
-	return ""
-}
-
-type GetUserTelegramContextByTelegramIDResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Context ID (UUID).
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// User ID (UUID).
-	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// Telegram chat ID linked to the user. Unique across users.
-	TelegramChatId *string `protobuf:"bytes,3,opt,name=telegram_chat_id,json=telegramChatId,proto3,oneof" json:"telegram_chat_id,omitempty"`
-	// Active bot conversation.
-	Conversation *string `protobuf:"bytes,4,opt,name=conversation,proto3,oneof" json:"conversation,omitempty"`
-	// Current state within the conversation.
-	State *string `protobuf:"bytes,5,opt,name=state,proto3,oneof" json:"state,omitempty"`
-	// Chat ID of the message the bot is currently interacting with.
-	InteractionChatId *string `protobuf:"bytes,6,opt,name=interaction_chat_id,json=interactionChatId,proto3,oneof" json:"interaction_chat_id,omitempty"`
-	// ID of the message the bot is currently interacting with.
-	InteractionMessageId *string `protobuf:"bytes,7,opt,name=interaction_message_id,json=interactionMessageId,proto3,oneof" json:"interaction_message_id,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
-}
-
-func (x *GetUserTelegramContextByTelegramIDResponse) Reset() {
-	*x = GetUserTelegramContextByTelegramIDResponse{}
-	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetUserTelegramContextByTelegramIDResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetUserTelegramContextByTelegramIDResponse) ProtoMessage() {}
-
-func (x *GetUserTelegramContextByTelegramIDResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetUserTelegramContextByTelegramIDResponse.ProtoReflect.Descriptor instead.
-func (*GetUserTelegramContextByTelegramIDResponse) Descriptor() ([]byte, []int) {
-	return file_financecore_v1_user_telegram_contexts_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *GetUserTelegramContextByTelegramIDResponse) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *GetUserTelegramContextByTelegramIDResponse) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
-}
-
-func (x *GetUserTelegramContextByTelegramIDResponse) GetTelegramChatId() string {
-	if x != nil && x.TelegramChatId != nil {
-		return *x.TelegramChatId
-	}
-	return ""
-}
-
-func (x *GetUserTelegramContextByTelegramIDResponse) GetConversation() string {
-	if x != nil && x.Conversation != nil {
-		return *x.Conversation
-	}
-	return ""
-}
-
-func (x *GetUserTelegramContextByTelegramIDResponse) GetState() string {
-	if x != nil && x.State != nil {
-		return *x.State
-	}
-	return ""
-}
-
-func (x *GetUserTelegramContextByTelegramIDResponse) GetInteractionChatId() string {
-	if x != nil && x.InteractionChatId != nil {
-		return *x.InteractionChatId
-	}
-	return ""
-}
-
-func (x *GetUserTelegramContextByTelegramIDResponse) GetInteractionMessageId() string {
-	if x != nil && x.InteractionMessageId != nil {
-		return *x.InteractionMessageId
-	}
-	return ""
-}
-
 type UpdateUserTelegramContextRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// ID of the user whose context to update (UUID).
-	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// Active bot conversation. If omitted, the current value is kept.
-	Conversation *string `protobuf:"bytes,2,opt,name=conversation,proto3,oneof" json:"conversation,omitempty"`
+	Conversation *string `protobuf:"bytes,1,opt,name=conversation,proto3,oneof" json:"conversation,omitempty"`
 	// Current state within the conversation. If omitted, the current value is kept.
-	State *string `protobuf:"bytes,3,opt,name=state,proto3,oneof" json:"state,omitempty"`
+	State *string `protobuf:"bytes,2,opt,name=state,proto3,oneof" json:"state,omitempty"`
 	// Chat ID of the message the bot is interacting with. If omitted, the current value is kept.
-	InteractionChatId *string `protobuf:"bytes,4,opt,name=interaction_chat_id,json=interactionChatId,proto3,oneof" json:"interaction_chat_id,omitempty"`
+	InteractionChatId *string `protobuf:"bytes,3,opt,name=interaction_chat_id,json=interactionChatId,proto3,oneof" json:"interaction_chat_id,omitempty"`
 	// ID of the message the bot is interacting with. If omitted, the current value is kept.
-	InteractionMessageId *string `protobuf:"bytes,5,opt,name=interaction_message_id,json=interactionMessageId,proto3,oneof" json:"interaction_message_id,omitempty"`
+	InteractionMessageId *string `protobuf:"bytes,4,opt,name=interaction_message_id,json=interactionMessageId,proto3,oneof" json:"interaction_message_id,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
 
 func (x *UpdateUserTelegramContextRequest) Reset() {
 	*x = UpdateUserTelegramContextRequest{}
-	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[4]
+	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -339,7 +184,7 @@ func (x *UpdateUserTelegramContextRequest) String() string {
 func (*UpdateUserTelegramContextRequest) ProtoMessage() {}
 
 func (x *UpdateUserTelegramContextRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[4]
+	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -352,14 +197,7 @@ func (x *UpdateUserTelegramContextRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateUserTelegramContextRequest.ProtoReflect.Descriptor instead.
 func (*UpdateUserTelegramContextRequest) Descriptor() ([]byte, []int) {
-	return file_financecore_v1_user_telegram_contexts_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *UpdateUserTelegramContextRequest) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
+	return file_financecore_v1_user_telegram_contexts_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *UpdateUserTelegramContextRequest) GetConversation() string {
@@ -412,7 +250,7 @@ type UpdateUserTelegramContextResponse struct {
 
 func (x *UpdateUserTelegramContextResponse) Reset() {
 	*x = UpdateUserTelegramContextResponse{}
-	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[5]
+	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -424,7 +262,7 @@ func (x *UpdateUserTelegramContextResponse) String() string {
 func (*UpdateUserTelegramContextResponse) ProtoMessage() {}
 
 func (x *UpdateUserTelegramContextResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[5]
+	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -437,7 +275,7 @@ func (x *UpdateUserTelegramContextResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use UpdateUserTelegramContextResponse.ProtoReflect.Descriptor instead.
 func (*UpdateUserTelegramContextResponse) Descriptor() ([]byte, []int) {
-	return file_financecore_v1_user_telegram_contexts_proto_rawDescGZIP(), []int{5}
+	return file_financecore_v1_user_telegram_contexts_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *UpdateUserTelegramContextResponse) GetId() string {
@@ -499,7 +337,7 @@ type BindTelegramAccountRequest struct {
 
 func (x *BindTelegramAccountRequest) Reset() {
 	*x = BindTelegramAccountRequest{}
-	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[6]
+	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -511,7 +349,7 @@ func (x *BindTelegramAccountRequest) String() string {
 func (*BindTelegramAccountRequest) ProtoMessage() {}
 
 func (x *BindTelegramAccountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[6]
+	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -524,7 +362,7 @@ func (x *BindTelegramAccountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BindTelegramAccountRequest.ProtoReflect.Descriptor instead.
 func (*BindTelegramAccountRequest) Descriptor() ([]byte, []int) {
-	return file_financecore_v1_user_telegram_contexts_proto_rawDescGZIP(), []int{6}
+	return file_financecore_v1_user_telegram_contexts_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *BindTelegramAccountRequest) GetCode() string {
@@ -545,7 +383,7 @@ type BindTelegramAccountResponse struct {
 
 func (x *BindTelegramAccountResponse) Reset() {
 	*x = BindTelegramAccountResponse{}
-	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[7]
+	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -557,7 +395,7 @@ func (x *BindTelegramAccountResponse) String() string {
 func (*BindTelegramAccountResponse) ProtoMessage() {}
 
 func (x *BindTelegramAccountResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[7]
+	mi := &file_financecore_v1_user_telegram_contexts_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -570,7 +408,7 @@ func (x *BindTelegramAccountResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BindTelegramAccountResponse.ProtoReflect.Descriptor instead.
 func (*BindTelegramAccountResponse) Descriptor() ([]byte, []int) {
-	return file_financecore_v1_user_telegram_contexts_proto_rawDescGZIP(), []int{7}
+	return file_financecore_v1_user_telegram_contexts_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *BindTelegramAccountResponse) GetUserId() string {
@@ -591,9 +429,8 @@ var File_financecore_v1_user_telegram_contexts_proto protoreflect.FileDescriptor
 
 const file_financecore_v1_user_telegram_contexts_proto_rawDesc = "" +
 	"\n" +
-	"+financecore/v1/user_telegram_contexts.proto\x12\x0efinancecore.v1\"8\n" +
-	"\x1dGetUserTelegramContextRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x8f\x03\n" +
+	"+financecore/v1/user_telegram_contexts.proto\x12\x0efinancecore.v1\"\x1f\n" +
+	"\x1dGetUserTelegramContextRequest\"\x8f\x03\n" +
 	"\x1eGetUserTelegramContextResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12-\n" +
@@ -606,28 +443,12 @@ const file_financecore_v1_user_telegram_contexts_proto_rawDesc = "" +
 	"\r_conversationB\b\n" +
 	"\x06_stateB\x16\n" +
 	"\x14_interaction_chat_idB\x19\n" +
-	"\x17_interaction_message_id\"U\n" +
-	")GetUserTelegramContextByTelegramIDRequest\x12(\n" +
-	"\x10telegram_chat_id\x18\x01 \x01(\tR\x0etelegramChatId\"\x9b\x03\n" +
-	"*GetUserTelegramContextByTelegramIDResponse\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12-\n" +
-	"\x10telegram_chat_id\x18\x03 \x01(\tH\x00R\x0etelegramChatId\x88\x01\x01\x12'\n" +
-	"\fconversation\x18\x04 \x01(\tH\x01R\fconversation\x88\x01\x01\x12\x19\n" +
-	"\x05state\x18\x05 \x01(\tH\x02R\x05state\x88\x01\x01\x123\n" +
-	"\x13interaction_chat_id\x18\x06 \x01(\tH\x03R\x11interactionChatId\x88\x01\x01\x129\n" +
-	"\x16interaction_message_id\x18\a \x01(\tH\x04R\x14interactionMessageId\x88\x01\x01B\x13\n" +
-	"\x11_telegram_chat_idB\x0f\n" +
-	"\r_conversationB\b\n" +
-	"\x06_stateB\x16\n" +
-	"\x14_interaction_chat_idB\x19\n" +
-	"\x17_interaction_message_id\"\xbd\x02\n" +
-	" UpdateUserTelegramContextRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\x12'\n" +
-	"\fconversation\x18\x02 \x01(\tH\x00R\fconversation\x88\x01\x01\x12\x19\n" +
-	"\x05state\x18\x03 \x01(\tH\x01R\x05state\x88\x01\x01\x123\n" +
-	"\x13interaction_chat_id\x18\x04 \x01(\tH\x02R\x11interactionChatId\x88\x01\x01\x129\n" +
-	"\x16interaction_message_id\x18\x05 \x01(\tH\x03R\x14interactionMessageId\x88\x01\x01B\x0f\n" +
+	"\x17_interaction_message_id\"\xa4\x02\n" +
+	" UpdateUserTelegramContextRequest\x12'\n" +
+	"\fconversation\x18\x01 \x01(\tH\x00R\fconversation\x88\x01\x01\x12\x19\n" +
+	"\x05state\x18\x02 \x01(\tH\x01R\x05state\x88\x01\x01\x123\n" +
+	"\x13interaction_chat_id\x18\x03 \x01(\tH\x02R\x11interactionChatId\x88\x01\x01\x129\n" +
+	"\x16interaction_message_id\x18\x04 \x01(\tH\x03R\x14interactionMessageId\x88\x01\x01B\x0f\n" +
 	"\r_conversationB\b\n" +
 	"\x06_stateB\x16\n" +
 	"\x14_interaction_chat_idB\x19\n" +
@@ -650,10 +471,9 @@ const file_financecore_v1_user_telegram_contexts_proto_rawDesc = "" +
 	"\x1bBindTelegramAccountResponse\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
 	"\n" +
-	"first_name\x18\x02 \x01(\tR\tfirstName2\xa6\x04\n" +
+	"first_name\x18\x02 \x01(\tR\tfirstName2\x88\x03\n" +
 	"\x1aUserTelegramContextService\x12w\n" +
-	"\x16GetUserTelegramContext\x12-.financecore.v1.GetUserTelegramContextRequest\x1a..financecore.v1.GetUserTelegramContextResponse\x12\x9b\x01\n" +
-	"\"GetUserTelegramContextByTelegramID\x129.financecore.v1.GetUserTelegramContextByTelegramIDRequest\x1a:.financecore.v1.GetUserTelegramContextByTelegramIDResponse\x12\x80\x01\n" +
+	"\x16GetUserTelegramContext\x12-.financecore.v1.GetUserTelegramContextRequest\x1a..financecore.v1.GetUserTelegramContextResponse\x12\x80\x01\n" +
 	"\x19UpdateUserTelegramContext\x120.financecore.v1.UpdateUserTelegramContextRequest\x1a1.financecore.v1.UpdateUserTelegramContextResponse\x12n\n" +
 	"\x13BindTelegramAccount\x12*.financecore.v1.BindTelegramAccountRequest\x1a+.financecore.v1.BindTelegramAccountResponseBSZQgithub.com/revirathya/revirathya-finance-core/gen/go/financecore/v1;financecorev1b\x06proto3"
 
@@ -669,28 +489,24 @@ func file_financecore_v1_user_telegram_contexts_proto_rawDescGZIP() []byte {
 	return file_financecore_v1_user_telegram_contexts_proto_rawDescData
 }
 
-var file_financecore_v1_user_telegram_contexts_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_financecore_v1_user_telegram_contexts_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_financecore_v1_user_telegram_contexts_proto_goTypes = []any{
-	(*GetUserTelegramContextRequest)(nil),              // 0: financecore.v1.GetUserTelegramContextRequest
-	(*GetUserTelegramContextResponse)(nil),             // 1: financecore.v1.GetUserTelegramContextResponse
-	(*GetUserTelegramContextByTelegramIDRequest)(nil),  // 2: financecore.v1.GetUserTelegramContextByTelegramIDRequest
-	(*GetUserTelegramContextByTelegramIDResponse)(nil), // 3: financecore.v1.GetUserTelegramContextByTelegramIDResponse
-	(*UpdateUserTelegramContextRequest)(nil),           // 4: financecore.v1.UpdateUserTelegramContextRequest
-	(*UpdateUserTelegramContextResponse)(nil),          // 5: financecore.v1.UpdateUserTelegramContextResponse
-	(*BindTelegramAccountRequest)(nil),                 // 6: financecore.v1.BindTelegramAccountRequest
-	(*BindTelegramAccountResponse)(nil),                // 7: financecore.v1.BindTelegramAccountResponse
+	(*GetUserTelegramContextRequest)(nil),     // 0: financecore.v1.GetUserTelegramContextRequest
+	(*GetUserTelegramContextResponse)(nil),    // 1: financecore.v1.GetUserTelegramContextResponse
+	(*UpdateUserTelegramContextRequest)(nil),  // 2: financecore.v1.UpdateUserTelegramContextRequest
+	(*UpdateUserTelegramContextResponse)(nil), // 3: financecore.v1.UpdateUserTelegramContextResponse
+	(*BindTelegramAccountRequest)(nil),        // 4: financecore.v1.BindTelegramAccountRequest
+	(*BindTelegramAccountResponse)(nil),       // 5: financecore.v1.BindTelegramAccountResponse
 }
 var file_financecore_v1_user_telegram_contexts_proto_depIdxs = []int32{
 	0, // 0: financecore.v1.UserTelegramContextService.GetUserTelegramContext:input_type -> financecore.v1.GetUserTelegramContextRequest
-	2, // 1: financecore.v1.UserTelegramContextService.GetUserTelegramContextByTelegramID:input_type -> financecore.v1.GetUserTelegramContextByTelegramIDRequest
-	4, // 2: financecore.v1.UserTelegramContextService.UpdateUserTelegramContext:input_type -> financecore.v1.UpdateUserTelegramContextRequest
-	6, // 3: financecore.v1.UserTelegramContextService.BindTelegramAccount:input_type -> financecore.v1.BindTelegramAccountRequest
-	1, // 4: financecore.v1.UserTelegramContextService.GetUserTelegramContext:output_type -> financecore.v1.GetUserTelegramContextResponse
-	3, // 5: financecore.v1.UserTelegramContextService.GetUserTelegramContextByTelegramID:output_type -> financecore.v1.GetUserTelegramContextByTelegramIDResponse
-	5, // 6: financecore.v1.UserTelegramContextService.UpdateUserTelegramContext:output_type -> financecore.v1.UpdateUserTelegramContextResponse
-	7, // 7: financecore.v1.UserTelegramContextService.BindTelegramAccount:output_type -> financecore.v1.BindTelegramAccountResponse
-	4, // [4:8] is the sub-list for method output_type
-	0, // [0:4] is the sub-list for method input_type
+	2, // 1: financecore.v1.UserTelegramContextService.UpdateUserTelegramContext:input_type -> financecore.v1.UpdateUserTelegramContextRequest
+	4, // 2: financecore.v1.UserTelegramContextService.BindTelegramAccount:input_type -> financecore.v1.BindTelegramAccountRequest
+	1, // 3: financecore.v1.UserTelegramContextService.GetUserTelegramContext:output_type -> financecore.v1.GetUserTelegramContextResponse
+	3, // 4: financecore.v1.UserTelegramContextService.UpdateUserTelegramContext:output_type -> financecore.v1.UpdateUserTelegramContextResponse
+	5, // 5: financecore.v1.UserTelegramContextService.BindTelegramAccount:output_type -> financecore.v1.BindTelegramAccountResponse
+	3, // [3:6] is the sub-list for method output_type
+	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -702,16 +518,15 @@ func file_financecore_v1_user_telegram_contexts_proto_init() {
 		return
 	}
 	file_financecore_v1_user_telegram_contexts_proto_msgTypes[1].OneofWrappers = []any{}
+	file_financecore_v1_user_telegram_contexts_proto_msgTypes[2].OneofWrappers = []any{}
 	file_financecore_v1_user_telegram_contexts_proto_msgTypes[3].OneofWrappers = []any{}
-	file_financecore_v1_user_telegram_contexts_proto_msgTypes[4].OneofWrappers = []any{}
-	file_financecore_v1_user_telegram_contexts_proto_msgTypes[5].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_financecore_v1_user_telegram_contexts_proto_rawDesc), len(file_financecore_v1_user_telegram_contexts_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -123,14 +123,12 @@ func (x *ExpenseResponse) GetAmount() string {
 
 type CreateExpenseRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// ID of the user who owns the expense (UUID).
-	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// Category ID (UUID). Must reference an existing category.
-	CategoryId string `protobuf:"bytes,2,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
+	CategoryId string `protobuf:"bytes,1,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
 	// Transaction date (YYYY-MM-DD).
-	TransactionDt string `protobuf:"bytes,3,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
+	TransactionDt string `protobuf:"bytes,2,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
 	// Free-text note about the expense.
-	Description *string `protobuf:"bytes,4,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Description *string `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	// Amount as a decimal string with up to 2 decimal places, e.g. "12500.50".
 	Amount        string `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -165,13 +163,6 @@ func (x *CreateExpenseRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use CreateExpenseRequest.ProtoReflect.Descriptor instead.
 func (*CreateExpenseRequest) Descriptor() ([]byte, []int) {
 	return file_financecore_v1_expenses_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *CreateExpenseRequest) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
 }
 
 func (x *CreateExpenseRequest) GetCategoryId() string {
@@ -294,8 +285,6 @@ func (x *CreateExpenseResponse) GetAmount() string {
 
 type ListExpensesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// ID of the user whose expenses to list (UUID).
-	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// If set, only returns expenses on this date (YYYY-MM-DD).
 	TransactionDt *string `protobuf:"bytes,2,opt,name=transaction_dt,json=transactionDt,proto3,oneof" json:"transaction_dt,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -330,13 +319,6 @@ func (x *ListExpensesRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ListExpensesRequest.ProtoReflect.Descriptor instead.
 func (*ListExpensesRequest) Descriptor() ([]byte, []int) {
 	return file_financecore_v1_expenses_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *ListExpensesRequest) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
 }
 
 func (x *ListExpensesRequest) GetTransactionDt() string {
@@ -801,13 +783,12 @@ const file_financecore_v1_expenses_proto_rawDesc = "" +
 	"\x0etransaction_dt\x18\x05 \x01(\tR\rtransactionDt\x12%\n" +
 	"\vdescription\x18\x06 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x16\n" +
 	"\x06amount\x18\a \x01(\tR\x06amountB\x0e\n" +
-	"\f_description\"\xc6\x01\n" +
-	"\x14CreateExpenseRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1f\n" +
-	"\vcategory_id\x18\x02 \x01(\tR\n" +
+	"\f_description\"\xad\x01\n" +
+	"\x14CreateExpenseRequest\x12\x1f\n" +
+	"\vcategory_id\x18\x01 \x01(\tR\n" +
 	"categoryId\x12%\n" +
-	"\x0etransaction_dt\x18\x03 \x01(\tR\rtransactionDt\x12%\n" +
-	"\vdescription\x18\x04 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x16\n" +
+	"\x0etransaction_dt\x18\x02 \x01(\tR\rtransactionDt\x12%\n" +
+	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x16\n" +
 	"\x06amount\x18\x05 \x01(\tR\x06amountB\x0e\n" +
 	"\f_description\"\xd7\x01\n" +
 	"\x15CreateExpenseResponse\x12\x0e\n" +
@@ -818,9 +799,8 @@ const file_financecore_v1_expenses_proto_rawDesc = "" +
 	"\x0etransaction_dt\x18\x04 \x01(\tR\rtransactionDt\x12%\n" +
 	"\vdescription\x18\x05 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x16\n" +
 	"\x06amount\x18\x06 \x01(\tR\x06amountB\x0e\n" +
-	"\f_description\"m\n" +
-	"\x13ListExpensesRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\x12*\n" +
+	"\f_description\"T\n" +
+	"\x13ListExpensesRequest\x12*\n" +
 	"\x0etransaction_dt\x18\x02 \x01(\tH\x00R\rtransactionDt\x88\x01\x01B\x11\n" +
 	"\x0f_transaction_dt\"S\n" +
 	"\x14ListExpensesResponse\x12;\n" +

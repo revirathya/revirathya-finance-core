@@ -9,7 +9,6 @@ type Expense {
 }
 
 input CreateExpenseInput {
-    userId: ID!
     transactionDt: String!
     categoryId: ID!
     description: String
@@ -25,11 +24,11 @@ input UpdateExpenseInput {
 
 extend type Query {
     expense(id: ID!): Expense
-    expenses(userId: ID!, transactionDt: String): [Expense!]!
+    expenses(transactionDt: String): [Expense!]!
 }
 
 extend type Mutation {
     createExpense(input: CreateExpenseInput!): Expense
     updateExpense(id: ID!, patch: UpdateExpenseInput!): Expense
-    deleteExpense(id: ID!): ID
+    deleteExpense(id: ID!): ID!
 }

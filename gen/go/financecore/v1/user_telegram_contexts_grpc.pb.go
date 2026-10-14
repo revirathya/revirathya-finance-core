@@ -19,10 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UserTelegramContextService_GetUserTelegramContext_FullMethodName             = "/financecore.v1.UserTelegramContextService/GetUserTelegramContext"
-	UserTelegramContextService_GetUserTelegramContextByTelegramID_FullMethodName = "/financecore.v1.UserTelegramContextService/GetUserTelegramContextByTelegramID"
-	UserTelegramContextService_UpdateUserTelegramContext_FullMethodName          = "/financecore.v1.UserTelegramContextService/UpdateUserTelegramContext"
-	UserTelegramContextService_BindTelegramAccount_FullMethodName                = "/financecore.v1.UserTelegramContextService/BindTelegramAccount"
+	UserTelegramContextService_GetUserTelegramContext_FullMethodName    = "/financecore.v1.UserTelegramContextService/GetUserTelegramContext"
+	UserTelegramContextService_UpdateUserTelegramContext_FullMethodName = "/financecore.v1.UserTelegramContextService/UpdateUserTelegramContext"
+	UserTelegramContextService_BindTelegramAccount_FullMethodName       = "/financecore.v1.UserTelegramContextService/BindTelegramAccount"
 )
 
 // UserTelegramContextServiceClient is the client API for UserTelegramContextService service.
@@ -34,8 +33,6 @@ const (
 type UserTelegramContextServiceClient interface {
 	// Returns the Telegram context of a user, looked up by user ID.
 	GetUserTelegramContext(ctx context.Context, in *GetUserTelegramContextRequest, opts ...grpc.CallOption) (*GetUserTelegramContextResponse, error)
-	// Returns the Telegram context linked to a Telegram chat ID.
-	GetUserTelegramContextByTelegramID(ctx context.Context, in *GetUserTelegramContextByTelegramIDRequest, opts ...grpc.CallOption) (*GetUserTelegramContextByTelegramIDResponse, error)
 	// Updates a user's Telegram context and returns it. Only the fields that
 	// are set are changed; omitted fields keep their current value.
 	// telegram_chat_id cannot be changed through this RPC.
@@ -62,16 +59,6 @@ func (c *userTelegramContextServiceClient) GetUserTelegramContext(ctx context.Co
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetUserTelegramContextResponse)
 	err := c.cc.Invoke(ctx, UserTelegramContextService_GetUserTelegramContext_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *userTelegramContextServiceClient) GetUserTelegramContextByTelegramID(ctx context.Context, in *GetUserTelegramContextByTelegramIDRequest, opts ...grpc.CallOption) (*GetUserTelegramContextByTelegramIDResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetUserTelegramContextByTelegramIDResponse)
-	err := c.cc.Invoke(ctx, UserTelegramContextService_GetUserTelegramContextByTelegramID_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,8 +94,6 @@ func (c *userTelegramContextServiceClient) BindTelegramAccount(ctx context.Conte
 type UserTelegramContextServiceServer interface {
 	// Returns the Telegram context of a user, looked up by user ID.
 	GetUserTelegramContext(context.Context, *GetUserTelegramContextRequest) (*GetUserTelegramContextResponse, error)
-	// Returns the Telegram context linked to a Telegram chat ID.
-	GetUserTelegramContextByTelegramID(context.Context, *GetUserTelegramContextByTelegramIDRequest) (*GetUserTelegramContextByTelegramIDResponse, error)
 	// Updates a user's Telegram context and returns it. Only the fields that
 	// are set are changed; omitted fields keep their current value.
 	// telegram_chat_id cannot be changed through this RPC.
@@ -133,9 +118,6 @@ type UnimplementedUserTelegramContextServiceServer struct{}
 
 func (UnimplementedUserTelegramContextServiceServer) GetUserTelegramContext(context.Context, *GetUserTelegramContextRequest) (*GetUserTelegramContextResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUserTelegramContext not implemented")
-}
-func (UnimplementedUserTelegramContextServiceServer) GetUserTelegramContextByTelegramID(context.Context, *GetUserTelegramContextByTelegramIDRequest) (*GetUserTelegramContextByTelegramIDResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method GetUserTelegramContextByTelegramID not implemented")
 }
 func (UnimplementedUserTelegramContextServiceServer) UpdateUserTelegramContext(context.Context, *UpdateUserTelegramContextRequest) (*UpdateUserTelegramContextResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateUserTelegramContext not implemented")
@@ -179,24 +161,6 @@ func _UserTelegramContextService_GetUserTelegramContext_Handler(srv interface{},
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserTelegramContextServiceServer).GetUserTelegramContext(ctx, req.(*GetUserTelegramContextRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _UserTelegramContextService_GetUserTelegramContextByTelegramID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetUserTelegramContextByTelegramIDRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UserTelegramContextServiceServer).GetUserTelegramContextByTelegramID(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UserTelegramContextService_GetUserTelegramContextByTelegramID_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserTelegramContextServiceServer).GetUserTelegramContextByTelegramID(ctx, req.(*GetUserTelegramContextByTelegramIDRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -247,10 +211,6 @@ var UserTelegramContextService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserTelegramContext",
 			Handler:    _UserTelegramContextService_GetUserTelegramContext_Handler,
-		},
-		{
-			MethodName: "GetUserTelegramContextByTelegramID",
-			Handler:    _UserTelegramContextService_GetUserTelegramContextByTelegramID_Handler,
 		},
 		{
 			MethodName: "UpdateUserTelegramContext",

@@ -86,11 +86,24 @@ Last reviewed: 2026-10-11
 ## 2. Mandatory before production
 
 ### Security
-- [ ] **Authentication and authorization.**
-  - gRPC (service-to-service): mTLS, or a shared token checked in an interceptor.
-  - GraphQL (end users): JWT or session.
-  - Today GraphQL accepts `userId` as an argument, so any caller can read or write any user's expenses.
-    **Top priority for financial data.**
+- [x] **Authentication and authorization.** Every request is now tied to an authenticated user, and all data
+  is scoped to that user.
+  - [x] Phase 1: gRPC service auth. The bot sends `authorization: Bearer <GRPC_API_KEY>`, checked in a unary
+    interceptor with a constant-time comparison.
+  - [x] Phase 2: shared plumbing. `ErrUnauthenticated` / `ErrForbidden` / `ErrConflict` / `ErrInvalidInput`, a
+    principal in the request context, and mapping in `ToStatus` and `ErrorPresenter`.
+  - [x] Phase 3: users and Google sign-in. `loginWithGoogle` verifies a Google ID token and returns a session
+    JWT (`JWT_SECRET`, `JWT_TTL`); `me` and `updateUser`; unique `email` and `google_sub`.
+  - [x] Phase 4: Telegram binding. One-time codes from the Web Console (`createTelegramBindCode`), redeemed by the
+    bot (`BindTelegramAccount`); `x-telegram-user-id` interceptor; attempt limit; `unbindTelegram`.
+  - [x] Phase 5: per-user categories, with a composite foreign key so expenses can only use their owner's
+    categories.
+  - [x] Phase 6: authorization sweep. No client-supplied user IDs remain in GraphQL or gRPC; every query filters
+    by the caller's `user_id`, and other users' records return `NOT_FOUND`.
+  - [ ] Coordinated Telegram bot update for phases 4–6: send the API key and `x-telegram-user-id` on every call,
+    implement `/bind`, drop the removed `user_id` fields and `GetUserTelegramContextByTelegramID`.
+  - Later, if the API is ever reached over an untrusted network or by more services: mTLS instead of the shared
+    API key.
 - [ ] **TLS** on both listeners, or terminated by a trusted proxy or mesh, with that decision documented.
 - [ ] **GraphQL hardening.** `handler.NewDefaultServer` enables introspection, GET, websockets and APQ with no
   query limits.
@@ -106,17 +119,17 @@ Last reviewed: 2026-10-11
   - [ ] `/healthz` (liveness) on HTTP.
   - [ ] `/readyz` (readiness, pings the DB) on HTTP.
 - [ ] **Timeouts and limits.**
-  - [ ] HTTP server timeouts (see bug list).
-  - [ ] Per-request context deadline.
+  - [x] HTTP server timeouts (see bug list).
+  - [x] Per-request context deadline for GraphQL (`http.TimeoutHandler`).
   - [ ] gRPC `MaxRecvMsgSize` and keepalive settings.
   - [ ] pgxpool settings: `MaxConns`, `MaxConnLifetime`, etc.
 - [ ] **Panic recovery** interceptor on gRPC (gqlgen already recovers by default).
 - [ ] **Config validation.**
-  - [ ] Fail fast on invalid values.
+  - [x] Fail fast on invalid values: required secrets, `JWT_SECRET` length, `JWT_TTL` duration.
   - [ ] Keep secrets in env or a secret manager.
   - [ ] Add `APP_ENV` to gate dev-only features (reflection, introspection, playground).
 - [ ] **Migrations.**
-  - [ ] Remove `000002_temp_seed` (per `CHANGELOG.md`).
+  - [x] Remove `000002_temp_seed` (per `CHANGELOG.md`).
   - [ ] Run migrations as a separate job before deploy, not on app start.
 
 ### Observability
@@ -128,18 +141,22 @@ Last reviewed: 2026-10-11
   - [ ] Never log secrets or full DSNs.
 
 ### Quality gates
-- [ ] **CI pipeline** (no `.github/` yet) running on every PR:
-  - [ ] `go vet`
+- [ ] **CI pipeline** ([`.github/workflows/ci.yaml`](../.github/workflows/ci.yaml)) running on every PR:
+  - [x] `go mod tidy -diff` and `go vet`
   - [ ] `golangci-lint`
-  - [ ] `go test -race ./...`
-  - [ ] `buf lint`
-  - [ ] `buf breaking --against main`
+  - [x] `go test -race ./...`
+  - [x] `buf lint`
+  - [ ] `buf breaking --against main`. Optional: per CLAUDE.md, breaking gRPC changes are allowed because
+    downstream services follow this repo, so this would only be useful as an informational check.
   - [ ] `govulncheck` (deferred, see section 5)
-  - [ ] Generated-code drift check: `buf generate && sqlc generate && gqlgen generate && git diff --exit-code`
+  - [x] Generated-code drift check (regenerate, then fail on any modified or untracked file)
+  - [x] Migration test: `up`, `down --all`, `up` against a Postgres service container
 - [ ] **Tests.**
   - [ ] Repository integration tests against real Postgres (testcontainers-go).
   - [ ] gRPC handler and GraphQL resolver tests.
-  - [ ] `internal/usecase/user` tests (currently none).
+  - [x] Usecase tests for every usecase, including `user`, `auth` and `telegrambindcode`.
+  - [x] Unit tests for the auth plumbing: API-key and Telegram interceptors, session tokens, HTTP auth
+    middleware, `ToStatus`, rate limiter.
 
 ### Documentation
 - [ ] **README / runbook.**

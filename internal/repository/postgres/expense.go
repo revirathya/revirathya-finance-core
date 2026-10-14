@@ -25,9 +25,9 @@ func NewExpenseRepositoryImpl(pool *pgxpool.Pool) domain.ExpenseRepository {
 	}
 }
 
-func (r *expenseRepositoryImpl) CreateExpense(ctx context.Context, input domain.ExpenseForm) (*domain.Expense, error) {
+func (r *expenseRepositoryImpl) CreateExpense(ctx context.Context, userID uuid.UUID, input domain.ExpenseForm) (*domain.Expense, error) {
 	args := sqlcgen.CreateExpenseParams{
-		UserID:        database.ToPgxUUID(input.UserID),
+		UserID:        database.ToPgxUUID(userID),
 		CategoryID:    database.ToPgxUUID(input.CategoryID),
 		TransactionDt: database.ToPgxDate(input.TransactionDt),
 		Description:   input.Description,
@@ -55,8 +55,13 @@ func (r *expenseRepositoryImpl) CreateExpense(ctx context.Context, input domain.
 	return result, nil
 }
 
-func (r *expenseRepositoryImpl) GetExpenseByID(ctx context.Context, id uuid.UUID) (*domain.Expense, error) {
-	row, err := r.query.GetExpenseByID(ctx, database.ToPgxUUID(id))
+func (r *expenseRepositoryImpl) GetExpenseByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Expense, error) {
+	args := sqlcgen.GetExpenseByIDParams{
+		ID:     database.ToPgxUUID(id),
+		UserID: database.ToPgxUUID(userID),
+	}
+
+	row, err := r.query.GetExpenseByID(ctx, args)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrNotFound
@@ -102,13 +107,14 @@ func (r *expenseRepositoryImpl) ListExpenses(ctx context.Context, userID uuid.UU
 	return results, nil
 }
 
-func (r *expenseRepositoryImpl) UpdateExpense(ctx context.Context, id uuid.UUID, patch domain.ExpenseForm) (*domain.Expense, error) {
+func (r *expenseRepositoryImpl) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.ExpenseForm) (*domain.Expense, error) {
 	args := sqlcgen.UpdateExpenseParams{
 		CategoryID:    database.ToPgxUUID(patch.CategoryID),
 		TransactionDt: database.ToPgxDate(patch.TransactionDt),
 		Description:   patch.Description,
 		Amount:        database.ToPgxNumeric(patch.Amount),
 		ID:            database.ToPgxUUID(id),
+		UserID:        database.ToPgxUUID(userID),
 	}
 
 	row, err := r.query.UpdateExpense(ctx, args)
@@ -136,12 +142,18 @@ func (r *expenseRepositoryImpl) UpdateExpense(ctx context.Context, id uuid.UUID,
 	return result, nil
 }
 
-func (r *expenseRepositoryImpl) DeleteExpense(ctx context.Context, id uuid.UUID) error {
-	if err := r.query.DeleteExpense(ctx, database.ToPgxUUID(id)); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return domain.ErrNotFound
-		}
+func (r *expenseRepositoryImpl) DeleteExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+	args := sqlcgen.DeleteExpenseParams{
+		ID:     database.ToPgxUUID(id),
+		UserID: database.ToPgxUUID(userID),
+	}
+
+	rowCnt, err := r.query.DeleteExpense(ctx, args)
+	if err != nil {
 		return err
+	}
+	if rowCnt == 0 {
+		return domain.ErrNotFound
 	}
 	return nil
 }

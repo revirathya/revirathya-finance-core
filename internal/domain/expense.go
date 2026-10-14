@@ -20,7 +20,6 @@ type Expense struct {
 }
 
 type ExpenseForm struct {
-	UserID        uuid.UUID
 	CategoryID    uuid.UUID
 	TransactionDt time.Time
 	Description   *string
@@ -29,9 +28,9 @@ type ExpenseForm struct {
 
 // Repository
 type ExpenseRepository interface {
-	CreateExpense(ctx context.Context, input ExpenseForm) (*Expense, error)
-	GetExpenseByID(ctx context.Context, id uuid.UUID) (*Expense, error)
+	CreateExpense(ctx context.Context, userID uuid.UUID, input ExpenseForm) (*Expense, error)
+	GetExpenseByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*Expense, error)
 	ListExpenses(ctx context.Context, userID uuid.UUID, transactionDt *time.Time) ([]Expense, error)
-	UpdateExpense(ctx context.Context, id uuid.UUID, patch ExpenseForm) (*Expense, error)
-	DeleteExpense(ctx context.Context, id uuid.UUID) error
+	UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch ExpenseForm) (*Expense, error)
+	DeleteExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 }

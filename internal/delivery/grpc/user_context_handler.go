@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
 	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
 	grpcErr "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/error"
@@ -32,14 +31,16 @@ func NewUserTelegramContextHandler(tbcUc *telegrambindcode.TelegramBindCodeUseca
 }
 
 func (h *UserTelegramContextHandler) GetUserTelegramContext(ctx context.Context, req *financecorev1.GetUserTelegramContextRequest) (*financecorev1.GetUserTelegramContextResponse, error) {
-	uuidUserID, err := uuid.Parse(req.UserId)
+	// Get user from context
+	userID, err := appAuth.UserIDFrom(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id UUID format: %v", err)
+		return nil, grpcErr.ToStatus("get user telegram context", err)
 	}
 
-	user_context, err := h.utelUc.GetUserTelegramContext(ctx, uuidUserID)
+	// Parse input
+	user_context, err := h.utelUc.GetUserTelegramContext(ctx, userID)
 	if err != nil {
-		return nil, grpcErr.ToStatus(fmt.Sprintf("get user telegram context %s", uuidUserID.String()), err)
+		return nil, grpcErr.ToStatus(fmt.Sprintf("get user telegram context %s", userID.String()), err)
 	}
 
 	resp := &financecorev1.GetUserTelegramContextResponse{
@@ -54,40 +55,24 @@ func (h *UserTelegramContextHandler) GetUserTelegramContext(ctx context.Context,
 	return resp, nil
 }
 
-func (h *UserTelegramContextHandler) GetUserTelegramContextByTelegramID(ctx context.Context, req *financecorev1.GetUserTelegramContextByTelegramIDRequest) (*financecorev1.GetUserTelegramContextByTelegramIDResponse, error) {
-	user_context, err := h.utelUc.GetUserTelegramContextByTelegramID(ctx, req.TelegramChatId)
-	if err != nil {
-		return nil, grpcErr.ToStatus(fmt.Sprintf("get user telegram context by telegram id %s", req.TelegramChatId), err)
-	}
-
-	resp := &financecorev1.GetUserTelegramContextByTelegramIDResponse{
-		Id:                   user_context.ID.String(),
-		UserId:               user_context.UserID.String(),
-		TelegramChatId:       user_context.TelegramChatID,
-		Conversation:         user_context.Conversation,
-		State:                user_context.State,
-		InteractionChatId:    user_context.InteractionChatID,
-		InteractionMessageId: user_context.InteractionMessageID,
-	}
-	return resp, nil
-}
-
 func (h *UserTelegramContextHandler) UpdateUserTelegramContext(ctx context.Context, req *financecorev1.UpdateUserTelegramContextRequest) (*financecorev1.UpdateUserTelegramContextResponse, error) {
-	uuidUserID, err := uuid.Parse(req.UserId)
+	// Get user from context
+	userID, err := appAuth.UserIDFrom(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id UUID format: %v", err)
+		return nil, grpcErr.ToStatus("update user telegram context", err)
 	}
 
+	// Parse input
 	user_context, err := h.utelUc.UpdateUserTelegramContext(
 		ctx,
-		uuidUserID,
+		userID,
 		req.Conversation,
 		req.State,
 		req.InteractionChatId,
 		req.InteractionMessageId,
 	)
 	if err != nil {
-		return nil, grpcErr.ToStatus(fmt.Sprintf("update user telegram context %s", uuidUserID.String()), err)
+		return nil, grpcErr.ToStatus(fmt.Sprintf("update user telegram context %s", userID.String()), err)
 	}
 
 	resp := &financecorev1.UpdateUserTelegramContextResponse{

@@ -32,12 +32,12 @@ type fakeExpenseRepo struct {
 	gotDeleteID uuid.UUID
 }
 
-func (f *fakeExpenseRepo) CreateExpense(ctx context.Context, input domain.ExpenseForm) (*domain.Expense, error) {
+func (f *fakeExpenseRepo) CreateExpense(ctx context.Context, userID uuid.UUID, input domain.ExpenseForm) (*domain.Expense, error) {
 	f.gotCreateInput = input
 	return f.createResp, f.err
 }
 
-func (f *fakeExpenseRepo) GetExpenseByID(ctx context.Context, id uuid.UUID) (*domain.Expense, error) {
+func (f *fakeExpenseRepo) GetExpenseByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Expense, error) {
 	f.gotGetID = id
 	return f.getResp, f.err
 }
@@ -48,13 +48,13 @@ func (f *fakeExpenseRepo) ListExpenses(ctx context.Context, userID uuid.UUID, tr
 	return f.listResp, f.err
 }
 
-func (f *fakeExpenseRepo) UpdateExpense(ctx context.Context, id uuid.UUID, patch domain.ExpenseForm) (*domain.Expense, error) {
+func (f *fakeExpenseRepo) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.ExpenseForm) (*domain.Expense, error) {
 	f.gotUpdateID = id
 	f.gotUpdatePatch = patch
 	return f.updateResp, f.err
 }
 
-func (f *fakeExpenseRepo) DeleteExpense(ctx context.Context, id uuid.UUID) error {
+func (f *fakeExpenseRepo) DeleteExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
 	f.gotDeleteID = id
 	return f.err
 }
@@ -81,7 +81,6 @@ func TestCreateExpense(t *testing.T) {
 		}
 
 		wantInput := domain.ExpenseForm{
-			UserID:        userID,
 			CategoryID:    categoryID,
 			TransactionDt: dt,
 			Description:   &description,
@@ -104,6 +103,7 @@ func TestCreateExpense(t *testing.T) {
 
 func TestGetExpenseByID(t *testing.T) {
 	id := uuid.New()
+	userID := uuid.New()
 	description := "Coffee"
 	want := &domain.Expense{ID: id, Description: &description}
 
@@ -111,7 +111,7 @@ func TestGetExpenseByID(t *testing.T) {
 		repo := &fakeExpenseRepo{getResp: want}
 		uc := expense.NewExpenseUsecase(repo)
 
-		got, err := uc.GetExpenseByID(context.Background(), id)
+		got, err := uc.GetExpenseByID(context.Background(), id, userID)
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -128,7 +128,7 @@ func TestGetExpenseByID(t *testing.T) {
 		repo := &fakeExpenseRepo{err: errors.New("not found")}
 		uc := expense.NewExpenseUsecase(repo)
 
-		if _, err := uc.GetExpenseByID(context.Background(), id); err == nil {
+		if _, err := uc.GetExpenseByID(context.Background(), id, userID); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})
@@ -182,7 +182,7 @@ func TestListExpenses(t *testing.T) {
 }
 
 func TestUpdateExpense(t *testing.T) {
-	id, categoryID := uuid.New(), uuid.New()
+	id, userID, categoryID := uuid.New(), uuid.New(), uuid.New()
 	dt := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
 	amount := decimal.NewFromFloat(42.50)
 	description := "Dinner"
@@ -192,7 +192,7 @@ func TestUpdateExpense(t *testing.T) {
 		repo := &fakeExpenseRepo{updateResp: want}
 		uc := expense.NewExpenseUsecase(repo)
 
-		got, err := uc.UpdateExpense(context.Background(), id, categoryID, dt, &description, amount)
+		got, err := uc.UpdateExpense(context.Background(), id, userID, categoryID, dt, &description, amount)
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -219,7 +219,7 @@ func TestUpdateExpense(t *testing.T) {
 		repo := &fakeExpenseRepo{err: errors.New("not found")}
 		uc := expense.NewExpenseUsecase(repo)
 
-		if _, err := uc.UpdateExpense(context.Background(), id, categoryID, dt, &description, amount); err == nil {
+		if _, err := uc.UpdateExpense(context.Background(), id, userID, categoryID, dt, &description, amount); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})
@@ -227,12 +227,13 @@ func TestUpdateExpense(t *testing.T) {
 
 func TestDeleteExpense(t *testing.T) {
 	id := uuid.New()
+	userID := uuid.New()
 
 	t.Run("deletes expense", func(t *testing.T) {
 		repo := &fakeExpenseRepo{}
 		uc := expense.NewExpenseUsecase(repo)
 
-		if err := uc.DeleteExpense(context.Background(), id); err != nil {
+		if err := uc.DeleteExpense(context.Background(), id, userID); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if repo.gotDeleteID != id {
@@ -244,7 +245,7 @@ func TestDeleteExpense(t *testing.T) {
 		repo := &fakeExpenseRepo{err: errors.New("fk violation")}
 		uc := expense.NewExpenseUsecase(repo)
 
-		if err := uc.DeleteExpense(context.Background(), id); err == nil {
+		if err := uc.DeleteExpense(context.Background(), id, userID); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})

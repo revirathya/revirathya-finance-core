@@ -59,15 +59,24 @@ func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (A
 	return i, err
 }
 
-const deleteExpense = `-- name: DeleteExpense :exec
+const deleteExpense = `-- name: DeleteExpense :execrows
 DELETE FROM app.expenses
 WHERE
   id = $1
+  AND user_id = $2
 `
 
-func (q *Queries) DeleteExpense(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteExpense, id)
-	return err
+type DeleteExpenseParams struct {
+	ID     pgtype.UUID `json:"id"`
+	UserID pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) DeleteExpense(ctx context.Context, arg DeleteExpenseParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteExpense, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const getExpenseByID = `-- name: GetExpenseByID :one
@@ -85,7 +94,13 @@ INNER JOIN app.categories AS ctg
   ON exp.category_id = ctg.id
 WHERE
   exp.id = $1
+  AND exp.user_id = $2
 `
+
+type GetExpenseByIDParams struct {
+	ID     pgtype.UUID `json:"id"`
+	UserID pgtype.UUID `json:"user_id"`
+}
 
 type GetExpenseByIDRow struct {
 	ID            pgtype.UUID    `json:"id"`
@@ -97,8 +112,8 @@ type GetExpenseByIDRow struct {
 	Amount        pgtype.Numeric `json:"amount"`
 }
 
-func (q *Queries) GetExpenseByID(ctx context.Context, id pgtype.UUID) (GetExpenseByIDRow, error) {
-	row := q.db.QueryRow(ctx, getExpenseByID, id)
+func (q *Queries) GetExpenseByID(ctx context.Context, arg GetExpenseByIDParams) (GetExpenseByIDRow, error) {
+	row := q.db.QueryRow(ctx, getExpenseByID, arg.ID, arg.UserID)
 	var i GetExpenseByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -183,6 +198,7 @@ SET
   amount = COALESCE($4, amount)
 WHERE
   id = $5
+  AND user_id = $6
 RETURNING id, user_id, category_id, transaction_dt, description, amount, created_at, updated_at
 `
 
@@ -192,6 +208,7 @@ type UpdateExpenseParams struct {
 	Description   *string        `json:"description"`
 	Amount        pgtype.Numeric `json:"amount"`
 	ID            pgtype.UUID    `json:"id"`
+	UserID        pgtype.UUID    `json:"user_id"`
 }
 
 func (q *Queries) UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (AppExpense, error) {
@@ -201,6 +218,7 @@ func (q *Queries) UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (A
 		arg.Description,
 		arg.Amount,
 		arg.ID,
+		arg.UserID,
 	)
 	var i AppExpense
 	err := row.Scan(

@@ -18,7 +18,6 @@ type CreateCategoryInput struct {
 }
 
 type CreateExpenseInput struct {
-	UserID        string  `json:"userId"`
 	TransactionDt string  `json:"transactionDt"`
 	CategoryID    string  `json:"categoryId"`
 	Description   *string `json:"description,omitempty"`

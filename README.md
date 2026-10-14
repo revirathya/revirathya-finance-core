@@ -132,6 +132,9 @@ Copy `.env.example` to `.env`. Only the required variables must be set; prefer t
 |`MIGRATION_VERSION`|Image tag for `migration` (e.g. `0.0.1`), versioned separately because the image only changes when `migrations/` does. Used by `make docker-build svc=migration` and docker-compose, which also checks it for every command.|
 |`DB_PASSWORD`|Postgres password, used by the `db` container and the Docker-mode connection string|
 |`DATABASE_URI`|Postgres DSN for **local mode** (`make run`, `make migrate-*`), e.g. `postgres://revirathya:<password>@localhost:5532/finance?sslmode=disable`. Its port must match `DB_HOST_PORT`. Docker mode ignores it and builds its own DSN pointing at `db:5432`.|
+|`GRPC_API_KEY`|Shared secret the Telegram bot sends on every gRPC call (`authorization: Bearer <key>`). Generate with `openssl rand -base64 32`.|
+|`GOOGLE_CLIENT_ID`|OAuth client ID of the Google Cloud OAuth client. Only Google ID tokens issued for this client are accepted by `loginWithGoogle`.|
+|`JWT_SECRET`|Secret for signing session tokens, at least 32 bytes. Generate with `openssl rand -base64 32`. Changing it logs everyone out.|
 
 ### Optional (defaults shown)
 
@@ -142,6 +145,8 @@ Copy `.env.example` to `.env`. Only the required variables must be set; prefer t
 |`GRPC_PORT`|`50051`|gRPC listen port (plain number, no `:`), local mode only|
 |`GQL_PORT`|`8080`|GraphQL listen port (plain number, no `:`), local mode only|
 |`ALLOWED_ORIGINS`|`http://localhost,http://127.0.0.1`|Comma-separated CORS origins for GraphQL. Must be full origins including scheme and port, e.g. `http://localhost:3000`|
+|`JWT_TTL`|`24h`|Session token lifetime, as a Go duration (e.g. `30m`, `12h`)|
+|`ENABLE_GRPC_REFLECTION`|`false`|Register gRPC server reflection, so `grpcurl` and Postman can discover services without proto files. Keep it off in production.|
 
 ### Optional: host ports for Docker mode
 
@@ -160,21 +165,77 @@ These control which ports on your machine map to the containers. The ports insid
 - Docker: built from `migration.Dockerfile` (`migrate/migrate` + bundled `migrations`); the `migration`
   service runs `up` automatically before `core` starts.
 
+## Authentication
+
+Every request is tied to an authenticated user, and all data (categories, expenses, Telegram context) is
+scoped to that user. The user is never taken from a request argument; another user's records return
+`NOT_FOUND`.
+
+### GraphQL (Web Console)
+
+1. The client signs in with Google and sends the Google ID token to `loginWithGoogle(idToken:)`.
+   On first login the user is created from the Google profile.
+2. The mutation returns a **session token** (JWT, valid for `JWT_TTL`).
+3. Every other request sends `Authorization: Bearer <session token>`. Requests without a valid token get
+   `UNAUTHENTICATED`.
+
+To get a session token from Postman without the Web Console, see
+[docs/postman-google-login.md](docs/postman-google-login.md).
+
+### gRPC (Telegram bot)
+
+Every call must send two metadata entries:
+
+|Metadata|Value|
+|:--|:--|
+|`authorization`|`Bearer <GRPC_API_KEY>`: identifies the bot itself|
+|`x-telegram-user-id`|The Telegram user ID of the message sender (`message.from.id`): identifies the user|
+
+| Situation | Result |
+|:--|:--|
+| Missing or wrong API key | `UNAUTHENTICATED`, before anything else runs |
+| Missing or malformed `x-telegram-user-id` (must be a positive integer) | `UNAUTHENTICATED` |
+| Telegram account not bound to a user | `UNAUTHENTICATED` for every RPC except `BindTelegramAccount` |
+| Bound account | The call runs as the bound user |
+
+### Telegram binding
+
+A user links their Telegram account once, from the Web Console:
+
+1. In the console (logged in), `createTelegramBindCode` returns a one-time code like `HE2H-KMDX`,
+   valid for 10 minutes. Creating a new code replaces the previous one.
+2. The user sends `/bind HE2H-KMDX` to the bot in a **private chat**.
+3. The bot calls `BindTelegramAccount` with the code. The Telegram account is now bound, and the bot's
+   conversation state is reset.
+
+| `BindTelegramAccount` error | Meaning |
+|:--|:--|
+| `INVALID_ARGUMENT` | The code is malformed (must be exactly `XXXX-XXXX`, uppercase), unknown, expired or already used |
+| `ALREADY_EXISTS` | This Telegram account is already bound to another user; unbind it there first |
+| `RESOURCE_EXHAUSTED` | Too many attempts: at most 10 per Telegram account per 5 minutes |
+
+Only a hash of each code is stored. `unbindTelegram` (GraphQL) removes the binding; binding again from a
+different Telegram account replaces it. The attempt limit is kept in memory, so it is per process and resets
+on restart.
+
 ## gRPC tools
 
-Server reflection isn't registered, so `grpcurl` is called with the proto files explicitly:
+`make grpc-list` and `make grpc-describe` read the local proto files, so they work without a running server:
 
 ```sh
-make grpc-list                                   # Local mode (localhost:50051)
-make grpc-list GRPC_ADDR=localhost:51051         # Docker mode
+make grpc-list
 make grpc-describe symbol=financecore.v1.CategoryService
 ```
 
-## GraphQL authentication
+To call RPCs, set `ENABLE_GRPC_REFLECTION=true` and send both metadata entries, e.g. (after
+`set -a; source .env; set +a` to load `.env` into your shell):
 
-GraphQL requests are authenticated with a session token (`Authorization: Bearer <token>`), obtained from the
-`loginWithGoogle` mutation with a Google ID token. To get one from Postman without the Web Console, see
-[docs/postman-google-login.md](docs/postman-google-login.md).
+```sh
+grpcurl -plaintext \
+  -H "authorization: Bearer $GRPC_API_KEY" \
+  -H "x-telegram-user-id: 123456789" \
+  localhost:50051 financecore.v1.CategoryService/ListCategories   # Docker mode: localhost:51051
+```
 
 ## Development
 

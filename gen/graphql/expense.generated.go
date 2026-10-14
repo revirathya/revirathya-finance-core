@@ -200,20 +200,13 @@ func (ec *executionContext) unmarshalInputCreateExpenseInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"userId", "transactionDt", "categoryId", "description", "amount"}
+	fieldsInOrder := [...]string{"transactionDt", "categoryId", "description", "amount"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "userId":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-			data, err := ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.UserID = data
 		case "transactionDt":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("transactionDt"))
 			data, err := ec.unmarshalNString2string(ctx, v)

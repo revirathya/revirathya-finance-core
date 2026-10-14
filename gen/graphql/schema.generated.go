@@ -21,10 +21,10 @@ type MutationResolver interface {
 	Ok(ctx context.Context) (*bool, error)
 	CreateCategory(ctx context.Context, input model.CreateCategoryInput) (*model.Category, error)
 	UpdateCategory(ctx context.Context, id string, patch model.UpdateCategoryInput) (*model.Category, error)
-	DeleteCategory(ctx context.Context, id string) (*string, error)
+	DeleteCategory(ctx context.Context, id string) (string, error)
 	CreateExpense(ctx context.Context, input model.CreateExpenseInput) (*model.Expense, error)
 	UpdateExpense(ctx context.Context, id string, patch model.UpdateExpenseInput) (*model.Expense, error)
-	DeleteExpense(ctx context.Context, id string) (*string, error)
+	DeleteExpense(ctx context.Context, id string) (string, error)
 	CreateTelegramBindCode(ctx context.Context) (*model.TelegramBindCode, error)
 	UnbindTelegram(ctx context.Context) (*model.User, error)
 	LoginWithGoogle(ctx context.Context, idToken string) (*model.AuthPayload, error)
@@ -35,7 +35,7 @@ type QueryResolver interface {
 	Category(ctx context.Context, id string) (*model.Category, error)
 	Categories(ctx context.Context) ([]*model.Category, error)
 	Expense(ctx context.Context, id string) (*model.Expense, error)
-	Expenses(ctx context.Context, userID string, transactionDt *string) ([]*model.Expense, error)
+	Expenses(ctx context.Context, transactionDt *string) ([]*model.Expense, error)
 	Me(ctx context.Context) (*model.User, error)
 }
 
@@ -216,22 +216,14 @@ func (ec *executionContext) field_Query_expense_args(ctx context.Context, rawArg
 func (ec *executionContext) field_Query_expenses_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "userId",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNID2string(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["userId"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "transactionDt",
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "transactionDt",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["transactionDt"] = arg1
+	args["transactionDt"] = arg0
 	return args, nil
 }
 
@@ -363,11 +355,11 @@ func (ec *executionContext) _Mutation_deleteCategory(ctx context.Context, field 
 			return ec.Resolvers.Mutation().DeleteCategory(ctx, fc.Args["id"].(string))
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
-			return ec.marshalOID2ᚖstring(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
 		},
 		true,
-		false,
+		true,
 	)
 }
 func (ec *executionContext) fieldContext_Mutation_deleteCategory(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -495,11 +487,11 @@ func (ec *executionContext) _Mutation_deleteExpense(ctx context.Context, field g
 			return ec.Resolvers.Mutation().DeleteExpense(ctx, fc.Args["id"].(string))
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
-			return ec.marshalOID2ᚖstring(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
 		},
 		true,
-		false,
+		true,
 	)
 }
 func (ec *executionContext) fieldContext_Mutation_deleteExpense(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -831,7 +823,7 @@ func (ec *executionContext) _Query_expenses(ctx context.Context, field graphql.C
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().Expenses(ctx, fc.Args["userId"].(string), fc.Args["transactionDt"].(*string))
+			return ec.Resolvers.Query().Expenses(ctx, fc.Args["transactionDt"].(*string))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.Expense) graphql.Marshaler {
@@ -1030,7 +1022,7 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_deleteCategory(ctx, field)
 			})
-			if out.Values[i] == graphql.RequiredNull {
+			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		case "createExpense":
@@ -1051,7 +1043,7 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_deleteExpense(ctx, field)
 			})
-			if out.Values[i] == graphql.RequiredNull {
+			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		case "createTelegramBindCode":

@@ -8,7 +8,59 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
 
 ## [Unreleased]
 
-### [0.0.1] - 2026-09-09
+### Added
+- **Authentication and per-user data.** Every request is tied to an authenticated user, and all categories,
+  expenses and Telegram contexts are scoped to that user.
+- GraphQL sign-in with Google: `loginWithGoogle(idToken:)` verifies a Google ID token and returns a session
+  token (JWT); requests send `Authorization: Bearer <token>`. New `me` query and `updateUser` mutation. Users
+  are created on first sign-in.
+- gRPC authentication for the Telegram bot: `authorization: Bearer <GRPC_API_KEY>` plus
+  `x-telegram-user-id` metadata on every call.
+- Telegram binding: `createTelegramBindCode` and `unbindTelegram` (GraphQL), `BindTelegramAccount` (gRPC).
+  One-time codes, valid 10 minutes, stored only as hashes; at most 10 bind attempts per Telegram account per
+  5 minutes.
+- Migrations: `000002_add_user_auth` (`google_sub`, unique `email`), `000003_add_telegram_bind`
+  (`telegram_bind_codes`), `000004_categories_per_user`.
+- Optional gRPC server reflection (`ENABLE_GRPC_REFLECTION`, off by default).
+- Graceful shutdown on SIGINT/SIGTERM, HTTP server timeouts and a per-request timeout for GraphQL.
+- CI workflow: tests with the race detector, generated-code drift check, migration up/down test.
+- Doc comments on all proto services and messages; `docs/production-readiness.md`,
+  `docs/postman-google-login.md`.
+- Make targets `docker-build`, `docker-up`, `docker-down`, `docker-logs`; separate `MIGRATION_VERSION` for the
+  migration image.
+
+### Changed
+- **Breaking (GraphQL):** client-supplied user IDs removed: `expenses(userId:)` is now `expenses(transactionDt:)`,
+  `CreateExpenseInput.userId` and `updateExpense`'s `userId` are gone, and `user(id:)` is replaced by `me`.
+- **Breaking (GraphQL):** mutation inputs are required (`CreateExpenseInput!`, `UpdateExpenseInput!`,
+  `UpdateUserInput!`), `UpdateCategoryInput.categoryName` is required, and `deleteExpense` / `deleteCategory`
+  return `ID!`.
+- **Breaking (gRPC):** `user_id` removed from all request messages; the user comes from the Telegram binding.
+  `UpdateExpenseRequest` fields renumbered.
+- **Breaking:** categories belong to a user; names are unique per user, and an expense can only use its
+  owner's categories.
+- gRPC errors use proper status codes (`INVALID_ARGUMENT`, `NOT_FOUND`, `UNAUTHENTICATED`,
+  `PERMISSION_DENIED`, `ALREADY_EXISTS`); internal error details are logged instead of returned.
+- GraphQL validation and parse errors are returned as-is; bad input returns `BAD_USER_INPUT`.
+- `ListExpenses` returns newest `transaction_dt` first; `UpdateExpense` can no longer change an expense's owner.
+- `GRPC_PORT` / `GQL_PORT` are plain numbers (`50051`, not `:50051`). New required config: `GRPC_API_KEY`,
+  `GOOGLE_CLIENT_ID`, `JWT_SECRET`, `MIGRATION_VERSION`.
+- Go 1.26; all generated code is committed.
+
+### Removed
+- Dev-only seed migration `000002_temp_seed`.
+- gRPC `GetUserTelegramContextByTelegramID`.
+- GraphQL `user(id:)` (use `me`).
+- `make docker-run` (use `make docker-up`).
+
+### Fixed
+- GraphQL `deleteExpense` deleted nothing (it called the category usecase).
+- `GetUserByID` returned `NOT_FOUND` for users without a Telegram binding.
+- User repository returned an empty user instead of database errors.
+- docker-compose referenced a non-existent service; `make grpc-list` pointed at a missing proto file; the
+  default CORS origins could never match.
+
+## [0.0.1] - 2026-09-09
 
 Initial release.
 
@@ -48,11 +100,11 @@ Initial release.
     - Read only: `GetUserTelegramContext`, `GetUserTelegramContextByTelegramID`
     - Write: `UpdateUserTelegramContext`
 
-## Infrastructure
+#### Infrastructure
 - Mutil-stage Docker build (distroless runtime)
 - Dedicated migration image (`migrations.Dockerfile`, based on `migrate/migrate`)
 - `docker-compose.yml` for local Postgres + migrations + service
 - Makefile targets for build, test, codegen (buf / sqlc / gqlgen), and migrations
 
-[Unrelease]: https://github.com/revirathya/revirathya-finance-core/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/revirathya/revirathya-finance-core/compare/v0.0.1...HEAD
 [0.0.1]: https://github.com/revirathya/revirathya-finance-core/releases/tag/v0.0.1

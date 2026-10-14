@@ -42,7 +42,7 @@ make proto-generate   # buf generate: proto/**/*.proto -> gen/go/**  (edit .prot
 make sqlc-generate    # sqlc generate: internal/repository/sqlc/queries/*.sql -> internal/repository/sqlc/gen
 make gql-generate     # gqlgen generate: graphql/schema/*.graphql -> gen/graphql + resolver stubs
 
-# gRPC dev tools (server reflection is NOT registered, so proto files must be passed explicitly)
+# gRPC dev tools (read local proto files; server reflection is only registered with ENABLE_GRPC_REFLECTION=true)
 make grpc-list
 make grpc-describe symbol=financecore.v1.CategoryService
 ```
@@ -74,8 +74,14 @@ internal/repository/
   postgres/<entity>.go     implements domain.<Entity>Repository using sqlcgen.Queries + pgxpool
 internal/delivery/
   grpc/<entity>_handler.go     gRPC handlers, implement generated *ServiceServer interfaces
+  grpc/auth/                   gRPC interceptors: APIKeyAuth (bot), TelegramUser (x-telegram-user-id -> principal)
+  grpc/error/                  ToStatus: domain error -> gRPC status (import with an alias, e.g. grpcErr)
   graphql/<entity>.resolver.go gqlgen resolvers (regenerated stubs — resolver.go itself is hand-maintained DI)
-internal/platform/database   pgxpool setup + pgx<->domain type conversion helpers (UUID/Date/Numeric)
+  graphql/middleware.go        WithAuth: session token -> principal
+internal/auth                 principal + Telegram ID in context, session JWT (TokenManager), bind-code helpers
+internal/platform/database   pgxpool setup + pgx<->domain type conversion helpers (UUID/Date/Numeric/Timestamp)
+internal/platform/google     Google ID-token verifier (implements domain.GoogleVerifier)
+internal/platform/ratelimit  in-memory fixed-window limiter (per process)
 internal/config               env-based config loading (.env via godotenv, falls back to OS env)
 cmd/api                       wires everything together and runs gRPC + GraphQL servers concurrently
 ```
@@ -91,9 +97,19 @@ shared currency between usecase and repository; conversion to/from pgx wire type
 hand-rolled CORS middleware from `cmd/api/cors.go`) inside an `errgroup`, so either server failing — or context
 cancellation — brings both down together via graceful shutdown.
 
-Error handling: repository layer maps `pgx.ErrNoRows` to `domain.ErrNotFound`; GraphQL surfaces this via a
-custom `ErrorPresenter` (`internal/delivery/graphql/error.go`) that turns `domain.ErrNotFound` into a
-`NOT_FOUND` extension code and otherwise reports a generic internal error (no raw error leakage to clients).
+Authentication: GraphQL requests carry a session JWT (`Authorization: Bearer`), turned into a principal by
+`WithAuth`; tokens come from `loginWithGoogle`. gRPC calls carry the bot's API key plus `x-telegram-user-id`;
+`TelegramUser` looks up the bound user and sets the principal (unbound users may only call
+`BindTelegramAccount`). Handlers and resolvers take the user from `auth.UserIDFrom(ctx)` and pass it explicitly
+to usecases; never accept a user ID from the request. Every query on user-owned data filters by `user_id`, and
+another user's record returns `domain.ErrNotFound` (not `ErrForbidden`).
+
+Error handling: repositories map `pgx.ErrNoRows` (or zero affected rows for `:execrows`) to
+`domain.ErrNotFound`, unique violations (`23505`) to `domain.ErrConflict`, and foreign-key violations (`23503`)
+to `domain.ErrConflict` (deleting something in use) or `domain.ErrInvalidInput` (referencing something that
+isn't the user's). gRPC maps domain errors with `grpcErr.ToStatus`; GraphQL with `ErrorPresenter`
+(`internal/delivery/graphql/error.go`), which also passes gqlgen validation/parse errors through. Unknown errors
+are logged and reported as a generic internal error (no raw error leakage to clients).
 
 Note: the gRPC `UserTelegramContextService` proto file is `proto/financecore/v1/user_telegram_contexts.proto`
 but the Go package/handler naming uses `UserTelegramContext` (singular `financecorev1.UserTelegramContext*`) —
@@ -103,12 +119,14 @@ check `gen/go/financecore/v1` for the actual generated symbol names when wiring 
 
 Single schema `app` (not `public`). Migrations live in `migrations/` as sequential golang-migrate pairs.
 `000001_init_schema` creates `users`, `user_telegram_contexts`, `categories`, `expenses` plus an
-`update_ts_now()` trigger function that auto-maintains `updated_at` on every table. `000002_temp_seed` is a
-dev-only seed (hardcoded sample data) — per `CHANGELOG.md` this is meant to be removed before first real
-deploy.
+`update_ts_now()` trigger function that auto-maintains `updated_at` on every table. `000002_add_user_auth` adds
+`users.google_sub` and unique emails, `000003_add_telegram_bind` adds `telegram_bind_codes`, and
+`000004_categories_per_user` makes categories per user, with a composite foreign key
+`expenses (category_id, user_id) -> categories (id, user_id)` so an expense can only use its owner's categories.
+There is no seed data.
 
-`sqlc.yaml` generates only from `migrations/000001_init_schema.up.sql` — if later migrations alter the schema,
-check whether the sqlc schema source needs updating too. SQL in `internal/repository/sqlc/queries/*.sql` is
+`sqlc.yaml` lists each migration's `.up.sql` explicitly as its schema source — add every new migration there,
+or `make sqlc-generate` won't see the new columns. SQL in `internal/repository/sqlc/queries/*.sql` is
 linted with `.sqlfluff` (postgres dialect, 2-space indent).
 
 ## Conventions to follow when extending
