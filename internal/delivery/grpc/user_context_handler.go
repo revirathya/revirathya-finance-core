@@ -6,7 +6,10 @@ import (
 
 	"github.com/google/uuid"
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
+	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
 	grpcErr "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/error"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/ratelimit"
+	"github.com/revirathya/revirathya-finance-core/internal/usecase/telegrambindcode"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/usercontext"
 
 	"google.golang.org/grpc/codes"
@@ -15,12 +18,16 @@ import (
 
 type UserTelegramContextHandler struct {
 	financecorev1.UnimplementedUserTelegramContextServiceServer
-	utelUc *usercontext.UserTelegramContextUsecase
+	tbcUc       *telegrambindcode.TelegramBindCodeUsecase
+	utelUc      *usercontext.UserTelegramContextUsecase
+	bindLimiter *ratelimit.Limiter
 }
 
-func NewUserTelegramContextHandler(utelUc *usercontext.UserTelegramContextUsecase) *UserTelegramContextHandler {
+func NewUserTelegramContextHandler(tbcUc *telegrambindcode.TelegramBindCodeUsecase, utelUc *usercontext.UserTelegramContextUsecase, bindLimiter *ratelimit.Limiter) *UserTelegramContextHandler {
 	return &UserTelegramContextHandler{
-		utelUc: utelUc,
+		tbcUc:       tbcUc,
+		utelUc:      utelUc,
+		bindLimiter: bindLimiter,
 	}
 }
 
@@ -93,5 +100,27 @@ func (h *UserTelegramContextHandler) UpdateUserTelegramContext(ctx context.Conte
 		InteractionMessageId: user_context.InteractionMessageID,
 	}
 
+	return resp, nil
+}
+
+func (h *UserTelegramContextHandler) BindTelegramAccount(ctx context.Context, req *financecorev1.BindTelegramAccountRequest) (*financecorev1.BindTelegramAccountResponse, error) {
+	telegramID, err := appAuth.TelegramUserIDFrom(ctx)
+	if err != nil {
+		return nil, grpcErr.ToStatus("bind telegram account", err)
+	}
+
+	if !h.bindLimiter.Allow(telegramID) {
+		return nil, status.Error(codes.ResourceExhausted, "too many bind attempts, try again later")
+	}
+
+	user, err := h.tbcUc.BindTelegram(ctx, req.Code, telegramID)
+	if err != nil {
+		return nil, grpcErr.ToStatus("bind telegram account", err)
+	}
+
+	resp := &financecorev1.BindTelegramAccountResponse{
+		UserId:    user.ID.String(),
+		FirstName: user.FirstName,
+	}
 	return resp, nil
 }

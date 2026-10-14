@@ -72,6 +72,7 @@ func main() {
 		cfg.GrpcApiKey,
 		ctgUc,
 		expUc,
+		tbcUc,
 		utelUc,
 	)
 	if err != nil {

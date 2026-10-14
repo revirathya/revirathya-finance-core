@@ -22,6 +22,7 @@ const (
 	UserTelegramContextService_GetUserTelegramContext_FullMethodName             = "/financecore.v1.UserTelegramContextService/GetUserTelegramContext"
 	UserTelegramContextService_GetUserTelegramContextByTelegramID_FullMethodName = "/financecore.v1.UserTelegramContextService/GetUserTelegramContextByTelegramID"
 	UserTelegramContextService_UpdateUserTelegramContext_FullMethodName          = "/financecore.v1.UserTelegramContextService/UpdateUserTelegramContext"
+	UserTelegramContextService_BindTelegramAccount_FullMethodName                = "/financecore.v1.UserTelegramContextService/BindTelegramAccount"
 )
 
 // UserTelegramContextServiceClient is the client API for UserTelegramContextService service.
@@ -39,6 +40,14 @@ type UserTelegramContextServiceClient interface {
 	// are set are changed; omitted fields keep their current value.
 	// telegram_chat_id cannot be changed through this RPC.
 	UpdateUserTelegramContext(ctx context.Context, in *UpdateUserTelegramContextRequest, opts ...grpc.CallOption) (*UpdateUserTelegramContextResponse, error)
+	// Binds the calling Telegram account (from "x-telegram-user-id" metadata) to the
+	// user who created the code in the Web Console.
+	//
+	// Errors:
+	//   - INVALID_ARGUMENT: the code is malformed, unknown, expired or already used.
+	//   - ALREADY_EXISTS: this Telegram account is already bound to another user.
+	//   - RESOURCE_EXHAUSTED: too many attempts; try again later.
+	BindTelegramAccount(ctx context.Context, in *BindTelegramAccountRequest, opts ...grpc.CallOption) (*BindTelegramAccountResponse, error)
 }
 
 type userTelegramContextServiceClient struct {
@@ -79,6 +88,16 @@ func (c *userTelegramContextServiceClient) UpdateUserTelegramContext(ctx context
 	return out, nil
 }
 
+func (c *userTelegramContextServiceClient) BindTelegramAccount(ctx context.Context, in *BindTelegramAccountRequest, opts ...grpc.CallOption) (*BindTelegramAccountResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BindTelegramAccountResponse)
+	err := c.cc.Invoke(ctx, UserTelegramContextService_BindTelegramAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserTelegramContextServiceServer is the server API for UserTelegramContextService service.
 // All implementations must embed UnimplementedUserTelegramContextServiceServer
 // for forward compatibility.
@@ -94,6 +113,14 @@ type UserTelegramContextServiceServer interface {
 	// are set are changed; omitted fields keep their current value.
 	// telegram_chat_id cannot be changed through this RPC.
 	UpdateUserTelegramContext(context.Context, *UpdateUserTelegramContextRequest) (*UpdateUserTelegramContextResponse, error)
+	// Binds the calling Telegram account (from "x-telegram-user-id" metadata) to the
+	// user who created the code in the Web Console.
+	//
+	// Errors:
+	//   - INVALID_ARGUMENT: the code is malformed, unknown, expired or already used.
+	//   - ALREADY_EXISTS: this Telegram account is already bound to another user.
+	//   - RESOURCE_EXHAUSTED: too many attempts; try again later.
+	BindTelegramAccount(context.Context, *BindTelegramAccountRequest) (*BindTelegramAccountResponse, error)
 	mustEmbedUnimplementedUserTelegramContextServiceServer()
 }
 
@@ -112,6 +139,9 @@ func (UnimplementedUserTelegramContextServiceServer) GetUserTelegramContextByTel
 }
 func (UnimplementedUserTelegramContextServiceServer) UpdateUserTelegramContext(context.Context, *UpdateUserTelegramContextRequest) (*UpdateUserTelegramContextResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateUserTelegramContext not implemented")
+}
+func (UnimplementedUserTelegramContextServiceServer) BindTelegramAccount(context.Context, *BindTelegramAccountRequest) (*BindTelegramAccountResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BindTelegramAccount not implemented")
 }
 func (UnimplementedUserTelegramContextServiceServer) mustEmbedUnimplementedUserTelegramContextServiceServer() {
 }
@@ -189,6 +219,24 @@ func _UserTelegramContextService_UpdateUserTelegramContext_Handler(srv interface
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserTelegramContextService_BindTelegramAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BindTelegramAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserTelegramContextServiceServer).BindTelegramAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserTelegramContextService_BindTelegramAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserTelegramContextServiceServer).BindTelegramAccount(ctx, req.(*BindTelegramAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserTelegramContextService_ServiceDesc is the grpc.ServiceDesc for UserTelegramContextService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -207,6 +255,10 @@ var UserTelegramContextService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateUserTelegramContext",
 			Handler:    _UserTelegramContextService_UpdateUserTelegramContext_Handler,
+		},
+		{
+			MethodName: "BindTelegramAccount",
+			Handler:    _UserTelegramContextService_BindTelegramAccount_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
