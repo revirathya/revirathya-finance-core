@@ -113,6 +113,10 @@ linted with `.sqlfluff` (postgres dialect, 2-space indent).
 
 ## Conventions to follow when extending
 
+- Every new table in a migration must have `created_at TIMESTAMPTZ DEFAULT NOW()` and
+  `updated_at TIMESTAMPTZ DEFAULT NOW()` columns, plus a `set_updated_at` trigger
+  (`BEFORE UPDATE ... FOR EACH ROW EXECUTE FUNCTION app.update_ts_now()`), following the pattern in
+  `000001_init_schema.up.sql`.
 - Adding a new entity/feature touches, in order: migration -> sqlc query -> `make sqlc-generate` -> domain
   entity+repo interface -> postgres repo impl -> usecase -> (grpc handler and/or graphql resolver) -> wire up
   in `cmd/api/main.go` / `startup.go`.

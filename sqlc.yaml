@@ -4,6 +4,7 @@ sql:
     schema:
       - "migrations/000001_init_schema.up.sql"
       - "migrations/000002_add_user_auth.up.sql"
+      - "migrations/000003_add_telegram_bind.up.sql"
     queries: "internal/repository/sqlc/queries"
     gen:
       go:

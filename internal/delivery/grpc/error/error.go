@@ -22,6 +22,8 @@ func ToStatus(op string, err error) error {
 		return status.Errorf(codes.PermissionDenied, "%s: permission denied", op)
 	case errors.Is(err, domain.ErrConflict):
 		return status.Errorf(codes.AlreadyExists, "%s: resource already exists", op)
+	case errors.Is(err, domain.ErrInvalidInput):
+		return status.Error(codes.InvalidArgument, "invalid argument")
 	default:
 		slog.Error("grpc request failed", "op", op, "err", err)
 		return status.Error(codes.Internal, "internal error")

@@ -91,6 +91,23 @@ func (q *Queries) GetUserTelegramContextByTelegramID(ctx context.Context, telegr
 	return i, err
 }
 
+const unbindTelegramBinding = `-- name: UnbindTelegramBinding :exec
+UPDATE app.user_telegram_contexts
+SET
+  telegram_chat_id = NULL,
+  conversation = NULL,
+  state = NULL,
+  interaction_chat_id = NULL,
+  interaction_message_id = NULL
+WHERE
+  user_id = $1
+`
+
+func (q *Queries) UnbindTelegramBinding(ctx context.Context, userID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, unbindTelegramBinding, userID)
+	return err
+}
+
 const updateUserTelegramContext = `-- name: UpdateUserTelegramContext :one
 UPDATE app.user_telegram_contexts
 SET
@@ -132,4 +149,35 @@ func (q *Queries) UpdateUserTelegramContext(ctx context.Context, arg UpdateUserT
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const upsertTelegramBinding = `-- name: UpsertTelegramBinding :one
+INSERT INTO app.user_telegram_contexts (
+  user_id,
+  telegram_chat_id
+)
+VALUES (
+  $1,
+  $2
+)
+ON CONFLICT (user_id)
+DO UPDATE SET
+  telegram_chat_id = $2,
+  conversation = NULL,
+  state = NULL,
+  interaction_chat_id = NULL,
+  interaction_message_id = NULL
+RETURNING user_id
+`
+
+type UpsertTelegramBindingParams struct {
+	UserID         pgtype.UUID `json:"user_id"`
+	TelegramChatID *string     `json:"telegram_chat_id"`
+}
+
+func (q *Queries) UpsertTelegramBinding(ctx context.Context, arg UpsertTelegramBindingParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, upsertTelegramBinding, arg.UserID, arg.TelegramChatID)
+	var user_id pgtype.UUID
+	err := row.Scan(&user_id)
+	return user_id, err
 }

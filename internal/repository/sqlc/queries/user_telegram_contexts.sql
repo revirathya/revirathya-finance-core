@@ -36,3 +36,32 @@ SET
 WHERE
   user_id = sqlc.arg('user_id')
 RETURNING *;
+
+-- name: UpsertTelegramBinding :one
+INSERT INTO app.user_telegram_contexts (
+  user_id,
+  telegram_chat_id
+)
+VALUES (
+  sqlc.arg('user_id'),
+  sqlc.arg('telegram_chat_id')
+)
+ON CONFLICT (user_id)
+DO UPDATE SET
+  telegram_chat_id = sqlc.arg('telegram_chat_id'),
+  conversation = NULL,
+  state = NULL,
+  interaction_chat_id = NULL,
+  interaction_message_id = NULL
+RETURNING user_id;
+
+-- name: UnbindTelegramBinding :exec
+UPDATE app.user_telegram_contexts
+SET
+  telegram_chat_id = NULL,
+  conversation = NULL,
+  state = NULL,
+  interaction_chat_id = NULL,
+  interaction_message_id = NULL
+WHERE
+  user_id = sqlc.arg('user_id');
