@@ -110,7 +110,7 @@ func (r *mutationResolver) DeleteExpense(ctx context.Context, id string) (*strin
 		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
 	}
 
-	if err = r.ctgUc.DeleteCategory(ctx, uuidId); err != nil {
+	if err = r.expUc.DeleteExpense(ctx, uuidId); err != nil {
 		return nil, err
 	}
 

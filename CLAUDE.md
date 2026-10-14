@@ -21,7 +21,7 @@ Stack: Go 1.25, pgx/v5, gRPC, gqlgen, sqlc, golang-migrate.
 make docker-up             # all compose services (db -> migration -> core); svc=db for Postgres only
 make docker-down           # stop services; extra compose flags via args="-v --remove-orphans"
 make docker-logs           # follow logs; svc=<service> for one service
-make docker-build          # build core image tagged $(VERSION); svc=migration for the migration image
+make docker-build          # build core image tagged $(VERSION); svc=migration for the migration image ($(MIGRATION_VERSION))
 make run                    # run the API locally (reads .env)
 make build                  # build binary to bin/api
 make test                   # go test ./...
@@ -50,8 +50,8 @@ make grpc-describe symbol=financecore.v1.CategoryService
 Docker: `make docker-build` builds the app image from `Dockerfile` (which itself runs `buf generate` and
 `gqlgen generate` inside the builder stage — generated code does not need to be committed for Docker builds,
 but IS committed under `gen/` for local `go build`/IDE use). `make docker-build svc=migration` builds
-`migration.Dockerfile`, a standalone `migrate/migrate` image bundled with `migrations/`. Both images are tagged
-`$(VERSION)` from `.env`, which docker-compose also requires. Make parses leading-dash words as its own flags,
+`migration.Dockerfile`, a standalone `migrate/migrate` image bundled with `migrations/`. The core image is tagged
+`$(VERSION)` and the migration image `$(MIGRATION_VERSION)`, both from `.env`; docker-compose requires both. Make parses leading-dash words as its own flags,
 so extra compose flags are passed through make variables (`args="..."`), not as `make docker-down -v`.
 
 Two run modes: local mode (`make docker-up svc=db` + `make run`, app reads `DATABASE_URI` pointing at
@@ -117,6 +117,13 @@ linted with `.sqlfluff` (postgres dialect, 2-space indent).
   `updated_at TIMESTAMPTZ DEFAULT NOW()` columns, plus a `set_updated_at` trigger
   (`BEFORE UPDATE ... FOR EACH ROW EXECUTE FUNCTION app.update_ts_now()`), following the pattern in
   `000001_init_schema.up.sql`.
+- API compatibility with downstream consumers:
+  - gRPC (`proto/`): breaking changes, including renumbering fields, are allowed. Downstream services follow
+    this repo's proto changes. Only keep wire compatibility (keep field numbers, `reserved` removed ones) when
+    the user explicitly asks for it for a given change.
+  - Everything else (GraphQL schema, database schema/migrations, env/config, Docker images): treat breaking
+    changes as risky for downstream consumers. Point out the possible conflict before making or recommending
+    such a change.
 - Adding a new entity/feature touches, in order: migration -> sqlc query -> `make sqlc-generate` -> domain
   entity+repo interface -> postgres repo impl -> usecase -> (grpc handler and/or graphql resolver) -> wire up
   in `cmd/api/main.go` / `startup.go`.

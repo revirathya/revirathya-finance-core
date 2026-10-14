@@ -13,19 +13,19 @@ import (
 type Querier interface {
 	ConsumeBindCode(ctx context.Context, codeHash string) (pgtype.UUID, error)
 	CreateBindCode(ctx context.Context, arg CreateBindCodeParams) error
-	CreateCategory(ctx context.Context, categoryName string) (AppCategory, error)
+	CreateCategory(ctx context.Context, arg CreateCategoryParams) (AppCategory, error)
 	CreateExpense(ctx context.Context, arg CreateExpenseParams) (AppExpense, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (pgtype.UUID, error)
 	DeleteBindCodes(ctx context.Context, userID pgtype.UUID) error
-	DeleteCategory(ctx context.Context, id pgtype.UUID) error
+	DeleteCategory(ctx context.Context, arg DeleteCategoryParams) (int64, error)
 	DeleteExpense(ctx context.Context, id pgtype.UUID) error
-	GetCategoryByID(ctx context.Context, id pgtype.UUID) (GetCategoryByIDRow, error)
+	GetCategoryByID(ctx context.Context, arg GetCategoryByIDParams) (GetCategoryByIDRow, error)
 	GetExpenseByID(ctx context.Context, id pgtype.UUID) (GetExpenseByIDRow, error)
 	GetUserByGoogleSub(ctx context.Context, googleSub *string) (GetUserByGoogleSubRow, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error)
 	GetUserTelegramContext(ctx context.Context, userID pgtype.UUID) (GetUserTelegramContextRow, error)
 	GetUserTelegramContextByTelegramID(ctx context.Context, telegramChatID *string) (GetUserTelegramContextByTelegramIDRow, error)
-	ListCategories(ctx context.Context) ([]ListCategoriesRow, error)
+	ListCategories(ctx context.Context, userID pgtype.UUID) ([]ListCategoriesRow, error)
 	ListExpenses(ctx context.Context, arg ListExpensesParams) ([]ListExpensesRow, error)
 	UnbindTelegramBinding(ctx context.Context, userID pgtype.UUID) error
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (AppCategory, error)

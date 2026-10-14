@@ -13,75 +13,104 @@ import (
 
 const createCategory = `-- name: CreateCategory :one
 INSERT INTO app.categories (
+  user_id,
   category_name
 )
 VALUES (
-  $1
+  $1,
+  $2
 )
-RETURNING id, category_name, created_at, updated_at
+RETURNING id, category_name, created_at, updated_at, user_id
 `
 
-func (q *Queries) CreateCategory(ctx context.Context, categoryName string) (AppCategory, error) {
-	row := q.db.QueryRow(ctx, createCategory, categoryName)
+type CreateCategoryParams struct {
+	UserID       pgtype.UUID `json:"user_id"`
+	CategoryName string      `json:"category_name"`
+}
+
+func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (AppCategory, error) {
+	row := q.db.QueryRow(ctx, createCategory, arg.UserID, arg.CategoryName)
 	var i AppCategory
 	err := row.Scan(
 		&i.ID,
 		&i.CategoryName,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UserID,
 	)
 	return i, err
 }
 
-const deleteCategory = `-- name: DeleteCategory :exec
+const deleteCategory = `-- name: DeleteCategory :execrows
 DELETE FROM app.categories
 WHERE
   id = $1
+  AND user_id = $2
 `
 
-func (q *Queries) DeleteCategory(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteCategory, id)
-	return err
+type DeleteCategoryParams struct {
+	ID     pgtype.UUID `json:"id"`
+	UserID pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) DeleteCategory(ctx context.Context, arg DeleteCategoryParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteCategory, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const getCategoryByID = `-- name: GetCategoryByID :one
 SELECT
   c.id,
+  c.user_id,
   c.category_name
 FROM
   app.categories AS c
 WHERE
   c.id = $1
+  AND c.user_id = $2
 `
+
+type GetCategoryByIDParams struct {
+	ID     pgtype.UUID `json:"id"`
+	UserID pgtype.UUID `json:"user_id"`
+}
 
 type GetCategoryByIDRow struct {
 	ID           pgtype.UUID `json:"id"`
+	UserID       pgtype.UUID `json:"user_id"`
 	CategoryName string      `json:"category_name"`
 }
 
-func (q *Queries) GetCategoryByID(ctx context.Context, id pgtype.UUID) (GetCategoryByIDRow, error) {
-	row := q.db.QueryRow(ctx, getCategoryByID, id)
+func (q *Queries) GetCategoryByID(ctx context.Context, arg GetCategoryByIDParams) (GetCategoryByIDRow, error) {
+	row := q.db.QueryRow(ctx, getCategoryByID, arg.ID, arg.UserID)
 	var i GetCategoryByIDRow
-	err := row.Scan(&i.ID, &i.CategoryName)
+	err := row.Scan(&i.ID, &i.UserID, &i.CategoryName)
 	return i, err
 }
 
 const listCategories = `-- name: ListCategories :many
 SELECT
   c.id,
+  c.user_id,
   c.category_name
 FROM
   app.categories AS c
+WHERE
+  c.user_id = $1
 ORDER BY c.category_name
 `
 
 type ListCategoriesRow struct {
 	ID           pgtype.UUID `json:"id"`
+	UserID       pgtype.UUID `json:"user_id"`
 	CategoryName string      `json:"category_name"`
 }
 
-func (q *Queries) ListCategories(ctx context.Context) ([]ListCategoriesRow, error) {
-	rows, err := q.db.Query(ctx, listCategories)
+func (q *Queries) ListCategories(ctx context.Context, userID pgtype.UUID) ([]ListCategoriesRow, error) {
+	rows, err := q.db.Query(ctx, listCategories, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +118,7 @@ func (q *Queries) ListCategories(ctx context.Context) ([]ListCategoriesRow, erro
 	var items []ListCategoriesRow
 	for rows.Next() {
 		var i ListCategoriesRow
-		if err := rows.Scan(&i.ID, &i.CategoryName); err != nil {
+		if err := rows.Scan(&i.ID, &i.UserID, &i.CategoryName); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -103,25 +132,28 @@ func (q *Queries) ListCategories(ctx context.Context) ([]ListCategoriesRow, erro
 const updateCategory = `-- name: UpdateCategory :one
 UPDATE app.categories
 SET
-  category_name = COALESCE($1, category_name)
+  category_name = $1
 WHERE
   id = $2
-RETURNING id, category_name, created_at, updated_at
+  AND user_id = $3
+RETURNING id, category_name, created_at, updated_at, user_id
 `
 
 type UpdateCategoryParams struct {
 	CategoryName string      `json:"category_name"`
 	ID           pgtype.UUID `json:"id"`
+	UserID       pgtype.UUID `json:"user_id"`
 }
 
 func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (AppCategory, error) {
-	row := q.db.QueryRow(ctx, updateCategory, arg.CategoryName, arg.ID)
+	row := q.db.QueryRow(ctx, updateCategory, arg.CategoryName, arg.ID, arg.UserID)
 	var i AppCategory
 	err := row.Scan(
 		&i.ID,
 		&i.CategoryName,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UserID,
 	)
 	return i, err
 }

@@ -5,6 +5,7 @@ sql:
       - "migrations/000001_init_schema.up.sql"
       - "migrations/000002_add_user_auth.up.sql"
       - "migrations/000003_add_telegram_bind.up.sql"
+      - "migrations/000004_categories_per_user.up.sql"
     queries: "internal/repository/sqlc/queries"
     gen:
       go:

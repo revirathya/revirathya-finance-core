@@ -38,7 +38,7 @@ docker-build: svc ?= core
 docker-build:
 	docker build \
 		-f $(if $(filter migration,$(svc)),migration.Dockerfile,Dockerfile) \
-		-t revirathya/revirathya-finance-$(svc):$(VERSION) .
+		-t revirathya/revirathya-finance-$(svc):$(if $(filter migration,$(svc)),$(MIGRATION_VERSION),$(VERSION)) .
 
 docker-up:
 	docker compose up -d $(svc)
