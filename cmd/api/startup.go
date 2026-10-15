@@ -43,6 +43,7 @@ const (
 func setupGraphQLServer(
 	port string,
 	allowedOrigins []string,
+	ping func(ctx context.Context) error,
 	tokens *appAuth.TokenManager,
 	authUc *ucAuth.AuthUsecase,
 	ctgUc *ucCtg.CategoryUsecase,
@@ -74,6 +75,10 @@ func setupGraphQLServer(
 			),
 		),
 	)
+
+	// Healthcheck
+	mux.HandleFunc("GET /healthz", healthz())
+	mux.HandleFunc("GET /readyz", readyz(ping))
 
 	httpServer := &http.Server{
 		Addr:              port,

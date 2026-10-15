@@ -45,6 +45,12 @@ services:
     ports:
       - "${GQL_HOST_PORT:-8180}:8080"
       - "${GRPC_HOST_PORT:-51051}:50051"
+    healthcheck:
+      test: ["CMD", "/app/financecore", "healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
 
 volumes:
   pgdata:

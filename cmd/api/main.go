@@ -27,6 +27,9 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		os.Exit(runHealthcheck())
+	}
 	// Get config
 	cfg, err := config.Load()
 	if err != nil {
@@ -91,6 +94,7 @@ func main() {
 	gqlServer := setupGraphQLServer(
 		cfg.GqlPort,
 		cfg.AllowedOrigins,
+		pool.Ping,
 		tokens,
 		authUc,
 		ctgUc,

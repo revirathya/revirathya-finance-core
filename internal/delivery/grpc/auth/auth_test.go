@@ -46,13 +46,24 @@ func TestAPIKeyAuthHealthcheck(t *testing.T) {
 	interceptor := grpcAuth.APIKeyAuth("secret")
 	handler := func(ctx context.Context, req any) (any, error) { return "ok", nil }
 
-	t.Run("healthcheck", func(t *testing.T) {
-		ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
-		_, err := interceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/grpc.health.v1.Health/"}, handler)
-		if got := status.Code(err); got != codes.OK {
-			t.Fatalf("got %v, want %v", got, codes.OK)
-		}
-	})
+	tests := []struct {
+		name     string
+		method   string
+		wantCode codes.Code
+	}{
+		{"healthcheck", "/grpc.health.v1.Health/Check", codes.OK},
+		{"non healthcheck", "/financecore.v1.ExpenseService/ListExpenses", codes.Unauthenticated},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
+			_, err := interceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: tt.method}, handler)
+			if got := status.Code(err); got != tt.wantCode {
+				t.Fatalf("got %v, want %v", got, tt.wantCode)
+			}
+		})
+	}
 }
 
 func TestTelegramUser(t *testing.T) {
@@ -147,15 +158,25 @@ func TestTelegramUserHealthcheck(t *testing.T) {
 	lookup := func(ctx context.Context, telegramID string) (uuid.UUID, error) {
 		return uuid.Nil, nil
 	}
-	const bindMethod = "/financecore.v1.UserTelegramContextService/BindTelegramAccount"
-	interceptor := grpcAuth.TelegramUser(lookup, bindMethod)
+	interceptor := grpcAuth.TelegramUser(lookup)
 	handler := func(ctx context.Context, req any) (any, error) { return "ok", nil }
 
-	t.Run("healthcheck", func(t *testing.T) {
-		ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
-		_, err := interceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/grpc.health.v1.Health/"}, handler)
-		if got := status.Code(err); got != codes.OK {
-			t.Fatalf("got %v, want %v", got, codes.OK)
-		}
-	})
+	tests := []struct {
+		name     string
+		method   string
+		wantCode codes.Code
+	}{
+		{"healthcheck", "/grpc.health.v1.Health/Check", codes.OK},
+		{"non healthcheck", "/financecore.v1.ExpenseService/ListExpenses", codes.Unauthenticated},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
+			_, err := interceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: tt.method}, handler)
+			if got := status.Code(err); got != tt.wantCode {
+				t.Fatalf("got %v, want %v", got, tt.wantCode)
+			}
+		})
+	}
 }
