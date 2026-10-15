@@ -76,6 +76,7 @@ internal/delivery/
   grpc/<entity>_handler.go     gRPC handlers, implement generated *ServiceServer interfaces
   grpc/auth/                   gRPC interceptors: APIKeyAuth (bot), TelegramUser (x-telegram-user-id -> principal)
   grpc/error/                  ToStatus: domain error -> gRPC status (import with an alias, e.g. grpcErr)
+  grpc/recovery/               panic-recovery interceptor; must stay first in the interceptor chain
   graphql/<entity>.resolver.go gqlgen resolvers (regenerated stubs — resolver.go itself is hand-maintained DI)
   graphql/middleware.go        WithAuth: session token -> principal
 internal/auth                 principal + Telegram ID in context, session JWT (TokenManager), bind-code helpers
@@ -94,7 +95,8 @@ shared currency between usecase and repository; conversion to/from pgx wire type
 
 `cmd/api/main.go` builds repositories -> usecases -> handlers/resolvers in that order, then
 `cmd/api/startup.go` starts the gRPC server and the GraphQL HTTP server (mounted at `/graphql`, wrapped in a
-hand-rolled CORS middleware from `cmd/api/cors.go`) inside an `errgroup`, so either server failing — or context
+hand-rolled CORS middleware from `cmd/api/cors.go`; `/healthz` and `/readyz` from `cmd/api/health.go` sit outside
+CORS and auth) inside an `errgroup`, so either server failing — or context
 cancellation — brings both down together via graceful shutdown.
 
 Authentication: GraphQL requests carry a session JWT (`Authorization: Bearer`), turned into a principal by
