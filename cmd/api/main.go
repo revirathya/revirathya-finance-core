@@ -11,9 +11,13 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/google"
 
-	pgRepo "github.com/revirathya/revirathya-finance-core/internal/repository/postgres"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
 	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
+
+	pgRepo "github.com/revirathya/revirathya-finance-core/internal/repository/postgres"
+
 	ucAuth "github.com/revirathya/revirathya-finance-core/internal/usecase/auth"
 	ucCtg "github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 	ucExp "github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
@@ -65,7 +69,7 @@ func main() {
 	usrUc := ucUsr.NewUserUsecase(usrRepo)
 	utelUc := ucUtel.NewUserTelegramContextUsecase(utelRepo)
 
-	// Setup servers
+	// Setup server - gRPC
 	grpcServer, lis, err := setupGRPCServer(
 		cfg.GrpcPort,
 		cfg.EnableGRPCReflection,
@@ -78,6 +82,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// Setup server - gRPC health
+	healthServer := health.NewServer()
+	healthpb.RegisterHealthServer(grpcServer, healthServer)
+
+	// Setup server - GraphQL
 	gqlServer := setupGraphQLServer(
 		cfg.GqlPort,
 		cfg.AllowedOrigins,
@@ -89,7 +99,8 @@ func main() {
 		usrUc,
 	)
 
-	g := setupServers(lis, ctx, grpcServer, gqlServer)
+	// Setup server - integration
+	g := setupServers(lis, ctx, grpcServer, healthServer, gqlServer)
 	if err = g.Wait(); err != nil {
 		panic(err)
 	}

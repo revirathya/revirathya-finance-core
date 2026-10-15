@@ -42,6 +42,19 @@ func TestAPIKeyAuth(t *testing.T) {
 	}
 }
 
+func TestAPIKeyAuthHealthcheck(t *testing.T) {
+	interceptor := grpcAuth.APIKeyAuth("secret")
+	handler := func(ctx context.Context, req any) (any, error) { return "ok", nil }
+
+	t.Run("healthcheck", func(t *testing.T) {
+		ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
+		_, err := interceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/grpc.health.v1.Health/"}, handler)
+		if got := status.Code(err); got != codes.OK {
+			t.Fatalf("got %v, want %v", got, codes.OK)
+		}
+	})
+}
+
 func TestTelegramUser(t *testing.T) {
 	const (
 		bindMethod  = "/financecore.v1.UserTelegramContextService/BindTelegramAccount"
@@ -128,4 +141,21 @@ func TestTelegramUser(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTelegramUserHealthcheck(t *testing.T) {
+	lookup := func(ctx context.Context, telegramID string) (uuid.UUID, error) {
+		return uuid.Nil, nil
+	}
+	const bindMethod = "/financecore.v1.UserTelegramContextService/BindTelegramAccount"
+	interceptor := grpcAuth.TelegramUser(lookup, bindMethod)
+	handler := func(ctx context.Context, req any) (any, error) { return "ok", nil }
+
+	t.Run("healthcheck", func(t *testing.T) {
+		ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
+		_, err := interceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "/grpc.health.v1.Health/"}, handler)
+		if got := status.Code(err); got != codes.OK {
+			t.Fatalf("got %v, want %v", got, codes.OK)
+		}
+	})
 }

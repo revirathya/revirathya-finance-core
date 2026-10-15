@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"errors"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -20,9 +21,15 @@ import (
 const telegramUserIDKey = "x-telegram-user-id"
 
 func APIKeyAuth(apiKey string) grpc.UnaryServerInterceptor {
+
 	expected := []byte("Bearer " + apiKey)
 
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		// Bypass healthcheck
+		if strings.HasPrefix(info.FullMethod, "/grpc.health.v1.Health/") {
+			return handler(ctx, req)
+		}
+
 		md, _ := metadata.FromIncomingContext(ctx)
 		values := md.Get("authorization")
 		if len(values) != 1 || subtle.ConstantTimeCompare([]byte(values[0]), expected) != 1 {
@@ -41,6 +48,11 @@ func TelegramUser(lookup TelegramUserLookup, unboundMethods ...string) grpc.Unar
 	}
 
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		// Bypass healthcheck
+		if strings.HasPrefix(info.FullMethod, "/grpc.health.v1.Health/") {
+			return handler(ctx, req)
+		}
+
 		// Read and validate Telegram user ID
 		md, _ := metadata.FromIncomingContext(ctx)
 		values := md.Get(telegramUserIDKey)
