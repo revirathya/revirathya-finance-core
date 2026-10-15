@@ -25,7 +25,9 @@ import (
 	grpcFincoreV1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
 	grpcDlv "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
 	grpcAuth "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/auth"
+	grpcRec "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/recovery"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -41,6 +43,7 @@ const (
 func setupGraphQLServer(
 	port string,
 	allowedOrigins []string,
+	ping func(ctx context.Context) error,
 	tokens *appAuth.TokenManager,
 	authUc *ucAuth.AuthUsecase,
 	ctgUc *ucCtg.CategoryUsecase,
@@ -72,6 +75,10 @@ func setupGraphQLServer(
 			),
 		),
 	)
+
+	// Healthcheck
+	mux.HandleFunc("GET /healthz", healthz())
+	mux.HandleFunc("GET /readyz", readyz(ping))
 
 	httpServer := &http.Server{
 		Addr:              port,
@@ -109,6 +116,7 @@ func setupGRPCServer(
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
+			grpcRec.UnaryServerInterceptor(),
 			grpcAuth.APIKeyAuth(apiKey),
 			grpcAuth.TelegramUser(
 				lookup,
@@ -131,7 +139,13 @@ func setupGRPCServer(
 	return grpcServer, lis, err
 }
 
-func setupServers(lis net.Listener, ctx context.Context, grpcServer *grpc.Server, gqlServer *http.Server) *errgroup.Group {
+func setupServers(
+	lis net.Listener,
+	ctx context.Context,
+	grpcServer *grpc.Server,
+	healthServer *health.Server,
+	gqlServer *http.Server,
+) *errgroup.Group {
 	g, gctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		return grpcServer.Serve(lis)
@@ -152,6 +166,7 @@ func setupServers(lis net.Listener, ctx context.Context, grpcServer *grpc.Server
 
 		stopped := make(chan struct{})
 		go func() {
+			healthServer.Shutdown()
 			grpcServer.GracefulStop()
 			close(stopped)
 		}()
