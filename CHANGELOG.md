@@ -23,6 +23,9 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
   (`telegram_bind_codes`), `000004_categories_per_user`.
 - Optional gRPC server reflection (`ENABLE_GRPC_REFLECTION`, off by default).
 - Graceful shutdown on SIGINT/SIGTERM, HTTP server timeouts and a per-request timeout for GraphQL.
+- Health checks: `GET /healthz` (liveness), `GET /readyz` (database readiness), the standard gRPC
+  `grpc.health.v1` service, and a Docker `healthcheck` for `core` via `financecore healthcheck`.
+- gRPC panic recovery: a panic in a handler returns `Internal` instead of crashing the process.
 - CI workflow: tests with the race detector, generated-code drift check, migration up/down test.
 - Doc comments on all proto services and messages; `docs/production-readiness.md`,
   `docs/postman-google-login.md`.

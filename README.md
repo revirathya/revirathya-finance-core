@@ -218,6 +218,23 @@ Only a hash of each code is stored. `unbindTelegram` (GraphQL) removes the bindi
 different Telegram account replaces it. The attempt limit is kept in memory, so it is per process and resets
 on restart.
 
+## Health checks
+
+|Endpoint|Meaning|
+|:--|:--|
+|`GET /healthz` (HTTP)|Liveness: always `200` while the process runs|
+|`GET /readyz` (HTTP)|Readiness: `200` when the database answers within 2 seconds, `503` otherwise|
+|`grpc.health.v1.Health/Check` (gRPC)|`SERVING` while the process runs, `NOT_SERVING` during shutdown|
+
+None of them require authentication. In Docker mode, `core` reports its health through `/readyz`
+(`docker compose ps` shows `healthy`). The runtime image has no shell or `curl`, so the check runs the binary
+itself: `financecore healthcheck` exits `0` when `/readyz` returns `200`, and `1` otherwise.
+
+```sh
+curl -i localhost:8080/readyz
+grpcurl -plaintext localhost:50051 grpc.health.v1.Health/Check   # needs ENABLE_GRPC_REFLECTION=true
+```
+
 ## gRPC tools
 
 `make grpc-list` and `make grpc-describe` read the local proto files, so they work without a running server:

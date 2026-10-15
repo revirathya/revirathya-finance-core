@@ -114,16 +114,21 @@ Last reviewed: 2026-10-11
   edge; on the proto side, `protovalidate` is the usual tool.
 
 ### Reliability
-- [ ] **Health checks.**
-  - [ ] `grpc.health.v1` on the gRPC server.
-  - [ ] `/healthz` (liveness) on HTTP.
-  - [ ] `/readyz` (readiness, pings the DB) on HTTP.
+- [x] **Health checks.**
+  - [x] `grpc.health.v1` on the gRPC server, exempt from auth. Reports liveness (`SERVING` while the process
+    runs, `NOT_SERVING` during shutdown); database readiness is `/readyz`.
+  - [x] `/healthz` (liveness) on HTTP.
+  - [x] `/readyz` (readiness, pings the DB with a 2s timeout) on HTTP.
+  - [x] Docker `healthcheck` for `core`, via the binary's own `healthcheck` subcommand (the image is distroless).
+  - Optional later: report `/readyz` as not ready as soon as shutdown starts; tie gRPC health to the database
+    if a gRPC load balancer or probe starts depending on it.
 - [ ] **Timeouts and limits.**
   - [x] HTTP server timeouts (see bug list).
   - [x] Per-request context deadline for GraphQL (`http.TimeoutHandler`).
   - [ ] gRPC `MaxRecvMsgSize` and keepalive settings.
   - [ ] pgxpool settings: `MaxConns`, `MaxConnLifetime`, etc.
-- [ ] **Panic recovery** interceptor on gRPC (gqlgen already recovers by default).
+- [x] **Panic recovery** interceptor on gRPC (gqlgen already recovers by default). First in the chain, so it also
+  covers the auth interceptors; logs the panic with a stack trace and returns `Internal`.
 - [ ] **Config validation.**
   - [x] Fail fast on invalid values: required secrets, `JWT_SECRET` length, `JWT_TTL` duration.
   - [ ] Keep secrets in env or a secret manager.

@@ -4,7 +4,7 @@ export
 GRPC_ADDR ?= localhost:50051
 GRPC_PROTOS := -proto financecore/v1/categories.proto -proto financecore/v1/expenses.proto -proto financecore/v1/user_telegram_contexts.proto
 
-.PHONY: run build test vet check tidy \
+.PHONY: run build test test-integration vet check tidy \
 	docker-build docker-up docker-down docker-logs \
 	migrate-up migrate-down migrate-force migrate-create migrate-version \
 	sqlc-generate proto-generate proto-lint \
@@ -19,6 +19,9 @@ build:
 
 test:
 	go test ./...
+
+test-integration:
+	go test -race -tags=integration ./internal/repository/...
 
 vet:
 	go vet ./...
