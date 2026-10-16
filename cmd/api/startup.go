@@ -29,8 +29,10 @@ import (
 
 	grpcFincoreV1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
 	grpcDlv "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
+	grpcAlog "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/accesslog"
 	grpcAuth "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/auth"
 	grpcRec "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/recovery"
+	grpcRqi "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/requestid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/reflection"
@@ -76,6 +78,7 @@ func setupGraphQLServer(
 		gqlServer.Use(extension.Introspection{})
 	}
 	gqlServer.SetErrorPresenter(gqlDlv.ErrorPresenter)
+	gqlServer.SetRecoverFunc(gqlDlv.RecoverFunc)
 
 	// Set routing
 	mux := http.NewServeMux()
@@ -102,7 +105,7 @@ func setupGraphQLServer(
 
 	httpServer := &http.Server{
 		Addr:              port,
-		Handler:           mux,
+		Handler:           withRequestID(withAccessLog(mux)),
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,
@@ -136,6 +139,8 @@ func setupGRPCServer(
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
+			grpcRqi.UnaryServerInterceptor(),
+			grpcAlog.UnaryServerInterceptor(),
 			grpcRec.UnaryServerInterceptor(),
 			grpcAuth.APIKeyAuth(apiKey),
 			grpcAuth.TelegramUser(

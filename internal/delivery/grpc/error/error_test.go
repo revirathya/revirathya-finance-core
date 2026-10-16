@@ -1,8 +1,12 @@
 package error_test
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"testing"
 
 	"google.golang.org/grpc/codes"
@@ -10,9 +14,12 @@ import (
 
 	grpcErr "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/error"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/logging"
 )
 
 func TestToStatus(t *testing.T) {
+	ctx := context.Background()
+
 	tests := []struct {
 		name     string
 		err      error
@@ -30,7 +37,7 @@ func TestToStatus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st, ok := status.FromError(grpcErr.ToStatus("get expense 1", tt.err))
+			st, ok := status.FromError(grpcErr.ToStatus(ctx, "get expense 1", tt.err))
 			if !ok {
 				t.Fatalf("not a gRPC status error")
 			}
@@ -42,4 +49,53 @@ func TestToStatus(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestToStatusLogging(t *testing.T) {
+	// useLogger installs the service's JSON logger (which adds request_id) for the rest of the test.
+	useLogger := func(t *testing.T) *bytes.Buffer {
+		t.Helper()
+		var buf bytes.Buffer
+		logger, err := logging.NewLogger(&buf, "json", slog.LevelDebug)
+		if err != nil {
+			t.Fatalf("NewLogger: %v", err)
+		}
+		previous := slog.Default()
+		slog.SetDefault(logger)
+		t.Cleanup(func() { slog.SetDefault(previous) })
+		return &buf
+	}
+	ctx := logging.WithRequestID(context.Background(), "bot-981")
+
+	t.Run("unknown error is logged with the request ID", func(t *testing.T) {
+		logs := useLogger(t)
+
+		_ = grpcErr.ToStatus(ctx, "list expenses", errors.New("connection reset"))
+
+		var line map[string]any
+		if err := json.Unmarshal(logs.Bytes(), &line); err != nil {
+			t.Fatalf("want one JSON log line, got %q: %v", logs.String(), err)
+		}
+		if line["level"] != "ERROR" || line["request_id"] != "bot-981" || line["op"] != "list expenses" {
+			t.Fatalf("unexpected line: %v", line)
+		}
+		if line["err"] != "connection reset" {
+			t.Fatalf("err %v, want the original error in the log", line["err"])
+		}
+	})
+
+	t.Run("known domain errors are not logged", func(t *testing.T) {
+		for _, err := range []error{
+			domain.ErrNotFound, domain.ErrUnauthenticated, domain.ErrForbidden,
+			domain.ErrConflict, domain.ErrInvalidInput,
+		} {
+			logs := useLogger(t)
+
+			_ = grpcErr.ToStatus(ctx, "get expense", err)
+
+			if logs.Len() != 0 {
+				t.Fatalf("%v was logged: %s", err, logs.String())
+			}
+		}
+	})
 }

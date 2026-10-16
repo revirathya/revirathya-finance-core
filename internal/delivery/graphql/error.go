@@ -29,7 +29,23 @@ func ErrorPresenter(ctx context.Context, err error) *gqlerror.Error {
 		return gqlErr
 	}
 
+	var raw *gqlerror.Error
+	if (errors.As(err, &raw)) && (raw.Err == nil && len(raw.Path) == 0) {
+		return &gqlerror.Error{
+			Message: "invalid request",
+			Extensions: map[string]any{
+				"code": "BAD_REQUEST",
+			},
+		}
+	}
+
 	switch {
+	case errors.Is(err, errResolverPanic):
+		// Already logged with its stack trace
+		gqlErr.Message = "internal error"
+		gqlErr.Extensions = map[string]any{
+			"code": "INTERNAL",
+		}
 	case errors.Is(err, domain.ErrNotFound):
 		gqlErr.Message = "resource not found"
 		gqlErr.Extensions = map[string]any{"code": "NOT_FOUND"}
@@ -58,7 +74,7 @@ func ErrorPresenter(ctx context.Context, err error) *gqlerror.Error {
 	default:
 		gqlErr.Message = "internal error"
 		gqlErr.Extensions = map[string]any{"code": "INTERNAL"}
-		slog.Error("graphql request failed", "path", graphql.GetPath(ctx), "err", err)
+		slog.ErrorContext(ctx, "graphql request failed", "path", graphql.GetPath(ctx), "err", err)
 	}
 
 	return gqlErr

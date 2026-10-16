@@ -6,6 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 1. Never edit anything unless explicitly asked to. Answer questions, investigate, and propose changes
    freely, but do not modify, create, or delete files until the user explicitly requests the change.
+2. Exception to rule 1: keep the Markdown docs in sync without asking. Whenever a change (yours or the user's)
+   makes any `*.md` file out of date — `README.md`, `CLAUDE.md`, `CHANGELOG.md`, `docs/*.md` — update those docs
+   to match, and say which ones were updated. This covers docs only, never code or config.
+3. Tests are written by Claude, not the user. When guiding an implementation step, don't tell the user to write
+   tests. Once the user has finished the implementation and Claude has reviewed it, Claude writes the unit tests
+   for it without being asked (exception to rule 1 for test files), runs them, and reports the results —
+   including tests that fail because of a bug found in the review.
 
 ## Overview
 
@@ -13,7 +20,7 @@ Revirathya Finance Core is a Go service managing financial data (users, categori
 conversation state). It exposes both gRPC and GraphQL APIs backed by Postgres, served from a single binary
 (`cmd/api`) over two listeners.
 
-Stack: Go 1.25, pgx/v5, gRPC, gqlgen, sqlc, golang-migrate.
+Stack: Go 1.26, pgx/v5, gRPC, gqlgen, sqlc, golang-migrate.
 
 ## Common commands
 
@@ -42,7 +49,7 @@ make proto-generate   # buf generate: proto/**/*.proto -> gen/go/**  (edit .prot
 make sqlc-generate    # sqlc generate: internal/repository/sqlc/queries/*.sql -> internal/repository/sqlc/gen
 make gql-generate     # gqlgen generate: graphql/schema/*.graphql -> gen/graphql + resolver stubs
 
-# gRPC dev tools (read local proto files; server reflection is only registered with ENABLE_GRPC_REFLECTION=true)
+# gRPC dev tools (read local proto files; server reflection is only registered with GRPC_ENABLE_REFLECTION=true)
 make grpc-list
 make grpc-describe symbol=financecore.v1.CategoryService
 ```
@@ -76,13 +83,17 @@ internal/delivery/
   grpc/<entity>_handler.go     gRPC handlers, implement generated *ServiceServer interfaces
   grpc/auth/                   gRPC interceptors: APIKeyAuth (bot), TelegramUser (x-telegram-user-id -> principal)
   grpc/error/                  ToStatus: domain error -> gRPC status (import with an alias, e.g. grpcErr)
-  grpc/recovery/               panic-recovery interceptor; must stay first in the interceptor chain
+  grpc/requestid/              request-ID interceptor (x-request-id metadata); must stay first in the chain
+  grpc/accesslog/              one log line per call (method, code, duration); right after requestid
+  grpc/recovery/               panic-recovery interceptor; after accesslog (so panics are logged), before auth
   graphql/<entity>.resolver.go gqlgen resolvers (regenerated stubs — resolver.go itself is hand-maintained DI)
   graphql/middleware.go        WithAuth: session token -> principal
+  graphql/recovery.go          RecoverFunc: logs resolver panics via slog; ErrorPresenter skips logging them again
 internal/auth                 principal + Telegram ID in context, session JWT (TokenManager), bind-code helpers
 internal/platform/database   pgxpool setup + pgx<->domain type conversion helpers (UUID/Date/Numeric/Timestamp)
 internal/platform/google     Google ID-token verifier (implements domain.GoogleVerifier)
 internal/platform/ratelimit  in-memory fixed-window limiter (per process)
+internal/platform/logging    slog setup (LOG_FORMAT json/text, LOG_LEVEL), request ID in context, EnsureRequestID
 internal/config               env-based config loading (.env via godotenv, falls back to OS env)
 cmd/api                       wires everything together and runs gRPC + GraphQL servers concurrently
 ```
@@ -96,7 +107,7 @@ shared currency between usecase and repository; conversion to/from pgx wire type
 `cmd/api/main.go` builds repositories -> usecases -> handlers/resolvers in that order, then
 `cmd/api/startup.go` starts the gRPC server and the GraphQL HTTP server (mounted at `/graphql`, wrapped in a
 hand-rolled CORS middleware from `cmd/api/cors.go`; `/healthz` and `/readyz` from `cmd/api/health.go` sit outside
-CORS and auth) inside an `errgroup`, so either server failing — or context
+CORS and auth; the whole mux is wrapped in `withRequestID(withAccessLog(...))` from `cmd/api/middleware.go`) inside an `errgroup`, so either server failing — or context
 cancellation — brings both down together via graceful shutdown.
 
 Authentication: GraphQL requests carry a session JWT (`Authorization: Bearer`), turned into a principal by
@@ -147,6 +158,9 @@ linted with `.sqlfluff` (postgres dialect, 2-space indent).
 - Adding a new entity/feature touches, in order: migration -> sqlc query -> `make sqlc-generate` -> domain
   entity+repo interface -> postgres repo impl -> usecase -> (grpc handler and/or graphql resolver) -> wire up
   in `cmd/api/main.go` / `startup.go`.
+- Logging: use `log/slog`'s `*Context` methods (`slog.InfoContext`, `slog.ErrorContext`, ...) wherever a request
+  context exists, so the request ID is attached. Never log secrets, tokens, `Authorization` headers, full DSNs, the
+  config struct, or raw request bodies. `cmd/api/main.go` returns errors from `run()` instead of panicking.
 - Usecases take and return `internal/domain` types only; they must not import pgx, gqlgen, or gRPC generated
   packages.
 - Usecase tests use hand-written fakes implementing the domain repository interface (see

@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/recovery"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/logging"
 )
 
 const testMethod = "/financecore.v1.ExpenseService/ListExpenses"
@@ -155,5 +156,24 @@ func TestUnaryServerInterceptorCoversLaterInterceptors(t *testing.T) {
 
 	if status.Code(err) != codes.Internal {
 		t.Fatalf("code: got %v, want %v", status.Code(err), codes.Internal)
+	}
+}
+
+func TestUnaryServerInterceptorLogsRequestID(t *testing.T) {
+	var buf bytes.Buffer
+	logger, err := logging.NewLogger(&buf, "json", slog.LevelDebug)
+	if err != nil {
+		t.Fatalf("NewLogger: %v", err)
+	}
+	previous := slog.Default()
+	slog.SetDefault(logger)
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	ctx := logging.WithRequestID(context.Background(), "bot-981")
+	_, _ = recovery.UnaryServerInterceptor()(ctx, "request", &grpc.UnaryServerInfo{FullMethod: testMethod},
+		func(ctx context.Context, req any) (any, error) { panic("boom") })
+
+	if !strings.Contains(buf.String(), `"request_id":"bot-981"`) {
+		t.Fatalf("panic log has no request_id: %s", buf.String())
 	}
 }

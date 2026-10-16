@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/revirathya/revirathya-finance-core/internal/platform/logging"
 )
 
 // captureLogs redirects the default slog logger into a buffer for the rest of the test.
@@ -134,4 +136,24 @@ func TestReadyz(t *testing.T) {
 			t.Fatalf("status: got %d, want %d", rec.Code, http.StatusServiceUnavailable)
 		}
 	})
+}
+
+func TestReadyzLogsRequestID(t *testing.T) {
+	var buf bytes.Buffer
+	logger, err := logging.NewLogger(&buf, "json", slog.LevelDebug)
+	if err != nil {
+		t.Fatalf("NewLogger: %v", err)
+	}
+	previous := slog.Default()
+	slog.SetDefault(logger)
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	ping := func(ctx context.Context) error { return errors.New("connection refused") }
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	req = req.WithContext(logging.WithRequestID(req.Context(), "probe-1"))
+	readyz(ping).ServeHTTP(httptest.NewRecorder(), req)
+
+	if !strings.Contains(buf.String(), `"request_id":"probe-1"`) {
+		t.Fatalf("readiness warning has no request_id: %s", buf.String())
+	}
 }

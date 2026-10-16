@@ -27,12 +27,12 @@ func NewCategoryHandler(ctgUc *category.CategoryUsecase) *CategoryHandler {
 func (h *CategoryHandler) ListCategories(ctx context.Context, req *financecorev1.ListCategoriesRequest) (*financecorev1.ListCategoriesResponse, error) {
 	userID, err := appAuth.UserIDFrom(ctx)
 	if err != nil {
-		return nil, grpcErr.ToStatus("list categories", err)
+		return nil, grpcErr.ToStatus(ctx, "list categories", err)
 	}
 
 	categories, err := h.ctgUc.ListCategories(ctx, userID)
 	if err != nil {
-		return nil, grpcErr.ToStatus("list categories", err)
+		return nil, grpcErr.ToStatus(ctx, "list categories", err)
 	}
 
 	resp := &financecorev1.ListCategoriesResponse{
@@ -56,12 +56,12 @@ func (h *CategoryHandler) GetCategoryByID(ctx context.Context, req *financecorev
 
 	userID, err := appAuth.UserIDFrom(ctx)
 	if err != nil {
-		return nil, grpcErr.ToStatus("get category by id", err)
+		return nil, grpcErr.ToStatus(ctx, "get category by id", err)
 	}
 
 	category, err := h.ctgUc.GetCategoryByID(ctx, uuidId, userID)
 	if err != nil {
-		return nil, grpcErr.ToStatus(fmt.Sprintf("get category by id %s", uuidId.String()), err)
+		return nil, grpcErr.ToStatus(ctx, fmt.Sprintf("get category by id %s", uuidId.String()), err)
 	}
 
 	response := &financecorev1.GetCategoryByIDResponse{

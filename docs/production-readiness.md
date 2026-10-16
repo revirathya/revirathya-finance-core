@@ -142,14 +142,20 @@ Last reviewed: 2026-10-11
 
 ### Observability
 - [ ] **Structured logging.**
-  - [ ] `log/slog` with JSON output.
-  - [ ] Request ID or trace ID on every log line.
-  - [ ] gRPC unary interceptor for logging.
-  - [ ] Replace `panic(err)` at startup with logged errors and a non-zero exit.
+  - [x] `log/slog` with JSON output (`LOG_FORMAT`, default `json`; `LOG_LEVEL`, default `info`).
+  - [x] Request ID on every request (`X-Request-ID` / `x-request-id`), added to log lines by the logger.
+  - [x] Access logs: one line per HTTP request and gRPC call (method, status/code, duration), level by outcome;
+    successful health checks skipped.
+  - [x] Error logs carry the request ID: `ToStatus(ctx, ...)`, `ErrorPresenter`, recovery and `readyz` log with
+    `slog.*Context`.
+  - [x] Replace `panic(err)` at startup with logged errors and a non-zero exit (`run() error` in `main.go`).
   - [ ] Never log secrets or full DSNs.
-  - [ ] Never log raw request bodies. gqlgen's "json request body could not be decoded" error includes the whole
-    body, and `ErrorPresenter` logs unknown errors, so a malformed `loginWithGoogle` request would log a Google ID
-    token.
+  - [x] Never log raw request bodies. Request-level errors from gqlgen's transport (no resolver path, no wrapped
+    error), such as a body that isn't valid JSON, are returned as `BAD_REQUEST` / "invalid request" and not logged.
+  - [x] GraphQL resolver panics go through the logger: `RecoverFunc` (`SetRecoverFunc`) logs the panic and stack
+    trace with the request ID, instead of gqlgen's default plain-text output to stderr; `ErrorPresenter` doesn't log
+    them a second time.
+  - [ ] Optional: `user_id` in access log lines.
 
 ### Quality gates
 - [ ] **CI pipeline** ([`.github/workflows/ci.yaml`](../.github/workflows/ci.yaml)) running on every PR:
@@ -224,7 +230,7 @@ files into client repos by hand.
 
 - [x] **Server reflection** (`google.golang.org/grpc/reflection`), so `grpcurl`, Postman and Evans can
   discover services without proto files.
-  - Done: gated by `ENABLE_GRPC_REFLECTION` (default `false`); set it to `true` in the local `.env`.
+  - Done: gated by `GRPC_ENABLE_REFLECTION` (default `false`); set it to `true` in the local `.env`.
   - Keep it off in production, at least until auth is in place.
 - [ ] **Simplify `make grpc-list` / `make grpc-describe`** to rely on reflection, dropping `GRPC_PROTOS`.
 - [ ] **Proto doc comments** on every service, RPC, message and field.
