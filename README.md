@@ -147,6 +147,7 @@ Copy `.env.example` to `.env`. Only the required variables must be set; prefer t
 |`ALLOWED_ORIGINS`|`http://localhost,http://127.0.0.1`|Comma-separated CORS origins for GraphQL. Must be full origins including scheme and port, e.g. `http://localhost:3000`|
 |`JWT_TTL`|`24h`|Session token lifetime, as a Go duration (e.g. `30m`, `12h`)|
 |`ENABLE_GRPC_REFLECTION`|`false`|Register gRPC server reflection, so `grpcurl` and Postman can discover services without proto files. Keep it off in production.|
+|`GQL_ENABLE_INTROSPECTION`|`false`|Allow GraphQL introspection (schema download) and "Did you mean …?" hints in validation errors. Keep it off in production.|
 
 ### Optional: host ports for Docker mode
 
@@ -217,6 +218,22 @@ A user links their Telegram account once, from the Web Console:
 Only a hash of each code is stored. `unbindTelegram` (GraphQL) removes the binding; binding again from a
 different Telegram account replaces it. The attempt limit is kept in memory, so it is per process and resets
 on restart.
+
+## GraphQL server
+
+`/graphql` accepts only `POST` requests with a JSON body. `GET`, websockets (subscriptions), multipart uploads and
+automatic persisted queries are disabled.
+
+|Limit|Value|When exceeded|
+|:--|:--|:--|
+|Request body|1 MB|HTTP `413`|
+|Query size|5000 tokens|`GRAPHQL_PARSE_FAILED`|
+|Query complexity|200 (each field counts 1)|`COMPLEXITY_LIMIT_EXCEEDED`|
+|Request duration|10 seconds|HTTP `503` with `request timeout`|
+
+Introspection is off unless `GQL_ENABLE_INTROSPECTION=true`. With it off, tools can't download the schema from
+the server (e.g. Postman's "fetch schema", GraphQL codegen); point them at the committed schema in
+`graphql/schema/*.graphql` instead, or enable it in development.
 
 ## Health checks
 

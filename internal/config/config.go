@@ -10,15 +10,16 @@ import (
 )
 
 type Config struct {
-	DatabaseURI          string
-	GrpcApiKey           string
-	GrpcPort             string
-	GqlPort              string
-	AllowedOrigins       []string
-	EnableGRPCReflection bool
-	GoogleClientID       string
-	JwtSecret            string
-	JwtTtl               time.Duration
+	DatabaseURI            string
+	GrpcApiKey             string
+	GrpcPort               string
+	GrpcEnableReflection   bool
+	GqlPort                string
+	GqlEnableInstropection bool
+	AllowedOrigins         []string
+	GoogleClientID         string
+	JwtSecret              string
+	JwtTtl                 time.Duration
 }
 
 func getEnv(key string, fallback string) string {
@@ -45,9 +46,10 @@ func Load() (*Config, error) {
 	cfg.DatabaseURI = getEnv("DATABASE_URI", "")
 	cfg.GrpcApiKey = getEnv("GRPC_API_KEY", "")
 	cfg.GrpcPort = ":" + getEnv("GRPC_PORT", "50051")
+	cfg.GrpcEnableReflection = getEnv("GRPC_ENABLE_REFLECTION", "false") == "true"
 	cfg.GqlPort = ":" + getEnv("GQL_PORT", "8080")
+	cfg.GqlEnableInstropection = getEnv("GQL_ENABLE_INTROSPECTION", "false") == "true"
 	cfg.AllowedOrigins = getEnvArray("ALLOWED_ORIGINS", "http://localhost,http://127.0.0.1")
-	cfg.EnableGRPCReflection = getEnv("ENABLE_GRPC_REFLECTION", "false") == "true"
 	cfg.GoogleClientID = getEnv("GOOGLE_CLIENT_ID", "")
 	cfg.JwtSecret = getEnv("JWT_SECRET", "")
 

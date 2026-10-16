@@ -16,10 +16,16 @@ type invalidInputError struct{ err error }
 func (e invalidInputError) Error() string { return e.err.Error() }
 func (e invalidInputError) Unwrap() error { return e.err }
 
+var passThroughCodes = map[string]bool{
+	errcode.ParseFailed:         true,
+	errcode.ValidationFailed:    true,
+	"COMPLEXITY_LIMIT_EXCEEDED": true, // from gqlgen extension.ComplexityLimit
+}
+
 func ErrorPresenter(ctx context.Context, err error) *gqlerror.Error {
 	gqlErr := graphql.DefaultErrorPresenter(ctx, err)
 
-	if code, _ := gqlErr.Extensions["code"].(string); code == errcode.ValidationFailed || code == errcode.ParseFailed {
+	if code, _ := gqlErr.Extensions["code"].(string); passThroughCodes[code] {
 		return gqlErr
 	}
 

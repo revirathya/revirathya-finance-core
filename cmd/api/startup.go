@@ -8,12 +8,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
-	gqlHdl "github.com/99designs/gqlgen/graphql/handler"
-	gqlSch "github.com/revirathya/revirathya-finance-core/gen/graphql"
 	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
-	gqlDlv "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/ratelimit"
+	"github.com/vektah/gqlparser/v2/ast"
+
 	ucAuth "github.com/revirathya/revirathya-finance-core/internal/usecase/auth"
 	ucCtg "github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 	ucExp "github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
@@ -21,6 +19,13 @@ import (
 	ucUsr "github.com/revirathya/revirathya-finance-core/internal/usecase/user"
 	ucUtel "github.com/revirathya/revirathya-finance-core/internal/usecase/usercontext"
 	"golang.org/x/sync/errgroup"
+
+	gqlHdl "github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/extension"
+	"github.com/99designs/gqlgen/graphql/handler/lru"
+	gqlTrn "github.com/99designs/gqlgen/graphql/handler/transport"
+	gqlSch "github.com/revirathya/revirathya-finance-core/gen/graphql"
+	gqlDlv "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql"
 
 	grpcFincoreV1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
 	grpcDlv "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
@@ -32,18 +37,20 @@ import (
 )
 
 const (
-	readHeaderTimeout = 5 * time.Second
-	readTimeout       = 10 * time.Second
-	writeTimeout      = 15 * time.Second
-	idleTimeout       = 60 * time.Second
-	handlerTimeout    = 10 * time.Second // val < writeTimeout
-	shutdownTimeout   = 10 * time.Second
+	readHeaderTimeout  = 5 * time.Second
+	readTimeout        = 10 * time.Second
+	writeTimeout       = 15 * time.Second
+	idleTimeout        = 60 * time.Second
+	handlerTimeout     = 10 * time.Second // val < writeTimeout
+	shutdownTimeout    = 10 * time.Second
+	maxRequestBodySize = 1 * 1024 * 1024 // 1 MB
 )
 
 func setupGraphQLServer(
 	port string,
 	allowedOrigins []string,
 	ping func(ctx context.Context) error,
+	enableInstropection bool,
 	tokens *appAuth.TokenManager,
 	authUc *ucAuth.AuthUsecase,
 	ctgUc *ucCtg.CategoryUsecase,
@@ -51,26 +58,39 @@ func setupGraphQLServer(
 	tbcUc *ucTbc.TelegramBindCodeUsecase,
 	usrUc *ucUsr.UserUsecase,
 ) *http.Server {
+	// Init resolver and server
 	resolver := gqlDlv.NewResolver(tokens, authUc, ctgUc, expUc, tbcUc, usrUc)
-
-	gqlServer := gqlHdl.NewDefaultServer(gqlSch.NewExecutableSchema(
+	gqlServer := gqlHdl.New(gqlSch.NewExecutableSchema(
 		gqlSch.Config{
 			Resolvers: resolver,
 		},
 	))
 
+	// Configure server
+	gqlServer.AddTransport(gqlTrn.POST{})
+	gqlServer.SetQueryCache(lru.New[*ast.QueryDocument](1000))
+	gqlServer.SetParserTokenLimit(5000)
+	gqlServer.SetDisableSuggestion(!enableInstropection)
+	gqlServer.Use(extension.FixedComplexityLimit(200))
+	if enableInstropection {
+		gqlServer.Use(extension.Introspection{})
+	}
 	gqlServer.SetErrorPresenter(gqlDlv.ErrorPresenter)
 
+	// Set routing
 	mux := http.NewServeMux()
 	mux.Handle(
 		"/graphql",
-		withCORS(
-			allowedOrigins,
-			gqlDlv.WithAuth(tokens,
-				http.TimeoutHandler(
-					gqlServer,
-					handlerTimeout,
-					`{"errors":[{"message":"request timeout"}]}`,
+		limitBody(
+			maxRequestBodySize,
+			withCORS(
+				allowedOrigins,
+				gqlDlv.WithAuth(tokens,
+					http.TimeoutHandler(
+						gqlServer,
+						handlerTimeout,
+						`{"errors":[{"message":"request timeout"}]}`,
+					),
 				),
 			),
 		),

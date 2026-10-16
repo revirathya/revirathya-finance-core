@@ -34,12 +34,13 @@ services:
         condition: service_completed_successfully
     environment:
       DATABASE_URI: "postgres://${DB_USER:-revirathya}:${DB_PASSWORD:?DB_PASSWORD is required}@db:5432/${DB_NAME:-finance}?sslmode=disable"
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}
       GRPC_API_KEY: "${GRPC_API_KEY:?GRPC_API_KEY is required}"
       GRPC_PORT: "50051"
+      GRPC_ENABLE_REFLECTION: ${GRPC_ENABLE_REFLECTION:-false}
       GQL_PORT: "8080"
+      GQL_ENABLE_INTROSPECTION: ${GQL_ENABLE_INTROSPECTION:-false}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
-      ENABLE_GRPC_REFLECTION: ${ENABLE_GRPC_REFLECTION:-false}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_TTL: ${JWT_TTL:-}
     ports:

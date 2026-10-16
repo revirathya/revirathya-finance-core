@@ -75,7 +75,7 @@ func main() {
 	// Setup server - gRPC
 	grpcServer, lis, err := setupGRPCServer(
 		cfg.GrpcPort,
-		cfg.EnableGRPCReflection,
+		cfg.GrpcEnableReflection,
 		cfg.GrpcApiKey,
 		ctgUc,
 		expUc,
@@ -95,6 +95,7 @@ func main() {
 		cfg.GqlPort,
 		cfg.AllowedOrigins,
 		pool.Ping,
+		cfg.GqlEnableInstropection,
 		tokens,
 		authUc,
 		ctgUc,
