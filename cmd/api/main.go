@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,6 +17,7 @@ import (
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
 	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
+	appLog "github.com/revirathya/revirathya-finance-core/internal/platform/logging"
 
 	pgRepo "github.com/revirathya/revirathya-finance-core/internal/repository/postgres"
 
@@ -27,14 +30,31 @@ import (
 )
 
 func main() {
+	// Early Healtcheck
 	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
 		os.Exit(runHealthcheck())
 	}
+
+	// Run
+	if err := run(); err != nil {
+		slog.Error("server stopped", "err", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	// Get config
 	cfg, err := config.Load()
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("load config: %w", err)
 	}
+
+	// Setup logger
+	logger, err := appLog.NewLogger(os.Stdout, cfg.LogFormat, cfg.LogLevel)
+	if err != nil {
+		return err
+	}
+	slog.SetDefault(logger)
 
 	// Get Postgres Pool
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -42,7 +62,7 @@ func main() {
 
 	pool, err := database.NewDBPool(ctx, cfg.DatabaseURI)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("create db pool: %w", err)
 	}
 	defer pool.Close()
 
@@ -50,7 +70,7 @@ func main() {
 	tmCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	if err := pool.Ping(tmCtx); err != nil {
-		panic(err)
+		return fmt.Errorf("ping db: %w", err)
 	}
 
 	// Gen Repository
@@ -83,7 +103,7 @@ func main() {
 		utelUc,
 	)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("setup grpc server: %w", err)
 	}
 
 	// Setup server - gRPC health
@@ -95,7 +115,7 @@ func main() {
 		cfg.GqlPort,
 		cfg.AllowedOrigins,
 		pool.Ping,
-		cfg.GqlEnableInstropection,
+		cfg.GqlEnableIntrospection,
 		tokens,
 		authUc,
 		ctgUc,
@@ -106,7 +126,13 @@ func main() {
 
 	// Setup server - integration
 	g := setupServers(lis, ctx, grpcServer, healthServer, gqlServer)
-	if err = g.Wait(); err != nil {
-		panic(err)
+	slog.Info(
+		"server started",
+		"grpc_addr", cfg.GrpcPort,
+		"gql_port", cfg.GqlPort,
+	)
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("serve: %w", err)
 	}
+	return nil
 }

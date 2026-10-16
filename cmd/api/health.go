@@ -37,7 +37,7 @@ func readyz(ping func(ctx context.Context) error) http.HandlerFunc {
 		defer cancel()
 
 		if err := ping(ctx); err != nil {
-			slog.Warn("readiness check failed", "err", err)
+			slog.WarnContext(ctx, "readiness check failed", "err", err)
 			http.Error(w, "not ready", http.StatusServiceUnavailable)
 			return
 		}

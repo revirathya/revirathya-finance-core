@@ -4,7 +4,7 @@
 Core services to managing financial data. Exposes gRPC and GraphQL as APIs backed by Postgres.
 
 **Stack:**
-- Go 1.25
+- Go 1.26
 - pgx
 - gRPC
 - gqlgen (GraphQL)
@@ -14,7 +14,7 @@ Core services to managing financial data. Exposes gRPC and GraphQL as APIs backe
 ## Prerequisites
 | Tool | Used by | Required? |
 |:--|:--|:--|
-| Go 1.25 | `run`, `build`, `test`, `vet`, `gql-generate` | Yes |
+| Go 1.26 | `run`, `build`, `test`, `vet`, `gql-generate` | Yes |
 | GNU Make | all `make` commands | Yes |
 | Docker with Compose v2 (`docker compose`) | `docker-*` | Yes |
 | `migrate` (golang-migrate, with Postgres driver) | `migrate-*` | Yes, for local mode |
@@ -146,7 +146,9 @@ Copy `.env.example` to `.env`. Only the required variables must be set; prefer t
 |`GQL_PORT`|`8080`|GraphQL listen port (plain number, no `:`), local mode only|
 |`ALLOWED_ORIGINS`|`http://localhost,http://127.0.0.1`|Comma-separated CORS origins for GraphQL. Must be full origins including scheme and port, e.g. `http://localhost:3000`|
 |`JWT_TTL`|`24h`|Session token lifetime, as a Go duration (e.g. `30m`, `12h`)|
-|`ENABLE_GRPC_REFLECTION`|`false`|Register gRPC server reflection, so `grpcurl` and Postman can discover services without proto files. Keep it off in production.|
+|`GRPC_ENABLE_REFLECTION`|`false`|Register gRPC server reflection, so `grpcurl` and Postman can discover services without proto files. Keep it off in production.|
+|`LOG_FORMAT`|`json`|Log output format: `json` (one JSON object per line, for log platforms) or `text` (readable in a terminal; handy in your local `.env`)|
+|`LOG_LEVEL`|`info`|Minimum level logged: `debug`, `info`, `warn` or `error`|
 |`GQL_ENABLE_INTROSPECTION`|`false`|Allow GraphQL introspection (schema download) and "Did you mean …?" hints in validation errors. Keep it off in production.|
 
 ### Optional: host ports for Docker mode
@@ -230,10 +232,27 @@ automatic persisted queries are disabled.
 |Query size|5000 tokens|`GRAPHQL_PARSE_FAILED`|
 |Query complexity|200 (each field counts 1)|`COMPLEXITY_LIMIT_EXCEEDED`|
 |Request duration|10 seconds|HTTP `503` with `request timeout`|
+|Malformed request (e.g. invalid JSON)|—|`BAD_REQUEST` / "invalid request"|
 
 Introspection is off unless `GQL_ENABLE_INTROSPECTION=true`. With it off, tools can't download the schema from
 the server (e.g. Postman's "fetch schema", GraphQL codegen); point them at the committed schema in
 `graphql/schema/*.graphql` instead, or enable it in development.
+
+## Request IDs
+
+Every request gets a request ID, added to the logs for that request so they can be found together. Send
+your own to correlate with your logs, or let the service generate one:
+
+|API|Request|Response|
+|:--|:--|:--|
+|GraphQL / HTTP|`X-Request-ID` header (optional)|`X-Request-ID` header|
+|gRPC|`x-request-id` metadata (optional)|`x-request-id` response header|
+
+Each request also produces one access log line (method, path or gRPC method, status, duration, request ID).
+Query strings, headers and bodies are never logged.
+
+An incoming ID is kept only if it is at most 64 characters of letters, digits, `-`, `_` and `.`; anything else is
+replaced with a new UUID. Browsers can send and read `X-Request-ID` through CORS.
 
 ## Health checks
 
@@ -249,7 +268,7 @@ itself: `financecore healthcheck` exits `0` when `/readyz` returns `200`, and `1
 
 ```sh
 curl -i localhost:8080/readyz
-grpcurl -plaintext localhost:50051 grpc.health.v1.Health/Check   # needs ENABLE_GRPC_REFLECTION=true
+grpcurl -plaintext localhost:50051 grpc.health.v1.Health/Check   # needs GRPC_ENABLE_REFLECTION=true
 ```
 
 ## gRPC tools
@@ -261,7 +280,7 @@ make grpc-list
 make grpc-describe symbol=financecore.v1.CategoryService
 ```
 
-To call RPCs, set `ENABLE_GRPC_REFLECTION=true` and send both metadata entries, e.g. (after
+To call RPCs, set `GRPC_ENABLE_REFLECTION=true` and send both metadata entries, e.g. (after
 `set -a; source .env; set +a` to load `.env` into your shell):
 
 ```sh

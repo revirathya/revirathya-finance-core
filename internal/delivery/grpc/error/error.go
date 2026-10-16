@@ -1,6 +1,7 @@
 package error
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 
@@ -12,7 +13,7 @@ import (
 // ToStatus converts a usecase error into a gRPC status error.
 // Known domain errors map to specific codes; anything else is logged with
 // full detail and returned to the client as a generic Internal error.
-func ToStatus(op string, err error) error {
+func ToStatus(ctx context.Context, op string, err error) error {
 	switch {
 	case errors.Is(err, domain.ErrNotFound):
 		return status.Errorf(codes.NotFound, "%s: not found", op)
@@ -25,7 +26,7 @@ func ToStatus(op string, err error) error {
 	case errors.Is(err, domain.ErrInvalidInput):
 		return status.Error(codes.InvalidArgument, "invalid argument")
 	default:
-		slog.Error("grpc request failed", "op", op, "err", err)
+		slog.ErrorContext(ctx, "grpc request failed", "op", op, "err", err)
 		return status.Error(codes.Internal, "internal error")
 	}
 }

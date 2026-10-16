@@ -14,7 +14,8 @@ func UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 		defer func() {
 			if r := recover(); r != nil {
-				slog.Error(
+				slog.ErrorContext(
+					ctx,
 					"grpc handler panicked",
 					"method", info.FullMethod,
 					"panic", r,

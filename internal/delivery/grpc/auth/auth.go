@@ -74,7 +74,7 @@ func TelegramUser(lookup TelegramUserLookup, unboundMethods ...string) grpc.Unar
 		case errors.Is(err, domain.ErrNotFound):
 			return nil, status.Error(codes.Unauthenticated, "telegram accoount not bound")
 		default:
-			return nil, grpcErr.ToStatus("look up telegram user", err)
+			return nil, grpcErr.ToStatus(ctx, "look up telegram user", err)
 		}
 
 		// Continue with enriched context

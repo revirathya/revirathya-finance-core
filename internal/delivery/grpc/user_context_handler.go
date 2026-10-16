@@ -34,13 +34,13 @@ func (h *UserTelegramContextHandler) GetUserTelegramContext(ctx context.Context,
 	// Get user from context
 	userID, err := appAuth.UserIDFrom(ctx)
 	if err != nil {
-		return nil, grpcErr.ToStatus("get user telegram context", err)
+		return nil, grpcErr.ToStatus(ctx, "get user telegram context", err)
 	}
 
 	// Parse input
 	user_context, err := h.utelUc.GetUserTelegramContext(ctx, userID)
 	if err != nil {
-		return nil, grpcErr.ToStatus(fmt.Sprintf("get user telegram context %s", userID.String()), err)
+		return nil, grpcErr.ToStatus(ctx, fmt.Sprintf("get user telegram context %s", userID.String()), err)
 	}
 
 	resp := &financecorev1.GetUserTelegramContextResponse{
@@ -59,7 +59,7 @@ func (h *UserTelegramContextHandler) UpdateUserTelegramContext(ctx context.Conte
 	// Get user from context
 	userID, err := appAuth.UserIDFrom(ctx)
 	if err != nil {
-		return nil, grpcErr.ToStatus("update user telegram context", err)
+		return nil, grpcErr.ToStatus(ctx, "update user telegram context", err)
 	}
 
 	// Parse input
@@ -72,7 +72,7 @@ func (h *UserTelegramContextHandler) UpdateUserTelegramContext(ctx context.Conte
 		req.InteractionMessageId,
 	)
 	if err != nil {
-		return nil, grpcErr.ToStatus(fmt.Sprintf("update user telegram context %s", userID.String()), err)
+		return nil, grpcErr.ToStatus(ctx, fmt.Sprintf("update user telegram context %s", userID.String()), err)
 	}
 
 	resp := &financecorev1.UpdateUserTelegramContextResponse{
@@ -91,7 +91,7 @@ func (h *UserTelegramContextHandler) UpdateUserTelegramContext(ctx context.Conte
 func (h *UserTelegramContextHandler) BindTelegramAccount(ctx context.Context, req *financecorev1.BindTelegramAccountRequest) (*financecorev1.BindTelegramAccountResponse, error) {
 	telegramID, err := appAuth.TelegramUserIDFrom(ctx)
 	if err != nil {
-		return nil, grpcErr.ToStatus("bind telegram account", err)
+		return nil, grpcErr.ToStatus(ctx, "bind telegram account", err)
 	}
 
 	if !h.bindLimiter.Allow(telegramID) {
@@ -100,7 +100,7 @@ func (h *UserTelegramContextHandler) BindTelegramAccount(ctx context.Context, re
 
 	user, err := h.tbcUc.BindTelegram(ctx, req.Code, telegramID)
 	if err != nil {
-		return nil, grpcErr.ToStatus("bind telegram account", err)
+		return nil, grpcErr.ToStatus(ctx, "bind telegram account", err)
 	}
 
 	resp := &financecorev1.BindTelegramAccountResponse{
