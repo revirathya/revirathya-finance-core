@@ -105,11 +105,14 @@ Last reviewed: 2026-10-11
   - Later, if the API is ever reached over an untrusted network or by more services: mTLS instead of the shared
     API key.
 - [ ] **TLS** on both listeners, or terminated by a trusted proxy or mesh, with that decision documented.
-- [ ] **GraphQL hardening.** `handler.NewDefaultServer` enables introspection, GET, websockets and APQ with no
-  query limits.
-  - [ ] Build the server explicitly and choose only the transports you need.
-  - [ ] Add `extension.FixedComplexityLimit` and a depth limit.
-  - [ ] Disable introspection in production, unless clients need it.
+- [x] **GraphQL hardening.** The server is built with `handler.New` instead of `handler.NewDefaultServer`, and
+  covered by `cmd/api/graphql_test.go` against the production handler.
+  - [x] Only the `POST` transport; `GET`, websockets, multipart and APQ removed. Query cache kept.
+  - [x] `extension.FixedComplexityLimit(200)` and `SetParserTokenLimit(5000)`. No separate depth limit: the
+    schema has no recursive types, so complexity covers deep queries too.
+  - [x] Introspection and "Did you mean …?" suggestions off unless `GQL_ENABLE_INTROSPECTION=true`.
+  - [x] Request body limited to 1 MB (`413`), including bodies sent without `Content-Length`.
+  - [x] `COMPLEXITY_LIMIT_EXCEEDED` passed through `ErrorPresenter` instead of being masked as `INTERNAL`.
 - [ ] **Input validation**: UUIDs, positive amounts, valid dates, string lengths. Do it in the usecase or at the
   edge; on the proto side, `protovalidate` is the usual tool.
 
@@ -144,6 +147,9 @@ Last reviewed: 2026-10-11
   - [ ] gRPC unary interceptor for logging.
   - [ ] Replace `panic(err)` at startup with logged errors and a non-zero exit.
   - [ ] Never log secrets or full DSNs.
+  - [ ] Never log raw request bodies. gqlgen's "json request body could not be decoded" error includes the whole
+    body, and `ErrorPresenter` logs unknown errors, so a malformed `loginWithGoogle` request would log a Google ID
+    token.
 
 ### Quality gates
 - [ ] **CI pipeline** ([`.github/workflows/ci.yaml`](../.github/workflows/ci.yaml)) running on every PR:
@@ -250,6 +256,18 @@ files into client repos by hand.
 - [ ] **Enable `govulncheck` in CI before the first deploy.** It's commented out in
   [`.github/workflows/ci.yaml`](../.github/workflows/ci.yaml) until a deployment target exists. Uncomment it, pin
   the latest release, and fix any reported vulnerabilities before the service goes live.
+- [ ] **Standardize module naming.** Use one name per concept across packages, files and types, e.g.
+  `usercontext` / `user_context` → `user_telegram_context`. The full list of renames is to be provided.
+- [ ] **Standardize middleware modules.** A cleaner, consistent structure for gRPC interceptors and GraphQL/HTTP
+  middleware (today they're spread over `internal/delivery/grpc/{auth,recovery}`, `internal/delivery/graphql/middleware.go`
+  and `cmd/api/{cors,middleware}.go`).
+- [ ] **Move the test suite out of `internal/`.** Put tests in a top-level `tests/` directory instead of next to the
+  code, and enforce a coverage target in CI (80% proposed; to be discussed). Go can't import `package main` and
+  external tests can't reach unexported code, so this needs two preparation steps first:
+  - [ ] Move the health handlers (`healthz`, `readyz`, `runHealthcheck`) and the GraphQL server setup
+    (`setupGraphQLServer`, `limitBody`, CORS) out of `cmd/api` into importable packages, so their tests can move.
+  - [ ] Export the unexported functions that tests currently reach from inside their package (e.g. `isTelegramID`,
+    `readyz`), or test them through exported entry points instead.
 
 ## 6. Suggested order
 
