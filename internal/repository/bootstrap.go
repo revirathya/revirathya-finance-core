@@ -7,7 +7,11 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 
 	// Repository
-	repoPg "github.com/revirathya/revirathya-finance-core/internal/repository/postgres"
+	"github.com/revirathya/revirathya-finance-core/internal/repository/postgres/category"
+	"github.com/revirathya/revirathya-finance-core/internal/repository/postgres/expense"
+	"github.com/revirathya/revirathya-finance-core/internal/repository/postgres/telegrambindcode"
+	"github.com/revirathya/revirathya-finance-core/internal/repository/postgres/user"
+	"github.com/revirathya/revirathya-finance-core/internal/repository/postgres/usertelegramcontext"
 )
 
 // Bootstraping Postgres repositories
@@ -21,10 +25,10 @@ type Repository struct {
 
 func BootstrapRepository(pool *pgxpool.Pool) Repository {
 	return Repository{
-		Category:            repoPg.NewCategoryRepositoryImpl(pool),
-		Expense:             repoPg.NewExpenseRepositoryImpl(pool),
-		TelegramBindCode:    repoPg.NewTelegramBindCodeRepositoryImpl(pool),
-		User:                repoPg.NewUserRepositoryImpl(pool),
-		UserTelegramContext: repoPg.NewUserTelegramContextRepositoryImpl(pool),
+		Category:            category.NewCategoryRepositoryImpl(pool),
+		Expense:             expense.NewExpenseRepositoryImpl(pool),
+		TelegramBindCode:    telegrambindcode.NewTelegramBindCodeRepositoryImpl(pool),
+		User:                user.NewUserRepositoryImpl(pool),
+		UserTelegramContext: usertelegramcontext.NewUserTelegramContextRepositoryImpl(pool),
 	}
 }

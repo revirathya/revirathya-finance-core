@@ -1,4 +1,4 @@
-package postgres
+package telegrambindcode
 
 import (
 	"context"
@@ -9,20 +9,24 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	// Generated
+	"github.com/revirathya/revirathya-finance-core/gen/sqlc"
+
+	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
-	sqlcgen "github.com/revirathya/revirathya-finance-core/internal/repository/sqlc/gen"
 )
 
 type telegramBindCodeRepositoryImpl struct {
 	pool  *pgxpool.Pool
-	query *sqlcgen.Queries
+	query *sqlc.Queries
 }
 
 func NewTelegramBindCodeRepositoryImpl(pool *pgxpool.Pool) domain.TelegramBindCodeRepository {
 	return &telegramBindCodeRepositoryImpl{
 		pool:  pool,
-		query: sqlcgen.New(pool),
+		query: sqlc.New(pool),
 	}
 }
 
@@ -43,7 +47,7 @@ func (r *telegramBindCodeRepositoryImpl) CreateBindCode(ctx context.Context, use
 	}
 
 	// Create new bind code for user
-	args := sqlcgen.CreateBindCodeParams{
+	args := sqlc.CreateBindCodeParams{
 		UserID:    database.ToPgxUUID(userID),
 		CodeHash:  codeHash,
 		ExpiresAt: database.ToPgxTimestamp(expiresAt),
@@ -81,7 +85,7 @@ func (r *telegramBindCodeRepositoryImpl) BindCode(ctx context.Context, codeHash 
 	}
 
 	// Update user's telegram binding
-	args := sqlcgen.UpsertTelegramBindingParams{
+	args := sqlc.UpsertTelegramBindingParams{
 		UserID:         userID,
 		TelegramChatID: &telegramID,
 	}

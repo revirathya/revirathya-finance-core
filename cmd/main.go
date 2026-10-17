@@ -14,7 +14,7 @@ import (
 	"github.com/revirathya/revirathya-finance-core/cmd/sub"
 
 	// Internal
-	authApp "github.com/revirathya/revirathya-finance-core/internal/auth"
+	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/config"
 	dlvGql "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql"
 	dlvGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
@@ -71,7 +71,7 @@ func run() error {
 
 	// Setup Auth service
 	gVeri := google.NewGoogleVerifier(cfg.GoogleClientID)
-	tokenManager := authApp.NewTokenManager(cfg.JwtSecret, cfg.JwtTtl)
+	tokenManager := auth.NewTokenManager(cfg.JwtSecret, cfg.JwtTtl)
 
 	// Setup repo and usecase
 	repo := repository.BootstrapRepository(pool)

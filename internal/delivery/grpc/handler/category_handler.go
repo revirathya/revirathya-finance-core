@@ -12,7 +12,7 @@ import (
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
 
 	// Internal
-	authApp "github.com/revirathya/revirathya-finance-core/internal/auth"
+	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 
 	// Internal - gRPC
@@ -31,7 +31,7 @@ func NewCategoryHandler(ctgUc *category.CategoryUsecase) *CategoryHandler {
 }
 
 func (h *CategoryHandler) ListCategories(ctx context.Context, req *financecorev1.ListCategoriesRequest) (*financecorev1.ListCategoriesResponse, error) {
-	userID, err := authApp.UserIDFrom(ctx)
+	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "list categories", err)
 	}
@@ -60,7 +60,7 @@ func (h *CategoryHandler) GetCategoryByID(ctx context.Context, req *financecorev
 		return nil, status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)
 	}
 
-	userID, err := authApp.UserIDFrom(ctx)
+	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "get category by id", err)
 	}

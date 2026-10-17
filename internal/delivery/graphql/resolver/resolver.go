@@ -2,7 +2,7 @@ package resolver
 
 import (
 	// Internal
-	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
+	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase"
 )
 
@@ -12,10 +12,10 @@ import (
 // here.
 
 type Resolver struct {
-	tokens  *appAuth.TokenManager
+	tokens  *auth.TokenManager
 	usecase usecase.Usecase
 }
 
-func NewResolver(tokens *appAuth.TokenManager, usecase usecase.Usecase) *Resolver {
+func NewResolver(tokens *auth.TokenManager, usecase usecase.Usecase) *Resolver {
 	return &Resolver{tokens: tokens, usecase: usecase}
 }

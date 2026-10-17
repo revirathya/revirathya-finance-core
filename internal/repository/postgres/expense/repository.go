@@ -1,4 +1,4 @@
-package postgres
+package expense
 
 import (
 	"context"
@@ -10,23 +10,27 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	// Generated
+	"github.com/revirathya/revirathya-finance-core/gen/sqlc"
+
+	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
-	sqlcgen "github.com/revirathya/revirathya-finance-core/internal/repository/sqlc/gen"
 )
 
 type expenseRepositoryImpl struct {
-	query *sqlcgen.Queries
+	query *sqlc.Queries
 }
 
 func NewExpenseRepositoryImpl(pool *pgxpool.Pool) domain.ExpenseRepository {
 	return &expenseRepositoryImpl{
-		query: sqlcgen.New(pool),
+		query: sqlc.New(pool),
 	}
 }
 
 func (r *expenseRepositoryImpl) CreateExpense(ctx context.Context, userID uuid.UUID, input domain.ExpenseForm) (*domain.Expense, error) {
-	args := sqlcgen.CreateExpenseParams{
+	args := sqlc.CreateExpenseParams{
 		UserID:        database.ToPgxUUID(userID),
 		CategoryID:    database.ToPgxUUID(input.CategoryID),
 		TransactionDt: database.ToPgxDate(input.TransactionDt),
@@ -56,7 +60,7 @@ func (r *expenseRepositoryImpl) CreateExpense(ctx context.Context, userID uuid.U
 }
 
 func (r *expenseRepositoryImpl) GetExpenseByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Expense, error) {
-	args := sqlcgen.GetExpenseByIDParams{
+	args := sqlc.GetExpenseByIDParams{
 		ID:     database.ToPgxUUID(id),
 		UserID: database.ToPgxUUID(userID),
 	}
@@ -82,7 +86,7 @@ func (r *expenseRepositoryImpl) GetExpenseByID(ctx context.Context, id uuid.UUID
 }
 
 func (r *expenseRepositoryImpl) ListExpenses(ctx context.Context, userID uuid.UUID, transactionDt *time.Time) ([]domain.Expense, error) {
-	args := sqlcgen.ListExpensesParams{
+	args := sqlc.ListExpensesParams{
 		UserID:        database.ToPgxUUID(userID),
 		TransactionDt: database.ToNullablePgxDate(transactionDt),
 	}
@@ -108,7 +112,7 @@ func (r *expenseRepositoryImpl) ListExpenses(ctx context.Context, userID uuid.UU
 }
 
 func (r *expenseRepositoryImpl) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.ExpenseForm) (*domain.Expense, error) {
-	args := sqlcgen.UpdateExpenseParams{
+	args := sqlc.UpdateExpenseParams{
 		CategoryID:    database.ToPgxUUID(patch.CategoryID),
 		TransactionDt: database.ToPgxDate(patch.TransactionDt),
 		Description:   patch.Description,
@@ -143,7 +147,7 @@ func (r *expenseRepositoryImpl) UpdateExpense(ctx context.Context, id uuid.UUID,
 }
 
 func (r *expenseRepositoryImpl) DeleteExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
-	args := sqlcgen.DeleteExpenseParams{
+	args := sqlc.DeleteExpenseParams{
 		ID:     database.ToPgxUUID(id),
 		UserID: database.ToPgxUUID(userID),
 	}

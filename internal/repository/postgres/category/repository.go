@@ -1,4 +1,4 @@
-package postgres
+package category
 
 import (
 	"context"
@@ -8,23 +8,27 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	// Generated
+	"github.com/revirathya/revirathya-finance-core/gen/sqlc"
+
+	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
-	sqlcgen "github.com/revirathya/revirathya-finance-core/internal/repository/sqlc/gen"
 )
 
 type categoryRepositoryImpl struct {
-	query *sqlcgen.Queries
+	query *sqlc.Queries
 }
 
 func NewCategoryRepositoryImpl(pool *pgxpool.Pool) domain.CategoryRepository {
 	return &categoryRepositoryImpl{
-		query: sqlcgen.New(pool),
+		query: sqlc.New(pool),
 	}
 }
 
 func (r *categoryRepositoryImpl) CreateCategory(ctx context.Context, userID uuid.UUID, input domain.CategoryForm) (*domain.Category, error) {
-	args := sqlcgen.CreateCategoryParams{
+	args := sqlc.CreateCategoryParams{
 		UserID:       database.ToPgxUUID(userID),
 		CategoryName: input.CategoryName,
 	}
@@ -48,7 +52,7 @@ func (r *categoryRepositoryImpl) CreateCategory(ctx context.Context, userID uuid
 }
 
 func (r *categoryRepositoryImpl) GetCategoryByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Category, error) {
-	args := sqlcgen.GetCategoryByIDParams{
+	args := sqlc.GetCategoryByIDParams{
 		ID:     database.ToPgxUUID(id),
 		UserID: database.ToPgxUUID(userID),
 	}
@@ -89,7 +93,7 @@ func (r *categoryRepositoryImpl) ListCategories(ctx context.Context, userID uuid
 }
 
 func (r *categoryRepositoryImpl) UpdateCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.CategoryForm) (*domain.Category, error) {
-	args := sqlcgen.UpdateCategoryParams{
+	args := sqlc.UpdateCategoryParams{
 		CategoryName: patch.CategoryName,
 		ID:           database.ToPgxUUID(id),
 		UserID:       database.ToPgxUUID(userID),
@@ -117,7 +121,7 @@ func (r *categoryRepositoryImpl) UpdateCategory(ctx context.Context, id uuid.UUI
 }
 
 func (r *categoryRepositoryImpl) DeleteCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
-	args := sqlcgen.DeleteCategoryParams{
+	args := sqlc.DeleteCategoryParams{
 		ID:     database.ToPgxUUID(id),
 		UserID: database.ToPgxUUID(userID),
 	}

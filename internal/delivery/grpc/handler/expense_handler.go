@@ -14,7 +14,7 @@ import (
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
 
 	// Internal
-	authApp "github.com/revirathya/revirathya-finance-core/internal/auth"
+	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
 
 	// Internal - gRPC
@@ -34,7 +34,7 @@ func NewExpenseHandler(expUc *expense.ExpenseUsecase) *ExpenseHandler {
 
 func (h *ExpenseHandler) CreateExpense(ctx context.Context, req *financecorev1.CreateExpenseRequest) (*financecorev1.CreateExpenseResponse, error) {
 	// Get user from context
-	userID, err := authApp.UserIDFrom(ctx)
+	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "create expense", err)
 	}
@@ -80,7 +80,7 @@ func (h *ExpenseHandler) CreateExpense(ctx context.Context, req *financecorev1.C
 
 func (h *ExpenseHandler) GetExpenseByID(ctx context.Context, req *financecorev1.GetExpenseByIDRequest) (*financecorev1.GetExpenseByIDResponse, error) {
 	// Get user from context
-	userID, err := authApp.UserIDFrom(ctx)
+	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "get expense by id", err)
 	}
@@ -112,7 +112,7 @@ func (h *ExpenseHandler) GetExpenseByID(ctx context.Context, req *financecorev1.
 
 func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.ListExpensesRequest) (*financecorev1.ListExpensesResponse, error) {
 	// Get user from context
-	userID, err := authApp.UserIDFrom(ctx)
+	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "list expenses", err)
 	}
@@ -153,7 +153,7 @@ func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.Li
 
 func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.UpdateExpenseRequest) (*financecorev1.UpdateExpenseResponse, error) {
 	// Get user from context
-	userID, err := authApp.UserIDFrom(ctx)
+	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "update expense", err)
 	}
@@ -207,7 +207,7 @@ func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.U
 
 func (h *ExpenseHandler) DeleteExpense(ctx context.Context, req *financecorev1.DeleteExpenseRequest) (*financecorev1.DeleteExpenseResponse, error) {
 	// Get user from context
-	userID, err := authApp.UserIDFrom(ctx)
+	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "delete expense", err)
 	}

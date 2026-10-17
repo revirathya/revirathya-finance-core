@@ -15,7 +15,7 @@ import (
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
 
 	// Internal
-	authApp "github.com/revirathya/revirathya-finance-core/internal/auth"
+	"github.com/revirathya/revirathya-finance-core/internal/auth"
 
 	// Internal - GraphQL
 	errGql "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql/error"
@@ -23,7 +23,7 @@ import (
 
 // CreateCategory is the resolver for the createCategory field.
 func (r *mutationResolver) CreateCategory(ctx context.Context, input model.CreateCategoryInput) (*model.Category, error) {
-	userID, err := authApp.UserIDFrom(ctx)
+	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (r *mutationResolver) UpdateCategory(ctx context.Context, id string, patch 
 		return nil, errGql.NewInvalidInputError(fmt.Errorf("invalid id UUID format: %w", err))
 	}
 
-	userID, err := authApp.UserIDFrom(ctx)
+	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (r *mutationResolver) DeleteCategory(ctx context.Context, id string) (strin
 		return "", errGql.NewInvalidInputError(fmt.Errorf("invalid id UUID format: %w", err))
 	}
 
-	userID, err := authApp.UserIDFrom(ctx)
+	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -90,7 +90,7 @@ func (r *queryResolver) Category(ctx context.Context, id string) (*model.Categor
 		return nil, errGql.NewInvalidInputError(fmt.Errorf("invalid id UUID format: %w", err))
 	}
 
-	userID, err := authApp.UserIDFrom(ctx)
+	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func (r *queryResolver) Category(ctx context.Context, id string) (*model.Categor
 
 // Categories is the resolver for the categories field.
 func (r *queryResolver) Categories(ctx context.Context) ([]*model.Category, error) {
-	userID, err := authApp.UserIDFrom(ctx)
+	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, err
 	}

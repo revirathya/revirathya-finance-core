@@ -4,8 +4,8 @@
     - [x] gRPC structure
     - [x] chaining graphQL via router
     - [x] graphQL structure
-- [ ] Module naming
-    - [ ] user_context -> telegram_context
+- [x] Module naming
+    - [x] user_context -> telegram_context
 - [x] Subcommand separation
 - [ ] Repository structure
     - [ ] sqlc to gen/sqlc

@@ -9,8 +9,8 @@ sql:
     queries: "internal/repository/sqlc/queries"
     gen:
       go:
-        package: "sqlcgen"
-        out: "internal/repository/sqlc/gen"
+        package: "sqlc"
+        out: "gen/sqlc"
         sql_package: "pgx/v5"
         emit_json_tags: true
         emit_interface: true

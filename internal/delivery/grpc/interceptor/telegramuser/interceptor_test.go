@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	authApp "github.com/revirathya/revirathya-finance-core/internal/auth"
+	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/telegramuser"
 )
 
@@ -68,8 +68,8 @@ func TestTelegramUser(t *testing.T) {
 			)
 			handler := func(ctx context.Context, req any) (any, error) {
 				called = true
-				gotPrincipal, principalErr = authApp.UserIDFrom(ctx)
-				gotTelegramID, _ = authApp.TelegramUserIDFrom(ctx)
+				gotPrincipal, principalErr = auth.UserIDFrom(ctx)
+				gotTelegramID, _ = auth.TelegramUserIDFrom(ctx)
 				return "ok", nil
 			}
 

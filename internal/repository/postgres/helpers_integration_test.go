@@ -10,16 +10,22 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/revirathya/revirathya-finance-core/internal/domain"
-	"github.com/revirathya/revirathya-finance-core/internal/repository/postgres"
 	"github.com/shopspring/decimal"
+
+	// Internal
+	"github.com/revirathya/revirathya-finance-core/internal/domain"
+
+	// Repository
+	rCategory "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/category"
+	rExpense "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/expense"
+	rUser "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/user"
 )
 
 func newUser(t *testing.T) *domain.User {
 	t.Helper()
 
 	id := uuid.NewString()
-	user, err := postgres.NewUserRepositoryImpl(testPool).CreateUser(context.Background(), domain.UserForm{
+	user, err := rUser.NewUserRepositoryImpl(testPool).CreateUser(context.Background(), domain.UserForm{
 		FirstName: "Test",
 		Email:     id + "@test.local",
 		GoogleSub: "google-" + id,
@@ -33,7 +39,7 @@ func newUser(t *testing.T) *domain.User {
 func newCategory(t *testing.T, userID uuid.UUID, name string) *domain.Category {
 	t.Helper()
 
-	category, err := postgres.NewCategoryRepositoryImpl(testPool).CreateCategory(
+	category, err := rCategory.NewCategoryRepositoryImpl(testPool).CreateCategory(
 		context.Background(), userID, domain.CategoryForm{CategoryName: name},
 	)
 	if err != nil {
@@ -46,7 +52,7 @@ func newCategory(t *testing.T, userID uuid.UUID, name string) *domain.Category {
 func newExpense(t *testing.T, userID, categoryID uuid.UUID, date, amount string) *domain.Expense {
 	t.Helper()
 
-	expense, err := postgres.NewExpenseRepositoryImpl(testPool).CreateExpense(context.Background(), userID, domain.ExpenseForm{
+	expense, err := rExpense.NewExpenseRepositoryImpl(testPool).CreateExpense(context.Background(), userID, domain.ExpenseForm{
 		CategoryID:    categoryID,
 		TransactionDt: day(t, date),
 		Amount:        decimal.RequireFromString(amount),

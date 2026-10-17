@@ -10,13 +10,16 @@ import (
 
 	"github.com/google/uuid"
 
+	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
-	"github.com/revirathya/revirathya-finance-core/internal/repository/postgres"
+
+	// Repository
+	rUser "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/user"
 )
 
 func TestUserRepository(t *testing.T) {
 	ctx := context.Background()
-	repo := postgres.NewUserRepositoryImpl(testPool)
+	repo := rUser.NewUserRepositoryImpl(testPool)
 
 	t.Run("create stores the email lowercased", func(t *testing.T) {
 		id := uuid.NewString()

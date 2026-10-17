@@ -3,8 +3,10 @@ package google
 import (
 	"context"
 
-	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"google.golang.org/api/idtoken"
+
+	// Internal
+	"github.com/revirathya/revirathya-finance-core/internal/domain"
 )
 
 type GoogleVerifier struct {

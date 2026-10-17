@@ -1,4 +1,4 @@
-package postgres
+package user
 
 import (
 	"context"
@@ -9,18 +9,22 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	// Generated
+	"github.com/revirathya/revirathya-finance-core/gen/sqlc"
+
+	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
-	sqlcgen "github.com/revirathya/revirathya-finance-core/internal/repository/sqlc/gen"
 )
 
 type userRepositoryImpl struct {
-	query *sqlcgen.Queries
+	query *sqlc.Queries
 }
 
 func NewUserRepositoryImpl(pool *pgxpool.Pool) domain.UserRepository {
 	return &userRepositoryImpl{
-		query: sqlcgen.New(pool),
+		query: sqlc.New(pool),
 	}
 }
 
@@ -63,7 +67,7 @@ func (r *userRepositoryImpl) GetUserByGoogleSub(ctx context.Context, googleSub s
 }
 
 func (r *userRepositoryImpl) CreateUser(ctx context.Context, form domain.UserForm) (*domain.User, error) {
-	args := sqlcgen.CreateUserParams{
+	args := sqlc.CreateUserParams{
 		FirstName: form.FirstName,
 		LastName:  form.LastName,
 		Email:     strings.ToLower(form.Email),
@@ -83,7 +87,7 @@ func (r *userRepositoryImpl) CreateUser(ctx context.Context, form domain.UserFor
 }
 
 func (r *userRepositoryImpl) UpdateUser(ctx context.Context, id uuid.UUID, firstName string, lastName *string) (*domain.User, error) {
-	args := sqlcgen.UpdateUserParams{
+	args := sqlc.UpdateUserParams{
 		FirstName: firstName,
 		LastName:  lastName,
 		ID:        database.ToPgxUUID(id),

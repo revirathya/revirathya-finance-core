@@ -11,7 +11,7 @@ import (
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
 
 	// Internal
-	authApp "github.com/revirathya/revirathya-finance-core/internal/auth"
+	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/ratelimit"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/telegrambindcode"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/usertelegramcontext"
@@ -37,7 +37,7 @@ func NewUserTelegramContextHandler(tbcUc *telegrambindcode.TelegramBindCodeUseca
 
 func (h *UserTelegramContextHandler) GetUserTelegramContext(ctx context.Context, req *financecorev1.GetUserTelegramContextRequest) (*financecorev1.GetUserTelegramContextResponse, error) {
 	// Get user from context
-	userID, err := authApp.UserIDFrom(ctx)
+	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "get user telegram context", err)
 	}
@@ -62,7 +62,7 @@ func (h *UserTelegramContextHandler) GetUserTelegramContext(ctx context.Context,
 
 func (h *UserTelegramContextHandler) UpdateUserTelegramContext(ctx context.Context, req *financecorev1.UpdateUserTelegramContextRequest) (*financecorev1.UpdateUserTelegramContextResponse, error) {
 	// Get user from context
-	userID, err := authApp.UserIDFrom(ctx)
+	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "update user telegram context", err)
 	}
@@ -94,7 +94,7 @@ func (h *UserTelegramContextHandler) UpdateUserTelegramContext(ctx context.Conte
 }
 
 func (h *UserTelegramContextHandler) BindTelegramAccount(ctx context.Context, req *financecorev1.BindTelegramAccountRequest) (*financecorev1.BindTelegramAccountResponse, error) {
-	telegramID, err := authApp.TelegramUserIDFrom(ctx)
+	telegramID, err := auth.TelegramUserIDFrom(ctx)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "bind telegram account", err)
 	}

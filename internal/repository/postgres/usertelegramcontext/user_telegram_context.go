@@ -1,4 +1,4 @@
-package postgres
+package usertelegramcontext
 
 import (
 	"context"
@@ -7,18 +7,22 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	// Generated
+	"github.com/revirathya/revirathya-finance-core/gen/sqlc"
+
+	// Repository
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
-	sqlcgen "github.com/revirathya/revirathya-finance-core/internal/repository/sqlc/gen"
 )
 
 type userTelegramContextRepositoryImpl struct {
-	query *sqlcgen.Queries
+	query *sqlc.Queries
 }
 
 func NewUserTelegramContextRepositoryImpl(pool *pgxpool.Pool) domain.UserTelegramContextRepository {
 	return &userTelegramContextRepositoryImpl{
-		query: sqlcgen.New(pool),
+		query: sqlc.New(pool),
 	}
 }
 
@@ -65,7 +69,7 @@ func (r *userTelegramContextRepositoryImpl) GetUserTelegramContextByTelegramID(c
 }
 
 func (r *userTelegramContextRepositoryImpl) UpdateUserTelegramContext(ctx context.Context, userID uuid.UUID, conversation *string, state *string, interactionChatID *string, interactionMessageID *string) (*domain.UserTelegramContext, error) {
-	args := sqlcgen.UpdateUserTelegramContextParams{
+	args := sqlc.UpdateUserTelegramContextParams{
 		Conversation:         conversation,
 		State:                state,
 		InteractionChatID:    interactionChatID,

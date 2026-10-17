@@ -9,13 +9,17 @@ import (
 
 	"github.com/shopspring/decimal"
 
+	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
-	"github.com/revirathya/revirathya-finance-core/internal/repository/postgres"
+
+	// Repository
+	rCategory "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/category"
+	rExpense "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/expense"
 )
 
 func TestExpenseRepository(t *testing.T) {
 	ctx := context.Background()
-	repo := postgres.NewExpenseRepositoryImpl(testPool)
+	repo := rExpense.NewExpenseRepositoryImpl(testPool)
 
 	t.Run("create and get round-trip all fields", func(t *testing.T) {
 		alice := newUser(t)
@@ -207,7 +211,7 @@ func TestExpenseRepository(t *testing.T) {
 		if _, err := repo.GetExpenseByID(ctx, expense.ID, alice.ID); !errors.Is(err, domain.ErrNotFound) {
 			t.Fatalf("expense: got %v, want domain.ErrNotFound", err)
 		}
-		if _, err := postgres.NewCategoryRepositoryImpl(testPool).GetCategoryByID(ctx, food.ID, alice.ID); !errors.Is(err, domain.ErrNotFound) {
+		if _, err := rCategory.NewCategoryRepositoryImpl(testPool).GetCategoryByID(ctx, food.ID, alice.ID); !errors.Is(err, domain.ErrNotFound) {
 			t.Fatalf("category: got %v, want domain.ErrNotFound", err)
 		}
 	})

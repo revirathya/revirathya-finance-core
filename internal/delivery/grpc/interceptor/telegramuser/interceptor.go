@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	// Internal
-	authApp "github.com/revirathya/revirathya-finance-core/internal/auth"
+	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 
 	// Internal - gRPC
@@ -44,13 +44,13 @@ func UnaryServerInterceptor(lookup TelegramUserLookup, unboundMethods ...string)
 		telegramID := values[0]
 
 		// Store to context
-		ctx = authApp.WithTelegramUserID(ctx, telegramID)
+		ctx = auth.WithTelegramUserID(ctx, telegramID)
 
 		// Find bounded users
 		userID, err := lookup(ctx, telegramID)
 		switch {
 		case err == nil:
-			ctx = authApp.WithPrincipal(ctx, authApp.Principal{UserID: userID})
+			ctx = auth.WithPrincipal(ctx, auth.Principal{UserID: userID})
 		case errors.Is(err, domain.ErrNotFound) && allowUnbound[info.FullMethod]:
 			// Not bounded
 		case errors.Is(err, domain.ErrNotFound):

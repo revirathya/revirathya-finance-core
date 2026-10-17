@@ -8,14 +8,18 @@ import (
 	"testing"
 	"time"
 
+	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
-	"github.com/revirathya/revirathya-finance-core/internal/repository/postgres"
+
+	// Repository
+	rTelegramBindCode "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/telegrambindcode"
+	rUserTelegramContext "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/usertelegramcontext"
 )
 
 func TestTelegramBindCodeRepository(t *testing.T) {
 	ctx := context.Background()
-	repo := postgres.NewTelegramBindCodeRepositoryImpl(testPool)
-	contexts := postgres.NewUserTelegramContextRepositoryImpl(testPool)
+	repo := rTelegramBindCode.NewTelegramBindCodeRepositoryImpl(testPool)
+	contexts := rUserTelegramContext.NewUserTelegramContextRepositoryImpl(testPool)
 	inTenMinutes := func() time.Time { return time.Now().Add(10 * time.Minute) }
 
 	t.Run("binds a valid code", func(t *testing.T) {
@@ -184,8 +188,8 @@ func TestTelegramBindCodeRepository(t *testing.T) {
 
 func TestUserTelegramContextRepository(t *testing.T) {
 	ctx := context.Background()
-	codes := postgres.NewTelegramBindCodeRepositoryImpl(testPool)
-	repo := postgres.NewUserTelegramContextRepositoryImpl(testPool)
+	codes := rTelegramBindCode.NewTelegramBindCodeRepositoryImpl(testPool)
+	repo := rUserTelegramContext.NewUserTelegramContextRepositoryImpl(testPool)
 
 	bind := func(t *testing.T) (*domain.User, string) {
 		t.Helper()

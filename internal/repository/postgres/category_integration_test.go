@@ -7,13 +7,17 @@ import (
 	"errors"
 	"testing"
 
+	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
-	"github.com/revirathya/revirathya-finance-core/internal/repository/postgres"
+
+	// Repository
+	rCategory "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/category"
+	rExpense "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/expense"
 )
 
 func TestCategoryRepository(t *testing.T) {
 	ctx := context.Background()
-	repo := postgres.NewCategoryRepositoryImpl(testPool)
+	repo := rCategory.NewCategoryRepositoryImpl(testPool)
 
 	t.Run("each user sees only their own categories, ordered by name", func(t *testing.T) {
 		alice, bob := newUser(t), newUser(t)
@@ -115,7 +119,7 @@ func TestCategoryRepository(t *testing.T) {
 			t.Fatalf("delete in-use category: got %v, want domain.ErrConflict", err)
 		}
 
-		if err := postgres.NewExpenseRepositoryImpl(testPool).DeleteExpense(ctx, expense.ID, alice.ID); err != nil {
+		if err := rExpense.NewExpenseRepositoryImpl(testPool).DeleteExpense(ctx, expense.ID, alice.ID); err != nil {
 			t.Fatalf("delete expense: %v", err)
 		}
 		if err := repo.DeleteCategory(ctx, food.ID, alice.ID); err != nil {

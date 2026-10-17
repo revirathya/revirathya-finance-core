@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
+	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 )
 
@@ -23,13 +23,13 @@ func NewTelegramBindCodeUsecase(tbcRepo domain.TelegramBindCodeRepository) *Tele
 
 func (u *TelegramBindCodeUsecase) CreateBindCode(ctx context.Context, userID uuid.UUID) (string, time.Time, error) {
 	// Generate code
-	code, err := appAuth.GenBindCode()
+	code, err := auth.GenBindCode()
 	if err != nil {
 		return "", time.Time{}, err
 	}
 
 	// Prepare code
-	codeHash := appAuth.HashCode(code)
+	codeHash := auth.HashCode(code)
 	expiresAt := time.Now().Add(10 * time.Minute)
 
 	// Save bind code
@@ -41,12 +41,12 @@ func (u *TelegramBindCodeUsecase) CreateBindCode(ctx context.Context, userID uui
 
 func (u *TelegramBindCodeUsecase) BindTelegram(ctx context.Context, code string, telegramID string) (*domain.User, error) {
 	// Validate code pattern
-	if matched := appAuth.ValidateCode(code); (!matched) || (telegramID == "") {
+	if matched := auth.ValidateCode(code); (!matched) || (telegramID == "") {
 		return nil, domain.ErrInvalidInput
 	}
 
 	// Bind code
-	codeHash := appAuth.HashCode(code)
+	codeHash := auth.HashCode(code)
 	user, err := u.tbcRepo.BindCode(ctx, codeHash, telegramID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
