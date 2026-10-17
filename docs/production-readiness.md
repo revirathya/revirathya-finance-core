@@ -177,9 +177,16 @@ Last reviewed: 2026-10-17
   - [x] Usecase tests for every usecase, including `user`, `auth` and `telegrambindcode`.
   - [x] Unit tests for the gRPC plumbing (all interceptors, `ToStatus`), config, logging, session tokens and the
     rate limiter.
-  - [ ] Restore the tests removed in the restructuring (`a38fd29`): the GraphQL server against the production
-    handler (transports, introspection, limits, request errors, resolver panics), health handlers, HTTP middleware
-    (request ID, access log, CORS, body limit, `WithAuth`), and `ErrorPresenter` / `RecoverFunc`.
+  - [x] Restore the tests removed in the restructuring (`a38fd29`), now in `test/internal/delivery/graphql/`: the
+    production handler from `graphql.Setup`, `ChainMiddleware`, every HTTP middleware, health handlers, and
+    `ErrorPresenter` / `RecoverFunc` (with errors wrapped the way gqlgen wraps them).
+  - [ ] Fix the three bugs these tests found (they fail until then):
+    - [ ] `ChainMiddleware` skips the last middleware and reverses the order, so there are no HTTP access logs
+      and no GraphQL request timeout.
+    - [ ] The `"POST /graphql"` route makes the mux reject CORS preflight (`OPTIONS`) with 405, so browsers
+      can't call the API. Register `"/graphql"`; gqlgen still rejects non-`POST` requests.
+    - [ ] `ErrorPresenter` changes the message to "internal error" before logging the wrapped resolver error,
+      so the log loses the real cause. Log `gqlErr.Err` (the original error) before masking.
   - [ ] gRPC handler and GraphQL resolver tests.
 
 ### Documentation
