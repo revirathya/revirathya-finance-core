@@ -15,15 +15,18 @@ import (
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
 
 	// Internal
-	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/handler"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/ratelimit"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase"
 
+	// Internal - gRPC
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/handler"
+
 	// Interceptors
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/accesslog"
-	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/auth"
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/apikeyauth"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/recovery"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/requestid"
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/telegramuser"
 )
 
 // Private
@@ -64,8 +67,8 @@ func Setup(
 			requestid.UnaryServerInterceptor(),
 			accesslog.UnaryServerInterceptor(),
 			recovery.UnaryServerInterceptor(),
-			auth.APIKeyAuth(apiKey),
-			auth.TelegramUser(
+			apikeyauth.UnaryServerInterceptor(apiKey),
+			telegramuser.UnaryServerInterceptor(
 				userLookup(usecase),
 				financecorev1.UserTelegramContextService_BindTelegramAccount_FullMethodName,
 			),

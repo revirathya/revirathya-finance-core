@@ -1,4 +1,4 @@
-package auth_test
+package telegramuser_test
 
 import (
 	"context"
@@ -6,65 +6,15 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
-	grpcAuth "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/auth"
-	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	authApp "github.com/revirathya/revirathya-finance-core/internal/auth"
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/telegramuser"
 )
-
-func TestAPIKeyAuth(t *testing.T) {
-	interceptor := grpcAuth.APIKeyAuth("secret")
-	handler := func(ctx context.Context, req any) (any, error) { return "ok", nil }
-
-	tests := []struct {
-		name     string
-		md       metadata.MD
-		wantCode codes.Code
-	}{
-		{"valid key", metadata.Pairs("authorization", "Bearer secret"), codes.OK},
-		{"wrong key", metadata.Pairs("authorization", "Bearer nope"), codes.Unauthenticated},
-		{"missing scheme", metadata.Pairs("authorization", "secret"), codes.Unauthenticated},
-		{"no metadata", metadata.MD{}, codes.Unauthenticated},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := metadata.NewIncomingContext(context.Background(), tt.md)
-			_, err := interceptor(ctx, nil, &grpc.UnaryServerInfo{}, handler)
-			if got := status.Code(err); got != tt.wantCode {
-				t.Fatalf("got %v, want %v", got, tt.wantCode)
-			}
-		})
-	}
-}
-
-func TestAPIKeyAuthHealthcheck(t *testing.T) {
-	interceptor := grpcAuth.APIKeyAuth("secret")
-	handler := func(ctx context.Context, req any) (any, error) { return "ok", nil }
-
-	tests := []struct {
-		name     string
-		method   string
-		wantCode codes.Code
-	}{
-		{"healthcheck", "/grpc.health.v1.Health/Check", codes.OK},
-		{"non healthcheck", "/financecore.v1.ExpenseService/ListExpenses", codes.Unauthenticated},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{})
-			_, err := interceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: tt.method}, handler)
-			if got := status.Code(err); got != tt.wantCode {
-				t.Fatalf("got %v, want %v", got, tt.wantCode)
-			}
-		})
-	}
-}
 
 func TestTelegramUser(t *testing.T) {
 	const (
@@ -84,7 +34,7 @@ func TestTelegramUser(t *testing.T) {
 			return uuid.Nil, domain.ErrNotFound
 		}
 	}
-	interceptor := grpcAuth.TelegramUser(lookup, bindMethod)
+	interceptor := telegramuser.UnaryServerInterceptor(lookup, bindMethod)
 
 	tests := []struct {
 		name           string
@@ -118,8 +68,8 @@ func TestTelegramUser(t *testing.T) {
 			)
 			handler := func(ctx context.Context, req any) (any, error) {
 				called = true
-				gotPrincipal, principalErr = appAuth.UserIDFrom(ctx)
-				gotTelegramID, _ = appAuth.TelegramUserIDFrom(ctx)
+				gotPrincipal, principalErr = authApp.UserIDFrom(ctx)
+				gotTelegramID, _ = authApp.TelegramUserIDFrom(ctx)
 				return "ok", nil
 			}
 
@@ -158,7 +108,7 @@ func TestTelegramUserHealthcheck(t *testing.T) {
 	lookup := func(ctx context.Context, telegramID string) (uuid.UUID, error) {
 		return uuid.Nil, nil
 	}
-	interceptor := grpcAuth.TelegramUser(lookup)
+	interceptor := telegramuser.UnaryServerInterceptor(lookup)
 	handler := func(ctx context.Context, req any) (any, error) { return "ok", nil }
 
 	tests := []struct {

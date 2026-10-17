@@ -1,18 +1,18 @@
 # Checklist
 
-- [ ] Middleware
-    - [ ] gRPC structure
-    - [ ] chaining graphQL via router
-    - [ ] graphQL structure
+- [x] Middleware
+    - [x] gRPC structure
+    - [x] chaining graphQL via router
+    - [x] graphQL structure
 - [ ] Module naming
     - [ ] user_context -> telegram_context
-- [ ] Subcommand separation
+- [x] Subcommand separation
 - [ ] Repository structure
     - [ ] sqlc to gen/sqlc
-    - [ ] Bootstrap repo
+    - [x] Bootstrap repo
     - [ ] Test suites
 - [ ] Usecase structure
-    - [ ] Boottrap usecase
+    - [x] Boottrap usecase
     - [ ] Test suites
 - [ ] Infra dir
     - [ ] infra/docker

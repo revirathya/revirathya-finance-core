@@ -7,8 +7,10 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/errcode"
-	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/vektah/gqlparser/v2/gqlerror"
+
+	// Internal
+	"github.com/revirathya/revirathya-finance-core/internal/domain"
 )
 
 type InvalidInputError struct{ err error }

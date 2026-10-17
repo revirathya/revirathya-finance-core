@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/requestid"
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/requestid"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/logging"
 )
 

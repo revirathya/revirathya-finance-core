@@ -9,26 +9,26 @@ import (
 	"syscall"
 	"time"
 
+	// Apps
+	"github.com/revirathya/revirathya-finance-core/cmd/api"
+	"github.com/revirathya/revirathya-finance-core/cmd/sub"
+
+	// Internal
+	authApp "github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/config"
-	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
-	"github.com/revirathya/revirathya-finance-core/internal/platform/google"
-
-	appApi "github.com/revirathya/revirathya-finance-core/cmd/api"
-	appSub "github.com/revirathya/revirathya-finance-core/cmd/sub"
-
-	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
-	appLog "github.com/revirathya/revirathya-finance-core/internal/platform/logging"
-	appRepo "github.com/revirathya/revirathya-finance-core/internal/repository"
-	appUc "github.com/revirathya/revirathya-finance-core/internal/usecase"
-
 	dlvGql "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql"
 	dlvGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/google"
+	logApp "github.com/revirathya/revirathya-finance-core/internal/platform/logging"
+	"github.com/revirathya/revirathya-finance-core/internal/repository"
+	"github.com/revirathya/revirathya-finance-core/internal/usecase"
 )
 
 func main() {
 	// Early Healtcheck
 	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
-		os.Exit(appSub.RunHealthcheck())
+		os.Exit(sub.RunHealthcheck())
 	}
 
 	// Run
@@ -46,7 +46,7 @@ func run() error {
 	}
 
 	// Setup logger
-	logger, err := appLog.NewLogger(os.Stdout, cfg.LogFormat, cfg.LogLevel)
+	logger, err := logApp.NewLogger(os.Stdout, cfg.LogFormat, cfg.LogLevel)
 	if err != nil {
 		return err
 	}
@@ -71,11 +71,11 @@ func run() error {
 
 	// Setup Auth service
 	gVeri := google.NewGoogleVerifier(cfg.GoogleClientID)
-	tokenManager := appAuth.NewTokenManager(cfg.JwtSecret, cfg.JwtTtl)
+	tokenManager := authApp.NewTokenManager(cfg.JwtSecret, cfg.JwtTtl)
 
-	// [NEW] Setup repo and usecase
-	repo := appRepo.BootstrapRepository(pool)
-	uc := appUc.BootstrapUsecase(gVeri, repo)
+	// Setup repo and usecase
+	repo := repository.BootstrapRepository(pool)
+	uc := usecase.BootstrapUsecase(gVeri, repo)
 
 	// Setup server - gRPC
 	grpcSrvLayer, err := dlvGrpc.Setup(cfg.GrpcPort, cfg.GrpcEnableReflection, cfg.GrpcApiKey, uc)
@@ -84,7 +84,7 @@ func run() error {
 	}
 
 	// Setup server - GraphQL
-	gqlSrv := dlvGql.Setup(
+	gqlSrvLayer := dlvGql.Setup(
 		cfg.GqlPort,
 		cfg.AllowedOrigins,
 		pool.Ping,
@@ -94,7 +94,7 @@ func run() error {
 	)
 
 	// Setup server - integration
-	g := appApi.RunServers(ctx, grpcSrvLayer, gqlSrv)
+	g := api.RunServers(ctx, grpcSrvLayer, gqlSrvLayer)
 	slog.Info(
 		"server started",
 		"grpc_addr", cfg.GrpcPort,

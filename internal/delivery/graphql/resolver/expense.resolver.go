@@ -11,16 +11,22 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
-	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
-	errGql "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql/error"
 	"github.com/shopspring/decimal"
+
+	// Generated
+	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
+
+	// Internal
+	authApp "github.com/revirathya/revirathya-finance-core/internal/auth"
+
+	// Internal - GraphQL
+	errGql "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql/error"
 )
 
 // CreateExpense is the resolver for the createExpense field.
 func (r *mutationResolver) CreateExpense(ctx context.Context, input model.CreateExpenseInput) (*model.Expense, error) {
 	// Get user from context
-	userID, err := appAuth.UserIDFrom(ctx)
+	userID, err := authApp.UserIDFrom(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +73,7 @@ func (r *mutationResolver) CreateExpense(ctx context.Context, input model.Create
 // UpdateExpense is the resolver for the updateExpense field.
 func (r *mutationResolver) UpdateExpense(ctx context.Context, id string, patch model.UpdateExpenseInput) (*model.Expense, error) {
 	// Get user from context
-	userID, err := appAuth.UserIDFrom(ctx)
+	userID, err := authApp.UserIDFrom(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +125,7 @@ func (r *mutationResolver) UpdateExpense(ctx context.Context, id string, patch m
 // DeleteExpense is the resolver for the deleteExpense field.
 func (r *mutationResolver) DeleteExpense(ctx context.Context, id string) (string, error) {
 	// Get user from context
-	userID, err := appAuth.UserIDFrom(ctx)
+	userID, err := authApp.UserIDFrom(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -140,7 +146,7 @@ func (r *mutationResolver) DeleteExpense(ctx context.Context, id string) (string
 // Expense is the resolver for the expense field.
 func (r *queryResolver) Expense(ctx context.Context, id string) (*model.Expense, error) {
 	// Get user from context
-	userID, err := appAuth.UserIDFrom(ctx)
+	userID, err := authApp.UserIDFrom(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +178,7 @@ func (r *queryResolver) Expense(ctx context.Context, id string) (*model.Expense,
 // Expenses is the resolver for the expenses field.
 func (r *queryResolver) Expenses(ctx context.Context, transactionDt *string) ([]*model.Expense, error) {
 	// Get user from context
-	userID, err := appAuth.UserIDFrom(ctx)
+	userID, err := authApp.UserIDFrom(ctx)
 	if err != nil {
 		return nil, err
 	}

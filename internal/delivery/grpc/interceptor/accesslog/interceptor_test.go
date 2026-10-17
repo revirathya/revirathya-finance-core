@@ -12,8 +12,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/accesslog"
+	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/platform/logging"
+
+	// Internal - gRPC
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/accesslog"
 )
 
 const testMethod = "/financecore.v1.ExpenseService/GetExpenseByID"

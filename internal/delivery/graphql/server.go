@@ -43,6 +43,10 @@ const (
 )
 
 // Public
+type ServerLayer struct {
+	Server *http.Server
+}
+
 func Setup(
 	port string,
 	allowedOrigins []string,
@@ -50,7 +54,7 @@ func Setup(
 	enableInstropection bool,
 	tokens *auth.TokenManager,
 	usecase usecase.Usecase,
-) *http.Server {
+) *ServerLayer {
 	// Init resolver and server
 	resolver := resolver.NewResolver(tokens, usecase)
 	gqlSrv := handler.New(schema.NewExecutableSchema(
@@ -101,5 +105,7 @@ func Setup(
 	mux.HandleFunc("GET /healthz", health.Healthz())
 	mux.HandleFunc("GET /readyz", health.Readyz(ping))
 
-	return httpServer
+	return &ServerLayer{
+		Server: httpServer,
+	}
 }

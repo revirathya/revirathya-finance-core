@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	// Internal
 	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase"
 )

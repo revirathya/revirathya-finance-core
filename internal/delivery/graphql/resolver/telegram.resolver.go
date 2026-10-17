@@ -9,13 +9,16 @@ import (
 	"context"
 	"time"
 
+	// Generated
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
-	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
+
+	// Internal
+	authApp "github.com/revirathya/revirathya-finance-core/internal/auth"
 )
 
 // CreateTelegramBindCode is the resolver for the createTelegramBindCode field.
 func (r *mutationResolver) CreateTelegramBindCode(ctx context.Context) (*model.TelegramBindCode, error) {
-	userID, err := appAuth.UserIDFrom(ctx)
+	userID, err := authApp.UserIDFrom(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +37,7 @@ func (r *mutationResolver) CreateTelegramBindCode(ctx context.Context) (*model.T
 
 // UnbindTelegram is the resolver for the unbindTelegram field.
 func (r *mutationResolver) UnbindTelegram(ctx context.Context) (*model.User, error) {
-	userID, err := appAuth.UserIDFrom(ctx)
+	userID, err := authApp.UserIDFrom(ctx)
 	if err != nil {
 		return nil, err
 	}

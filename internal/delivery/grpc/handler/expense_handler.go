@@ -6,14 +6,19 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	// Generated
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
-	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
-	grpcErr "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/error"
+
+	// Internal
+	authApp "github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
-	"github.com/shopspring/decimal"
+
+	// Internal - gRPC
+	errGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/error"
 )
 
 type ExpenseHandler struct {
@@ -29,9 +34,9 @@ func NewExpenseHandler(expUc *expense.ExpenseUsecase) *ExpenseHandler {
 
 func (h *ExpenseHandler) CreateExpense(ctx context.Context, req *financecorev1.CreateExpenseRequest) (*financecorev1.CreateExpenseResponse, error) {
 	// Get user from context
-	userID, err := appAuth.UserIDFrom(ctx)
+	userID, err := authApp.UserIDFrom(ctx)
 	if err != nil {
-		return nil, grpcErr.ToStatus(ctx, "create expense", err)
+		return nil, errGrpc.ToStatus(ctx, "create expense", err)
 	}
 
 	// Parse input
@@ -59,7 +64,7 @@ func (h *ExpenseHandler) CreateExpense(ctx context.Context, req *financecorev1.C
 		decAmount,
 	)
 	if err != nil {
-		return nil, grpcErr.ToStatus(ctx, "create expense", err)
+		return nil, errGrpc.ToStatus(ctx, "create expense", err)
 	}
 
 	resp := &financecorev1.CreateExpenseResponse{
@@ -75,9 +80,9 @@ func (h *ExpenseHandler) CreateExpense(ctx context.Context, req *financecorev1.C
 
 func (h *ExpenseHandler) GetExpenseByID(ctx context.Context, req *financecorev1.GetExpenseByIDRequest) (*financecorev1.GetExpenseByIDResponse, error) {
 	// Get user from context
-	userID, err := appAuth.UserIDFrom(ctx)
+	userID, err := authApp.UserIDFrom(ctx)
 	if err != nil {
-		return nil, grpcErr.ToStatus(ctx, "get expense by id", err)
+		return nil, errGrpc.ToStatus(ctx, "get expense by id", err)
 	}
 
 	// Parse input
@@ -89,7 +94,7 @@ func (h *ExpenseHandler) GetExpenseByID(ctx context.Context, req *financecorev1.
 	// Get expense by ID
 	expense, err := h.expUc.GetExpenseByID(ctx, uuidId, userID)
 	if err != nil {
-		return nil, grpcErr.ToStatus(ctx, fmt.Sprintf("get expense %s", uuidId.String()), err)
+		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("get expense %s", uuidId.String()), err)
 	}
 
 	resp := &financecorev1.GetExpenseByIDResponse{
@@ -107,9 +112,9 @@ func (h *ExpenseHandler) GetExpenseByID(ctx context.Context, req *financecorev1.
 
 func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.ListExpensesRequest) (*financecorev1.ListExpensesResponse, error) {
 	// Get user from context
-	userID, err := appAuth.UserIDFrom(ctx)
+	userID, err := authApp.UserIDFrom(ctx)
 	if err != nil {
-		return nil, grpcErr.ToStatus(ctx, "list expenses", err)
+		return nil, errGrpc.ToStatus(ctx, "list expenses", err)
 	}
 
 	// Parse input
@@ -125,7 +130,7 @@ func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.Li
 	// List expenses
 	expenses, err := h.expUc.ListExpenses(ctx, userID, ntmTransactionDt)
 	if err != nil {
-		return nil, grpcErr.ToStatus(ctx, "list expenses", err)
+		return nil, errGrpc.ToStatus(ctx, "list expenses", err)
 	}
 
 	resp := &financecorev1.ListExpensesResponse{
@@ -148,9 +153,9 @@ func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.Li
 
 func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.UpdateExpenseRequest) (*financecorev1.UpdateExpenseResponse, error) {
 	// Get user from context
-	userID, err := appAuth.UserIDFrom(ctx)
+	userID, err := authApp.UserIDFrom(ctx)
 	if err != nil {
-		return nil, grpcErr.ToStatus(ctx, "update expense", err)
+		return nil, errGrpc.ToStatus(ctx, "update expense", err)
 	}
 
 	// Parse input
@@ -185,7 +190,7 @@ func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.U
 		decAmount,
 	)
 	if err != nil {
-		return nil, grpcErr.ToStatus(ctx, fmt.Sprintf("update expense %s", uuidId.String()), err)
+		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("update expense %s", uuidId.String()), err)
 	}
 
 	resp := &financecorev1.UpdateExpenseResponse{
@@ -202,9 +207,9 @@ func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.U
 
 func (h *ExpenseHandler) DeleteExpense(ctx context.Context, req *financecorev1.DeleteExpenseRequest) (*financecorev1.DeleteExpenseResponse, error) {
 	// Get user from context
-	userID, err := appAuth.UserIDFrom(ctx)
+	userID, err := authApp.UserIDFrom(ctx)
 	if err != nil {
-		return nil, grpcErr.ToStatus(ctx, "delete expense", err)
+		return nil, errGrpc.ToStatus(ctx, "delete expense", err)
 	}
 
 	// Parse input
@@ -215,7 +220,7 @@ func (h *ExpenseHandler) DeleteExpense(ctx context.Context, req *financecorev1.D
 
 	// Delete expense
 	if err := h.expUc.DeleteExpense(ctx, uuidId, userID); err != nil {
-		return nil, grpcErr.ToStatus(ctx, fmt.Sprintf("delete expense %s", uuidId.String()), err)
+		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("delete expense %s", uuidId.String()), err)
 	}
 
 	return &financecorev1.DeleteExpenseResponse{}, nil

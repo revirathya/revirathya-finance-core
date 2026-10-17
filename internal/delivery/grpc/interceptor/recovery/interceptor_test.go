@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/recovery"
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/recovery"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/logging"
 )
 

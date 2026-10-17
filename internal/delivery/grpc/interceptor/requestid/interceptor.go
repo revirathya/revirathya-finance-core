@@ -4,9 +4,11 @@ import (
 	"context"
 	"strings"
 
-	"github.com/revirathya/revirathya-finance-core/internal/platform/logging"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+
+	// Internal
+	"github.com/revirathya/revirathya-finance-core/internal/platform/logging"
 )
 
 func UnaryServerInterceptor() grpc.UnaryServerInterceptor {
