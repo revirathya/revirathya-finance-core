@@ -3,13 +3,10 @@ package main
 import (
 	"context"
 	"errors"
-	"net"
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
 	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
-	"github.com/revirathya/revirathya-finance-core/internal/platform/ratelimit"
 	"github.com/vektah/gqlparser/v2/ast"
 
 	ucAuth "github.com/revirathya/revirathya-finance-core/internal/usecase/auth"
@@ -17,7 +14,7 @@ import (
 	ucExp "github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
 	ucTbc "github.com/revirathya/revirathya-finance-core/internal/usecase/telegrambindcode"
 	ucUsr "github.com/revirathya/revirathya-finance-core/internal/usecase/user"
-	ucUtel "github.com/revirathya/revirathya-finance-core/internal/usecase/usercontext"
+
 	"golang.org/x/sync/errgroup"
 
 	gqlHdl "github.com/99designs/gqlgen/graphql/handler"
@@ -27,15 +24,14 @@ import (
 	gqlSch "github.com/revirathya/revirathya-finance-core/gen/graphql"
 	gqlDlv "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql"
 
-	grpcFincoreV1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
-	grpcDlv "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
-	grpcAlog "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/accesslog"
-	grpcAuth "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/auth"
-	grpcRec "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/recovery"
-	grpcRqi "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/requestid"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/health"
-	"google.golang.org/grpc/reflection"
+	dlvGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
+	// grpcFincoreV1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
+	// grpcDlv "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
+	// grpcAlog "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/accesslog"
+	// grpcAuth "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/auth"
+	// grpcRec "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/recovery"
+	// grpcRqi "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/requestid"
+	// "google.golang.org/grpc/reflection"
 )
 
 const (
@@ -114,68 +110,17 @@ func setupGraphQLServer(
 	return httpServer
 }
 
-func setupGRPCServer(
-	port string,
-	enableReflection bool,
-	apiKey string,
-	ctgUc *ucCtg.CategoryUsecase,
-	expUc *ucExp.ExpenseUsecase,
-	tbcUc *ucTbc.TelegramBindCodeUsecase,
-	utelUc *ucUtel.UserTelegramContextUsecase,
-) (*grpc.Server, net.Listener, error) {
-	bindLimiter := ratelimit.NewLimiter(10, 5*time.Minute)
-
-	ctgHan := grpcDlv.NewCategoryHandler(ctgUc)
-	expHan := grpcDlv.NewExpenseHandler(expUc)
-	utelHan := grpcDlv.NewUserTelegramContextHandler(tbcUc, utelUc, bindLimiter)
-
-	lookup := func(ctx context.Context, telegramID string) (uuid.UUID, error) {
-		utel, err := utelUc.GetUserTelegramContextByTelegramID(ctx, telegramID)
-		if err != nil {
-			return uuid.Nil, err
-		}
-		return utel.UserID, nil
-	}
-
-	grpcServer := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(
-			grpcRqi.UnaryServerInterceptor(),
-			grpcAlog.UnaryServerInterceptor(),
-			grpcRec.UnaryServerInterceptor(),
-			grpcAuth.APIKeyAuth(apiKey),
-			grpcAuth.TelegramUser(
-				lookup,
-				grpcFincoreV1.UserTelegramContextService_BindTelegramAccount_FullMethodName,
-			),
-		),
-	)
-	grpcFincoreV1.RegisterCategoryServiceServer(grpcServer, ctgHan)
-	grpcFincoreV1.RegisterExpenseServiceServer(grpcServer, expHan)
-	grpcFincoreV1.RegisterUserTelegramContextServiceServer(grpcServer, utelHan)
-
-	lis, err := net.Listen("tcp", port)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if enableReflection {
-		reflection.Register(grpcServer)
-	}
-	return grpcServer, lis, err
-}
-
-func setupServers(
-	lis net.Listener,
-	ctx context.Context,
-	grpcServer *grpc.Server,
-	healthServer *health.Server,
-	gqlServer *http.Server,
-) *errgroup.Group {
+// [NEW]
+func runServers(ctx context.Context, grpcSrvLayer *dlvGrpc.ServerLayer, gqlServer *http.Server) *errgroup.Group {
+	// Init errgroup
 	g, gctx := errgroup.WithContext(ctx)
+
+	// Serve gRPC
 	g.Go(func() error {
-		return grpcServer.Serve(lis)
+		return grpcSrvLayer.Server.Serve(grpcSrvLayer.Listener)
 	})
 
+	// Serve GraphQL
 	g.Go(func() error {
 		if err := gqlServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
@@ -183,6 +128,7 @@ func setupServers(
 		return nil
 	})
 
+	// Gracefull shutdown
 	g.Go(func() error {
 		<-gctx.Done()
 
@@ -191,14 +137,14 @@ func setupServers(
 
 		stopped := make(chan struct{})
 		go func() {
-			healthServer.Shutdown()
-			grpcServer.GracefulStop()
+			grpcSrvLayer.HealthServer.Shutdown()
+			grpcSrvLayer.Server.GracefulStop()
 			close(stopped)
 		}()
 		select {
 		case <-stopped:
 		case <-shutdownCtx.Done():
-			grpcServer.Stop()
+			grpcSrvLayer.Server.Stop()
 		}
 
 		return gqlServer.Shutdown(shutdownCtx)

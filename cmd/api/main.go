@@ -13,11 +13,10 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/google"
 
-	"google.golang.org/grpc/health"
-	healthpb "google.golang.org/grpc/health/grpc_health_v1"
-
 	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
 	appLog "github.com/revirathya/revirathya-finance-core/internal/platform/logging"
+	appRepo "github.com/revirathya/revirathya-finance-core/internal/repository"
+	appUc "github.com/revirathya/revirathya-finance-core/internal/usecase"
 
 	pgRepo "github.com/revirathya/revirathya-finance-core/internal/repository/postgres"
 
@@ -26,7 +25,8 @@ import (
 	ucExp "github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
 	ucTbc "github.com/revirathya/revirathya-finance-core/internal/usecase/telegrambindcode"
 	ucUsr "github.com/revirathya/revirathya-finance-core/internal/usecase/user"
-	ucUtel "github.com/revirathya/revirathya-finance-core/internal/usecase/usercontext"
+
+	dlvGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
 )
 
 func main() {
@@ -78,37 +78,28 @@ func run() error {
 	expRepo := pgRepo.NewExpenseRepositoryImpl(pool)
 	tbcRepo := pgRepo.NewTelegramBindCodeRepositoryImpl(pool)
 	usrRepo := pgRepo.NewUserRepositoryImpl(pool)
-	utelRepo := pgRepo.NewUserTelegramContextRepositoryImpl(pool)
+	// utelRepo := pgRepo.NewUserTelegramContextRepositoryImpl(pool)
 
 	// Setup Auth service
-	verifier := google.NewGoogleVerifier(cfg.GoogleClientID)
-	tokens := appAuth.NewTokenManager(cfg.JwtSecret, cfg.JwtTtl)
+	gVeri := google.NewGoogleVerifier(cfg.GoogleClientID)
+	tokenManager := appAuth.NewTokenManager(cfg.JwtSecret, cfg.JwtTtl)
 
 	// Gen Usecase
-	authUc := ucAuth.NewAuthUsecase(verifier, usrRepo)
+	authUc := ucAuth.NewAuthUsecase(gVeri, usrRepo)
 	ctgUc := ucCtg.NewCategoryUsecase(ctgRepo)
 	expUc := ucExp.NewExpenseUsecase(expRepo)
 	tbcUc := ucTbc.NewTelegramBindCodeUsecase(tbcRepo)
 	usrUc := ucUsr.NewUserUsecase(usrRepo)
-	utelUc := ucUtel.NewUserTelegramContextUsecase(utelRepo)
+
+	// [NEW] Setup repo and usecase
+	repo := appRepo.BootstrapRepository(pool)
+	uc := appUc.BootstrapUsecase(gVeri, repo)
 
 	// Setup server - gRPC
-	grpcServer, lis, err := setupGRPCServer(
-		cfg.GrpcPort,
-		cfg.GrpcEnableReflection,
-		cfg.GrpcApiKey,
-		ctgUc,
-		expUc,
-		tbcUc,
-		utelUc,
-	)
+	grpcSrvLayer, err := dlvGrpc.Setup(cfg.GrpcPort, cfg.GrpcEnableReflection, cfg.GrpcApiKey, uc)
 	if err != nil {
 		return fmt.Errorf("setup grpc server: %w", err)
 	}
-
-	// Setup server - gRPC health
-	healthServer := health.NewServer()
-	healthpb.RegisterHealthServer(grpcServer, healthServer)
 
 	// Setup server - GraphQL
 	gqlServer := setupGraphQLServer(
@@ -116,7 +107,7 @@ func run() error {
 		cfg.AllowedOrigins,
 		pool.Ping,
 		cfg.GqlEnableIntrospection,
-		tokens,
+		tokenManager,
 		authUc,
 		ctgUc,
 		expUc,
@@ -125,7 +116,7 @@ func run() error {
 	)
 
 	// Setup server - integration
-	g := setupServers(lis, ctx, grpcServer, healthServer, gqlServer)
+	g := runServers(ctx, grpcSrvLayer, gqlServer)
 	slog.Info(
 		"server started",
 		"grpc_addr", cfg.GrpcPort,
