@@ -1,4 +1,4 @@
-package graphql
+package resolver
 
 // This file will be automatically regenerated based on the schema, any resolver
 // implementations
@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
 	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
+	errGql "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql/error"
 )
 
 // CreateCategory is the resolver for the createCategory field.
@@ -21,7 +22,7 @@ func (r *mutationResolver) CreateCategory(ctx context.Context, input model.Creat
 		return nil, err
 	}
 
-	result, err := r.ctgUc.CreateCategory(ctx, userID, input.CategoryName)
+	result, err := r.usecase.Category.CreateCategory(ctx, userID, input.CategoryName)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +38,7 @@ func (r *mutationResolver) CreateCategory(ctx context.Context, input model.Creat
 func (r *mutationResolver) UpdateCategory(ctx context.Context, id string, patch model.UpdateCategoryInput) (*model.Category, error) {
 	uuidID, err := uuid.Parse(id)
 	if err != nil {
-		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
+		return nil, errGql.NewInvalidInputError(fmt.Errorf("invalid id UUID format: %w", err))
 	}
 
 	userID, err := appAuth.UserIDFrom(ctx)
@@ -45,7 +46,7 @@ func (r *mutationResolver) UpdateCategory(ctx context.Context, id string, patch 
 		return nil, err
 	}
 
-	result, err := r.ctgUc.UpdateCategory(ctx, uuidID, userID, patch.CategoryName)
+	result, err := r.usecase.Category.UpdateCategory(ctx, uuidID, userID, patch.CategoryName)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +62,7 @@ func (r *mutationResolver) UpdateCategory(ctx context.Context, id string, patch 
 func (r *mutationResolver) DeleteCategory(ctx context.Context, id string) (string, error) {
 	uuidID, err := uuid.Parse(id)
 	if err != nil {
-		return "", invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
+		return "", errGql.NewInvalidInputError(fmt.Errorf("invalid id UUID format: %w", err))
 	}
 
 	userID, err := appAuth.UserIDFrom(ctx)
@@ -69,7 +70,7 @@ func (r *mutationResolver) DeleteCategory(ctx context.Context, id string) (strin
 		return "", err
 	}
 
-	if err = r.ctgUc.DeleteCategory(ctx, uuidID, userID); err != nil {
+	if err = r.usecase.Category.DeleteCategory(ctx, uuidID, userID); err != nil {
 		return "", err
 	}
 
@@ -80,7 +81,7 @@ func (r *mutationResolver) DeleteCategory(ctx context.Context, id string) (strin
 func (r *queryResolver) Category(ctx context.Context, id string) (*model.Category, error) {
 	uuidID, err := uuid.Parse(id)
 	if err != nil {
-		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
+		return nil, errGql.NewInvalidInputError(fmt.Errorf("invalid id UUID format: %w", err))
 	}
 
 	userID, err := appAuth.UserIDFrom(ctx)
@@ -88,7 +89,7 @@ func (r *queryResolver) Category(ctx context.Context, id string) (*model.Categor
 		return nil, err
 	}
 
-	result, err := r.ctgUc.GetCategoryByID(ctx, uuidID, userID)
+	result, err := r.usecase.Category.GetCategoryByID(ctx, uuidID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +108,7 @@ func (r *queryResolver) Categories(ctx context.Context) ([]*model.Category, erro
 		return nil, err
 	}
 
-	results, err := r.ctgUc.ListCategories(ctx, userID)
+	results, err := r.usecase.Category.ListCategories(ctx, userID)
 	if err != nil {
 		return nil, err
 	}

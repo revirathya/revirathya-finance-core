@@ -1,4 +1,4 @@
-package graphql
+package error
 
 import (
 	"context"
@@ -11,10 +11,16 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
-type invalidInputError struct{ err error }
+type InvalidInputError struct{ err error }
 
-func (e invalidInputError) Error() string { return e.err.Error() }
-func (e invalidInputError) Unwrap() error { return e.err }
+func (e InvalidInputError) Error() string { return e.err.Error() }
+func (e InvalidInputError) Unwrap() error { return e.err }
+
+func NewInvalidInputError(err error) InvalidInputError {
+	return InvalidInputError{
+		err: err,
+	}
+}
 
 var passThroughCodes = map[string]bool{
 	errcode.ParseFailed:         true,
@@ -49,7 +55,7 @@ func ErrorPresenter(ctx context.Context, err error) *gqlerror.Error {
 	case errors.Is(err, domain.ErrNotFound):
 		gqlErr.Message = "resource not found"
 		gqlErr.Extensions = map[string]any{"code": "NOT_FOUND"}
-	case errors.As(err, &invalidInputError{}):
+	case errors.As(err, &InvalidInputError{}):
 		gqlErr.Extensions = map[string]any{"code": "BAD_USER_INPUT"}
 	case errors.Is(err, domain.ErrUnauthenticated):
 		gqlErr.Message = "authentication required"

@@ -1,4 +1,4 @@
-package graphql
+package resolver
 
 // This file will be automatically regenerated based on the schema, any resolver
 // implementations
@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
 	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
+	errGql "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql/error"
 	"github.com/shopspring/decimal"
 )
 
@@ -27,21 +28,21 @@ func (r *mutationResolver) CreateExpense(ctx context.Context, input model.Create
 	// Parse input
 	uuidCategoryId, err := uuid.Parse(input.CategoryID)
 	if err != nil {
-		return nil, invalidInputError{fmt.Errorf("invalid category_id UUID format: %w", err)}
+		return nil, errGql.NewInvalidInputError(fmt.Errorf("invalid category_id UUID format: %w", err))
 	}
 
 	tmTransactionDt, err := time.Parse("2006-01-02", input.TransactionDt)
 	if err != nil {
-		return nil, invalidInputError{fmt.Errorf("invalid transaction_dt Date format: %w", err)}
+		return nil, errGql.NewInvalidInputError(fmt.Errorf("invalid transaction_dt Date format: %w", err))
 	}
 
 	decAmount, err := decimal.NewFromString(input.Amount)
 	if err != nil {
-		return nil, invalidInputError{fmt.Errorf("invalid amount Decimal format: %w", err)}
+		return nil, errGql.NewInvalidInputError(fmt.Errorf("invalid amount Decimal format: %w", err))
 	}
 
 	// Create expense
-	expense, err := r.expUc.CreateExpense(
+	expense, err := r.usecase.Expense.CreateExpense(
 		ctx,
 		userID,
 		uuidCategoryId,
@@ -74,25 +75,25 @@ func (r *mutationResolver) UpdateExpense(ctx context.Context, id string, patch m
 	// Parse input
 	uuidId, err := uuid.Parse(id)
 	if err != nil {
-		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
+		return nil, errGql.NewInvalidInputError(fmt.Errorf("invalid id UUID format: %w", err))
 	}
 
 	uuidCategoryId, err := uuid.Parse(patch.CategoryID)
 	if err != nil {
-		return nil, invalidInputError{fmt.Errorf("invalid category_id UUID format: %w", err)}
+		return nil, errGql.NewInvalidInputError(fmt.Errorf("invalid category_id UUID format: %w", err))
 	}
 
 	tmTransactionDt, err := time.Parse("2006-01-02", patch.TransactionDt)
 	if err != nil {
-		return nil, invalidInputError{fmt.Errorf("invalid transaction_dt Date format: %w", err)}
+		return nil, errGql.NewInvalidInputError(fmt.Errorf("invalid transaction_dt Date format: %w", err))
 	}
 
 	decAmount, err := decimal.NewFromString(patch.Amount)
 	if err != nil {
-		return nil, invalidInputError{fmt.Errorf("invalid amount Decimal format: %w", err)}
+		return nil, errGql.NewInvalidInputError(fmt.Errorf("invalid amount Decimal format: %w", err))
 	}
 
-	expense, err := r.expUc.UpdateExpense(
+	expense, err := r.usecase.Expense.UpdateExpense(
 		ctx,
 		uuidId,
 		userID,
@@ -126,11 +127,11 @@ func (r *mutationResolver) DeleteExpense(ctx context.Context, id string) (string
 	// Parse input
 	uuidId, err := uuid.Parse(id)
 	if err != nil {
-		return "", invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
+		return "", errGql.NewInvalidInputError(fmt.Errorf("invalid id UUID format: %w", err))
 	}
 
 	// Delete expense
-	if err = r.expUc.DeleteExpense(ctx, uuidId, userID); err != nil {
+	if err = r.usecase.Expense.DeleteExpense(ctx, uuidId, userID); err != nil {
 		return "", err
 	}
 	return id, nil
@@ -147,11 +148,11 @@ func (r *queryResolver) Expense(ctx context.Context, id string) (*model.Expense,
 	// Parse input
 	uuidId, err := uuid.Parse(id)
 	if err != nil {
-		return nil, invalidInputError{fmt.Errorf("invalid id UUID format: %w", err)}
+		return nil, errGql.NewInvalidInputError(fmt.Errorf("invalid id UUID format: %w", err))
 	}
 
 	// Get expense by ID
-	expense, err := r.expUc.GetExpenseByID(ctx, uuidId, userID)
+	expense, err := r.usecase.Expense.GetExpenseByID(ctx, uuidId, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -181,13 +182,13 @@ func (r *queryResolver) Expenses(ctx context.Context, transactionDt *string) ([]
 	if transactionDt != nil {
 		tmTransactionDt, err := time.Parse("2006-01-02", *transactionDt)
 		if err != nil {
-			return nil, invalidInputError{fmt.Errorf("invalid transaction_dt Date format: %w", err)}
+			return nil, errGql.NewInvalidInputError(fmt.Errorf("invalid transaction_dt Date format: %w", err))
 		}
 		tmTransactionDtPtr = &tmTransactionDt
 	}
 
 	// List expenses
-	expenses, err := r.expUc.ListExpenses(ctx, userID, tmTransactionDtPtr)
+	expenses, err := r.usecase.Expense.ListExpenses(ctx, userID, tmTransactionDtPtr)
 	if err != nil {
 		return nil, err
 	}

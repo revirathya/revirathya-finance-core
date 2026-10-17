@@ -1,4 +1,4 @@
-package graphql
+package resolver
 
 // This file will be automatically regenerated based on the schema, any resolver
 // implementations
@@ -13,11 +13,12 @@ import (
 
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
 	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
+	errGql "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql/error"
 )
 
 // LoginWithGoogle is the resolver for the loginWithGoogle field.
 func (r *mutationResolver) LoginWithGoogle(ctx context.Context, idToken string) (*model.AuthPayload, error) {
-	user, err := r.authUc.LoginWithGoogle(ctx, idToken)
+	user, err := r.usecase.Auth.LoginWithGoogle(ctx, idToken)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +51,7 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUse
 
 	firstName := strings.TrimSpace(input.FirstName)
 	if firstName == "" {
-		return nil, invalidInputError{fmt.Errorf("first_name is required")}
+		return nil, errGql.NewInvalidInputError(fmt.Errorf("first_name is required"))
 	}
 
 	lastName := input.LastName
@@ -58,7 +59,7 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUse
 		lastName = nil
 	}
 
-	user, err := r.usrUc.UpdateUser(ctx, userID, firstName, lastName)
+	user, err := r.usecase.User.UpdateUser(ctx, userID, firstName, lastName)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +81,7 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 		return nil, err
 	}
 
-	user, err := r.usrUc.GetUserByID(ctx, userID)
+	user, err := r.usecase.User.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}

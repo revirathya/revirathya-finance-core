@@ -13,26 +13,22 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/google"
 
+	appApi "github.com/revirathya/revirathya-finance-core/cmd/api"
+	appSub "github.com/revirathya/revirathya-finance-core/cmd/sub"
+
 	appAuth "github.com/revirathya/revirathya-finance-core/internal/auth"
 	appLog "github.com/revirathya/revirathya-finance-core/internal/platform/logging"
 	appRepo "github.com/revirathya/revirathya-finance-core/internal/repository"
 	appUc "github.com/revirathya/revirathya-finance-core/internal/usecase"
 
-	pgRepo "github.com/revirathya/revirathya-finance-core/internal/repository/postgres"
-
-	ucAuth "github.com/revirathya/revirathya-finance-core/internal/usecase/auth"
-	ucCtg "github.com/revirathya/revirathya-finance-core/internal/usecase/category"
-	ucExp "github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
-	ucTbc "github.com/revirathya/revirathya-finance-core/internal/usecase/telegrambindcode"
-	ucUsr "github.com/revirathya/revirathya-finance-core/internal/usecase/user"
-
+	dlvGql "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql"
 	dlvGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
 )
 
 func main() {
 	// Early Healtcheck
 	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
-		os.Exit(runHealthcheck())
+		os.Exit(appSub.RunHealthcheck())
 	}
 
 	// Run
@@ -73,23 +69,9 @@ func run() error {
 		return fmt.Errorf("ping db: %w", err)
 	}
 
-	// Gen Repository
-	ctgRepo := pgRepo.NewCategoryRepositoryImpl(pool)
-	expRepo := pgRepo.NewExpenseRepositoryImpl(pool)
-	tbcRepo := pgRepo.NewTelegramBindCodeRepositoryImpl(pool)
-	usrRepo := pgRepo.NewUserRepositoryImpl(pool)
-	// utelRepo := pgRepo.NewUserTelegramContextRepositoryImpl(pool)
-
 	// Setup Auth service
 	gVeri := google.NewGoogleVerifier(cfg.GoogleClientID)
 	tokenManager := appAuth.NewTokenManager(cfg.JwtSecret, cfg.JwtTtl)
-
-	// Gen Usecase
-	authUc := ucAuth.NewAuthUsecase(gVeri, usrRepo)
-	ctgUc := ucCtg.NewCategoryUsecase(ctgRepo)
-	expUc := ucExp.NewExpenseUsecase(expRepo)
-	tbcUc := ucTbc.NewTelegramBindCodeUsecase(tbcRepo)
-	usrUc := ucUsr.NewUserUsecase(usrRepo)
 
 	// [NEW] Setup repo and usecase
 	repo := appRepo.BootstrapRepository(pool)
@@ -102,21 +84,17 @@ func run() error {
 	}
 
 	// Setup server - GraphQL
-	gqlServer := setupGraphQLServer(
+	gqlSrv := dlvGql.Setup(
 		cfg.GqlPort,
 		cfg.AllowedOrigins,
 		pool.Ping,
 		cfg.GqlEnableIntrospection,
 		tokenManager,
-		authUc,
-		ctgUc,
-		expUc,
-		tbcUc,
-		usrUc,
+		uc,
 	)
 
 	// Setup server - integration
-	g := runServers(ctx, grpcSrvLayer, gqlServer)
+	g := appApi.RunServers(ctx, grpcSrvLayer, gqlSrv)
 	slog.Info(
 		"server started",
 		"grpc_addr", cfg.GrpcPort,

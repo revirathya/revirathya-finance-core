@@ -1,4 +1,4 @@
-package main
+package health
 
 import (
 	"context"
@@ -7,23 +7,8 @@ import (
 	"time"
 )
 
-func runHealthcheck() int {
-	client := &http.Client{
-		Timeout: 2 * time.Second,
-	}
-	resp, err := client.Get("http://localhost:8080/readyz")
-	if err != nil {
-		return 1
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return 1
-	}
-	return 0
-}
-
-func healthz() http.HandlerFunc {
+// Private
+func Healthz() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}
@@ -31,7 +16,7 @@ func healthz() http.HandlerFunc {
 
 const readyTimeout = 2 * time.Second
 
-func readyz(ping func(ctx context.Context) error) http.HandlerFunc {
+func Readyz(ping func(ctx context.Context) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), readyTimeout)
 		defer cancel()
