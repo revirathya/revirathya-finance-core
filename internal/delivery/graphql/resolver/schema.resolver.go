@@ -8,7 +8,6 @@ package resolver
 import (
 	"context"
 
-	// Generated
 	graphql1 "github.com/revirathya/revirathya-finance-core/gen/graphql"
 )
 

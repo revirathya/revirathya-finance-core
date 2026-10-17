@@ -10,14 +10,8 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-
-	// Generated
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
-
-	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
-
-	// Internal - GraphQL
 	errGql "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql/error"
 )
 

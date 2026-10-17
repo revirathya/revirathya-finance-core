@@ -11,16 +11,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
-
-	// Generated
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
-
-	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
-
-	// Internal - GraphQL
 	errGql "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql/error"
+	"github.com/shopspring/decimal"
 )
 
 // CreateExpense is the resolver for the createExpense field.

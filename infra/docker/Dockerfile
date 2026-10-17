@@ -17,14 +17,8 @@ RUN go mod download
 # Copy sources
 COPY . .
 
-# Generate proto stubs
-RUN buf generate
-
-# Generate gql resolver
-RUN go run github.com/99designs/gqlgen generate
-
 # Static binary
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/financecore ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/financecore ./cmd
 
 # -------------------
 
