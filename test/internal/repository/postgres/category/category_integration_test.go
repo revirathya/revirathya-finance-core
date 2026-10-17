@@ -1,10 +1,11 @@
 //go:build integration
 
-package postgres_test
+package category_test
 
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 
 	// Internal
@@ -13,17 +14,24 @@ import (
 	// Repository
 	rCategory "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/category"
 	rExpense "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/expense"
+
+	// Test Util
+	"github.com/revirathya/revirathya-finance-core/testutil"
 )
+
+func TestMain(m *testing.M) {
+	os.Exit(testutil.RunWithPostgres(m))
+}
 
 func TestCategoryRepository(t *testing.T) {
 	ctx := context.Background()
-	repo := rCategory.NewCategoryRepositoryImpl(testPool)
+	repo := rCategory.NewCategoryRepositoryImpl(testutil.TestPool)
 
 	t.Run("each user sees only their own categories, ordered by name", func(t *testing.T) {
-		alice, bob := newUser(t), newUser(t)
-		newCategory(t, alice.ID, "Transport")
-		newCategory(t, alice.ID, "Food")
-		newCategory(t, bob.ID, "Bills")
+		alice, bob := testutil.NewUser(t), testutil.NewUser(t)
+		testutil.NewCategory(t, alice.ID, "Transport")
+		testutil.NewCategory(t, alice.ID, "Food")
+		testutil.NewCategory(t, bob.ID, "Bills")
 
 		got, err := repo.ListCategories(ctx, alice.ID)
 
@@ -41,13 +49,13 @@ func TestCategoryRepository(t *testing.T) {
 	})
 
 	t.Run("two users can use the same name", func(t *testing.T) {
-		newCategory(t, newUser(t).ID, "Food")
-		newCategory(t, newUser(t).ID, "Food")
+		testutil.NewCategory(t, testutil.NewUser(t).ID, "Food")
+		testutil.NewCategory(t, testutil.NewUser(t).ID, "Food")
 	})
 
 	t.Run("duplicate name for the same user is a conflict", func(t *testing.T) {
-		alice := newUser(t)
-		newCategory(t, alice.ID, "Food")
+		alice := testutil.NewUser(t)
+		testutil.NewCategory(t, alice.ID, "Food")
 
 		if _, err := repo.CreateCategory(ctx, alice.ID, domain.CategoryForm{CategoryName: "Food"}); !errors.Is(err, domain.ErrConflict) {
 			t.Fatalf("got %v, want domain.ErrConflict", err)
@@ -55,9 +63,9 @@ func TestCategoryRepository(t *testing.T) {
 	})
 
 	t.Run("renaming to an existing name is a conflict", func(t *testing.T) {
-		alice := newUser(t)
-		newCategory(t, alice.ID, "Food")
-		bills := newCategory(t, alice.ID, "Bills")
+		alice := testutil.NewUser(t)
+		testutil.NewCategory(t, alice.ID, "Food")
+		bills := testutil.NewCategory(t, alice.ID, "Bills")
 
 		if _, err := repo.UpdateCategory(ctx, bills.ID, alice.ID, domain.CategoryForm{CategoryName: "Food"}); !errors.Is(err, domain.ErrConflict) {
 			t.Fatalf("got %v, want domain.ErrConflict", err)
@@ -65,8 +73,8 @@ func TestCategoryRepository(t *testing.T) {
 	})
 
 	t.Run("owner can get, rename and delete", func(t *testing.T) {
-		alice := newUser(t)
-		food := newCategory(t, alice.ID, "Food")
+		alice := testutil.NewUser(t)
+		food := testutil.NewCategory(t, alice.ID, "Food")
 
 		if _, err := repo.GetCategoryByID(ctx, food.ID, alice.ID); err != nil {
 			t.Fatalf("get: %v", err)
@@ -87,8 +95,8 @@ func TestCategoryRepository(t *testing.T) {
 	})
 
 	t.Run("another user's category is not found", func(t *testing.T) {
-		alice, bob := newUser(t), newUser(t)
-		food := newCategory(t, alice.ID, "Food")
+		alice, bob := testutil.NewUser(t), testutil.NewUser(t)
+		food := testutil.NewCategory(t, alice.ID, "Food")
 
 		if _, err := repo.GetCategoryByID(ctx, food.ID, bob.ID); !errors.Is(err, domain.ErrNotFound) {
 			t.Fatalf("get: got %v, want domain.ErrNotFound", err)
@@ -111,15 +119,15 @@ func TestCategoryRepository(t *testing.T) {
 	})
 
 	t.Run("a category used by an expense cannot be deleted", func(t *testing.T) {
-		alice := newUser(t)
-		food := newCategory(t, alice.ID, "Food")
-		expense := newExpense(t, alice.ID, food.ID, "2026-01-15", "10.00")
+		alice := testutil.NewUser(t)
+		food := testutil.NewCategory(t, alice.ID, "Food")
+		expense := testutil.NewExpense(t, alice.ID, food.ID, "2026-01-15", "10.00")
 
 		if err := repo.DeleteCategory(ctx, food.ID, alice.ID); !errors.Is(err, domain.ErrConflict) {
 			t.Fatalf("delete in-use category: got %v, want domain.ErrConflict", err)
 		}
 
-		if err := rExpense.NewExpenseRepositoryImpl(testPool).DeleteExpense(ctx, expense.ID, alice.ID); err != nil {
+		if err := rExpense.NewExpenseRepositoryImpl(testutil.TestPool).DeleteExpense(ctx, expense.ID, alice.ID); err != nil {
 			t.Fatalf("delete expense: %v", err)
 		}
 		if err := repo.DeleteCategory(ctx, food.ID, alice.ID); err != nil {

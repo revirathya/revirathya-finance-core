@@ -1,10 +1,11 @@
 //go:build integration
 
-package postgres_test
+package user_test
 
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 
@@ -15,18 +16,24 @@ import (
 
 	// Repository
 	rUser "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/user"
+
+	// Test Util
+	"github.com/revirathya/revirathya-finance-core/testutil"
 )
 
+func TestMain(m *testing.M) {
+	os.Exit(testutil.RunWithPostgres(m))
+}
 func TestUserRepository(t *testing.T) {
 	ctx := context.Background()
-	repo := rUser.NewUserRepositoryImpl(testPool)
+	repo := rUser.NewUserRepositoryImpl(testutil.TestPool)
 
 	t.Run("create stores the email lowercased", func(t *testing.T) {
 		id := uuid.NewString()
 
 		user, err := repo.CreateUser(ctx, domain.UserForm{
 			FirstName: "Avi",
-			LastName:  ptr("Leonardi"),
+			LastName:  testutil.Ptr("Leonardi"),
 			Email:     "Avi." + id + "@Example.COM",
 			GoogleSub: "google-" + id,
 		})
@@ -43,7 +50,7 @@ func TestUserRepository(t *testing.T) {
 	})
 
 	t.Run("a user without a telegram binding is found by ID", func(t *testing.T) {
-		alice := newUser(t)
+		alice := testutil.NewUser(t)
 
 		got, err := repo.GetUserByID(ctx, alice.ID)
 
@@ -106,8 +113,8 @@ func TestUserRepository(t *testing.T) {
 	})
 
 	t.Run("update changes names, keeps email, and nil clears the last name", func(t *testing.T) {
-		alice := newUser(t)
-		if _, err := repo.UpdateUser(ctx, alice.ID, "Alice", ptr("Smith")); err != nil {
+		alice := testutil.NewUser(t)
+		if _, err := repo.UpdateUser(ctx, alice.ID, "Alice", testutil.Ptr("Smith")); err != nil {
 			t.Fatalf("first update: %v", err)
 		}
 
@@ -131,7 +138,7 @@ func TestUserRepository(t *testing.T) {
 	})
 
 	t.Run("database errors are returned, not swallowed", func(t *testing.T) {
-		alice := newUser(t)
+		alice := testutil.NewUser(t)
 		cancelled, cancel := context.WithCancel(ctx)
 		cancel()
 

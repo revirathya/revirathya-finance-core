@@ -7,13 +7,13 @@
 - [x] Module naming
     - [x] user_context -> telegram_context
 - [x] Subcommand separation
-- [ ] Repository structure
-    - [ ] sqlc to gen/sqlc
+- [x] Repository structure
+    - [x] sqlc to gen/sqlc
     - [x] Bootstrap repo
-    - [ ] Test suites
-- [ ] Usecase structure
+    - [x] Test suites
+- [x] Usecase structure
     - [x] Boottrap usecase
-    - [ ] Test suites
+    - [x] Test suites
 - [ ] Infra dir
     - [ ] infra/docker
     - [ ] Makefile fix

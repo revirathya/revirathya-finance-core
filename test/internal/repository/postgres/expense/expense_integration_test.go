@@ -1,10 +1,11 @@
 //go:build integration
 
-package postgres_test
+package expense_test
 
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/shopspring/decimal"
@@ -15,20 +16,27 @@ import (
 	// Repository
 	rCategory "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/category"
 	rExpense "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/expense"
+
+	// Test Util
+	"github.com/revirathya/revirathya-finance-core/testutil"
 )
+
+func TestMain(m *testing.M) {
+	os.Exit(testutil.RunWithPostgres(m))
+}
 
 func TestExpenseRepository(t *testing.T) {
 	ctx := context.Background()
-	repo := rExpense.NewExpenseRepositoryImpl(testPool)
+	repo := rExpense.NewExpenseRepositoryImpl(testutil.TestPool)
 
 	t.Run("create and get round-trip all fields", func(t *testing.T) {
-		alice := newUser(t)
-		food := newCategory(t, alice.ID, "Food")
+		alice := testutil.NewUser(t)
+		food := testutil.NewCategory(t, alice.ID, "Food")
 
 		created, err := repo.CreateExpense(ctx, alice.ID, domain.ExpenseForm{
 			CategoryID:    food.ID,
-			TransactionDt: day(t, "2026-01-15"),
-			Description:   ptr("Lunch"),
+			TransactionDt: testutil.Day(t, "2026-01-15"),
+			Description:   testutil.Ptr("Lunch"),
 			Amount:        decimal.RequireFromString("12500.50"),
 		})
 		if err != nil {
@@ -54,8 +62,8 @@ func TestExpenseRepository(t *testing.T) {
 	})
 
 	t.Run("description is optional", func(t *testing.T) {
-		alice := newUser(t)
-		expense := newExpense(t, alice.ID, newCategory(t, alice.ID, "Food").ID, "2026-01-15", "1")
+		alice := testutil.NewUser(t)
+		expense := testutil.NewExpense(t, alice.ID, testutil.NewCategory(t, alice.ID, "Food").ID, "2026-01-15", "1")
 
 		got, err := repo.GetExpenseByID(ctx, expense.ID, alice.ID)
 		if err != nil {
@@ -67,12 +75,12 @@ func TestExpenseRepository(t *testing.T) {
 	})
 
 	t.Run("creating with another user's category is invalid input", func(t *testing.T) {
-		alice, bob := newUser(t), newUser(t)
-		bobsFood := newCategory(t, bob.ID, "Food")
+		alice, bob := testutil.NewUser(t), testutil.NewUser(t)
+		bobsFood := testutil.NewCategory(t, bob.ID, "Food")
 
 		_, err := repo.CreateExpense(ctx, alice.ID, domain.ExpenseForm{
 			CategoryID:    bobsFood.ID,
-			TransactionDt: day(t, "2026-01-15"),
+			TransactionDt: testutil.Day(t, "2026-01-15"),
 			Amount:        decimal.RequireFromString("10"),
 		})
 		if !errors.Is(err, domain.ErrInvalidInput) {
@@ -81,13 +89,13 @@ func TestExpenseRepository(t *testing.T) {
 	})
 
 	t.Run("updating to another user's category is invalid input", func(t *testing.T) {
-		alice, bob := newUser(t), newUser(t)
-		expense := newExpense(t, alice.ID, newCategory(t, alice.ID, "Food").ID, "2026-01-15", "10")
-		bobsFood := newCategory(t, bob.ID, "Food")
+		alice, bob := testutil.NewUser(t), testutil.NewUser(t)
+		expense := testutil.NewExpense(t, alice.ID, testutil.NewCategory(t, alice.ID, "Food").ID, "2026-01-15", "10")
+		bobsFood := testutil.NewCategory(t, bob.ID, "Food")
 
 		_, err := repo.UpdateExpense(ctx, expense.ID, alice.ID, domain.ExpenseForm{
 			CategoryID:    bobsFood.ID,
-			TransactionDt: day(t, "2026-01-15"),
+			TransactionDt: testutil.Day(t, "2026-01-15"),
 			Amount:        decimal.RequireFromString("10"),
 		})
 		if !errors.Is(err, domain.ErrInvalidInput) {
@@ -96,13 +104,13 @@ func TestExpenseRepository(t *testing.T) {
 	})
 
 	t.Run("owner can update and delete", func(t *testing.T) {
-		alice := newUser(t)
-		food, bills := newCategory(t, alice.ID, "Food"), newCategory(t, alice.ID, "Bills")
-		expense := newExpense(t, alice.ID, food.ID, "2026-01-15", "10")
+		alice := testutil.NewUser(t)
+		food, bills := testutil.NewCategory(t, alice.ID, "Food"), testutil.NewCategory(t, alice.ID, "Bills")
+		expense := testutil.NewExpense(t, alice.ID, food.ID, "2026-01-15", "10")
 
 		updated, err := repo.UpdateExpense(ctx, expense.ID, alice.ID, domain.ExpenseForm{
 			CategoryID:    bills.ID,
-			TransactionDt: day(t, "2026-01-20"),
+			TransactionDt: testutil.Day(t, "2026-01-20"),
 			Amount:        decimal.RequireFromString("99.99"),
 		})
 		if err != nil {
@@ -121,16 +129,16 @@ func TestExpenseRepository(t *testing.T) {
 	})
 
 	t.Run("another user's expense is not found", func(t *testing.T) {
-		alice, bob := newUser(t), newUser(t)
-		expense := newExpense(t, alice.ID, newCategory(t, alice.ID, "Food").ID, "2026-01-15", "10")
-		bobsFood := newCategory(t, bob.ID, "Food")
+		alice, bob := testutil.NewUser(t), testutil.NewUser(t)
+		expense := testutil.NewExpense(t, alice.ID, testutil.NewCategory(t, alice.ID, "Food").ID, "2026-01-15", "10")
+		bobsFood := testutil.NewCategory(t, bob.ID, "Food")
 
 		if _, err := repo.GetExpenseByID(ctx, expense.ID, bob.ID); !errors.Is(err, domain.ErrNotFound) {
 			t.Fatalf("get: got %v, want domain.ErrNotFound", err)
 		}
 		_, err := repo.UpdateExpense(ctx, expense.ID, bob.ID, domain.ExpenseForm{
 			CategoryID:    bobsFood.ID,
-			TransactionDt: day(t, "2026-01-15"),
+			TransactionDt: testutil.Day(t, "2026-01-15"),
 			Amount:        decimal.RequireFromString("0"),
 		})
 		if !errors.Is(err, domain.ErrNotFound) {
@@ -151,12 +159,12 @@ func TestExpenseRepository(t *testing.T) {
 	})
 
 	t.Run("list returns only the user's expenses, newest first", func(t *testing.T) {
-		alice, bob := newUser(t), newUser(t)
-		food := newCategory(t, alice.ID, "Food")
-		newExpense(t, alice.ID, food.ID, "2026-01-10", "1")
-		newExpense(t, alice.ID, food.ID, "2026-01-20", "2")
-		newExpense(t, alice.ID, food.ID, "2026-01-15", "3")
-		newExpense(t, bob.ID, newCategory(t, bob.ID, "Food").ID, "2026-01-25", "4")
+		alice, bob := testutil.NewUser(t), testutil.NewUser(t)
+		food := testutil.NewCategory(t, alice.ID, "Food")
+		testutil.NewExpense(t, alice.ID, food.ID, "2026-01-10", "1")
+		testutil.NewExpense(t, alice.ID, food.ID, "2026-01-20", "2")
+		testutil.NewExpense(t, alice.ID, food.ID, "2026-01-15", "3")
+		testutil.NewExpense(t, bob.ID, testutil.NewCategory(t, bob.ID, "Food").ID, "2026-01-25", "4")
 
 		got, err := repo.ListExpenses(ctx, alice.ID, nil)
 
@@ -177,13 +185,13 @@ func TestExpenseRepository(t *testing.T) {
 	})
 
 	t.Run("list filters by date", func(t *testing.T) {
-		alice := newUser(t)
-		food := newCategory(t, alice.ID, "Food")
-		newExpense(t, alice.ID, food.ID, "2026-01-10", "1")
-		newExpense(t, alice.ID, food.ID, "2026-01-15", "2")
-		newExpense(t, alice.ID, food.ID, "2026-01-15", "3")
+		alice := testutil.NewUser(t)
+		food := testutil.NewCategory(t, alice.ID, "Food")
+		testutil.NewExpense(t, alice.ID, food.ID, "2026-01-10", "1")
+		testutil.NewExpense(t, alice.ID, food.ID, "2026-01-15", "2")
+		testutil.NewExpense(t, alice.ID, food.ID, "2026-01-15", "3")
 
-		filter := day(t, "2026-01-15")
+		filter := testutil.Day(t, "2026-01-15")
 		got, err := repo.ListExpenses(ctx, alice.ID, &filter)
 
 		if err != nil {
@@ -200,18 +208,18 @@ func TestExpenseRepository(t *testing.T) {
 	})
 
 	t.Run("deleting a user deletes their expenses and categories", func(t *testing.T) {
-		alice := newUser(t)
-		food := newCategory(t, alice.ID, "Food")
-		expense := newExpense(t, alice.ID, food.ID, "2026-01-15", "10")
+		alice := testutil.NewUser(t)
+		food := testutil.NewCategory(t, alice.ID, "Food")
+		expense := testutil.NewExpense(t, alice.ID, food.ID, "2026-01-15", "10")
 
-		if _, err := testPool.Exec(ctx, "DELETE FROM app.users WHERE id = $1", alice.ID); err != nil {
+		if _, err := testutil.TestPool.Exec(ctx, "DELETE FROM app.users WHERE id = $1", alice.ID); err != nil {
 			t.Fatalf("delete user: %v", err)
 		}
 
 		if _, err := repo.GetExpenseByID(ctx, expense.ID, alice.ID); !errors.Is(err, domain.ErrNotFound) {
 			t.Fatalf("expense: got %v, want domain.ErrNotFound", err)
 		}
-		if _, err := rCategory.NewCategoryRepositoryImpl(testPool).GetCategoryByID(ctx, food.ID, alice.ID); !errors.Is(err, domain.ErrNotFound) {
+		if _, err := rCategory.NewCategoryRepositoryImpl(testutil.TestPool).GetCategoryByID(ctx, food.ID, alice.ID); !errors.Is(err, domain.ErrNotFound) {
 			t.Fatalf("category: got %v, want domain.ErrNotFound", err)
 		}
 	})

@@ -1,10 +1,11 @@
 //go:build integration
 
-package postgres_test
+package telegrambindcode_test
 
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 	"time"
 
@@ -14,16 +15,23 @@ import (
 	// Repository
 	rTelegramBindCode "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/telegrambindcode"
 	rUserTelegramContext "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/usertelegramcontext"
+
+	// Test Util
+	"github.com/revirathya/revirathya-finance-core/testutil"
 )
+
+func TestMain(m *testing.M) {
+	os.Exit(testutil.RunWithPostgres(m))
+}
 
 func TestTelegramBindCodeRepository(t *testing.T) {
 	ctx := context.Background()
-	repo := rTelegramBindCode.NewTelegramBindCodeRepositoryImpl(testPool)
-	contexts := rUserTelegramContext.NewUserTelegramContextRepositoryImpl(testPool)
+	repo := rTelegramBindCode.NewTelegramBindCodeRepositoryImpl(testutil.TestPool)
+	contexts := rUserTelegramContext.NewUserTelegramContextRepositoryImpl(testutil.TestPool)
 	inTenMinutes := func() time.Time { return time.Now().Add(10 * time.Minute) }
 
 	t.Run("binds a valid code", func(t *testing.T) {
-		alice, tg, hash := newUser(t), newTelegramID(), newCodeHash()
+		alice, tg, hash := testutil.NewUser(t), testutil.NewTelegramID(), testutil.NewCodeHash()
 		if err := repo.CreateBindCode(ctx, alice.ID, hash, inTenMinutes()); err != nil {
 			t.Fatalf("create code: %v", err)
 		}
@@ -42,38 +50,38 @@ func TestTelegramBindCodeRepository(t *testing.T) {
 	})
 
 	t.Run("a code can only be used once", func(t *testing.T) {
-		alice, hash := newUser(t), newCodeHash()
+		alice, hash := testutil.NewUser(t), testutil.NewCodeHash()
 		if err := repo.CreateBindCode(ctx, alice.ID, hash, inTenMinutes()); err != nil {
 			t.Fatalf("create code: %v", err)
 		}
-		if _, err := repo.BindCode(ctx, hash, newTelegramID()); err != nil {
+		if _, err := repo.BindCode(ctx, hash, testutil.NewTelegramID()); err != nil {
 			t.Fatalf("first bind: %v", err)
 		}
 
-		if _, err := repo.BindCode(ctx, hash, newTelegramID()); !errors.Is(err, domain.ErrNotFound) {
+		if _, err := repo.BindCode(ctx, hash, testutil.NewTelegramID()); !errors.Is(err, domain.ErrNotFound) {
 			t.Fatalf("second bind: got %v, want domain.ErrNotFound", err)
 		}
 	})
 
 	t.Run("an expired code is rejected", func(t *testing.T) {
-		alice, hash := newUser(t), newCodeHash()
+		alice, hash := testutil.NewUser(t), testutil.NewCodeHash()
 		if err := repo.CreateBindCode(ctx, alice.ID, hash, time.Now().Add(-time.Minute)); err != nil {
 			t.Fatalf("create code: %v", err)
 		}
 
-		if _, err := repo.BindCode(ctx, hash, newTelegramID()); !errors.Is(err, domain.ErrNotFound) {
+		if _, err := repo.BindCode(ctx, hash, testutil.NewTelegramID()); !errors.Is(err, domain.ErrNotFound) {
 			t.Fatalf("got %v, want domain.ErrNotFound", err)
 		}
 	})
 
 	t.Run("an unknown code is rejected", func(t *testing.T) {
-		if _, err := repo.BindCode(ctx, newCodeHash(), newTelegramID()); !errors.Is(err, domain.ErrNotFound) {
+		if _, err := repo.BindCode(ctx, testutil.NewCodeHash(), testutil.NewTelegramID()); !errors.Is(err, domain.ErrNotFound) {
 			t.Fatalf("got %v, want domain.ErrNotFound", err)
 		}
 	})
 
 	t.Run("a new code replaces the previous one", func(t *testing.T) {
-		alice, oldHash, newHash := newUser(t), newCodeHash(), newCodeHash()
+		alice, oldHash, newHash := testutil.NewUser(t), testutil.NewCodeHash(), testutil.NewCodeHash()
 		if err := repo.CreateBindCode(ctx, alice.ID, oldHash, inTenMinutes()); err != nil {
 			t.Fatalf("create old code: %v", err)
 		}
@@ -81,17 +89,17 @@ func TestTelegramBindCodeRepository(t *testing.T) {
 			t.Fatalf("create new code: %v", err)
 		}
 
-		if _, err := repo.BindCode(ctx, oldHash, newTelegramID()); !errors.Is(err, domain.ErrNotFound) {
+		if _, err := repo.BindCode(ctx, oldHash, testutil.NewTelegramID()); !errors.Is(err, domain.ErrNotFound) {
 			t.Fatalf("old code: got %v, want domain.ErrNotFound", err)
 		}
-		if _, err := repo.BindCode(ctx, newHash, newTelegramID()); err != nil {
+		if _, err := repo.BindCode(ctx, newHash, testutil.NewTelegramID()); err != nil {
 			t.Fatalf("new code: %v", err)
 		}
 	})
 
 	t.Run("telegram account bound to another user is a conflict, and the code stays valid", func(t *testing.T) {
-		alice, bob, tg := newUser(t), newUser(t), newTelegramID()
-		aliceHash, bobHash := newCodeHash(), newCodeHash()
+		alice, bob, tg := testutil.NewUser(t), testutil.NewUser(t), testutil.NewTelegramID()
+		aliceHash, bobHash := testutil.NewCodeHash(), testutil.NewCodeHash()
 		if err := repo.CreateBindCode(ctx, alice.ID, aliceHash, inTenMinutes()); err != nil {
 			t.Fatalf("create alice code: %v", err)
 		}
@@ -120,15 +128,15 @@ func TestTelegramBindCodeRepository(t *testing.T) {
 	})
 
 	t.Run("re-binding to a new telegram account resets conversation state", func(t *testing.T) {
-		alice, firstTG, secondTG := newUser(t), newTelegramID(), newTelegramID()
-		firstHash, secondHash := newCodeHash(), newCodeHash()
+		alice, firstTG, secondTG := testutil.NewUser(t), testutil.NewTelegramID(), testutil.NewTelegramID()
+		firstHash, secondHash := testutil.NewCodeHash(), testutil.NewCodeHash()
 		if err := repo.CreateBindCode(ctx, alice.ID, firstHash, inTenMinutes()); err != nil {
 			t.Fatalf("create first code: %v", err)
 		}
 		if _, err := repo.BindCode(ctx, firstHash, firstTG); err != nil {
 			t.Fatalf("first bind: %v", err)
 		}
-		if _, err := contexts.UpdateUserTelegramContext(ctx, alice.ID, ptr("add_expense"), ptr("ask_amount"), ptr("1"), ptr("2")); err != nil {
+		if _, err := contexts.UpdateUserTelegramContext(ctx, alice.ID, testutil.Ptr("add_expense"), testutil.Ptr("ask_amount"), testutil.Ptr("1"), testutil.Ptr("2")); err != nil {
 			t.Fatalf("set conversation: %v", err)
 		}
 		if err := repo.CreateBindCode(ctx, alice.ID, secondHash, inTenMinutes()); err != nil {
@@ -152,14 +160,14 @@ func TestTelegramBindCodeRepository(t *testing.T) {
 	})
 
 	t.Run("unbinding clears the binding and conversation state", func(t *testing.T) {
-		alice, tg, hash := newUser(t), newTelegramID(), newCodeHash()
+		alice, tg, hash := testutil.NewUser(t), testutil.NewTelegramID(), testutil.NewCodeHash()
 		if err := repo.CreateBindCode(ctx, alice.ID, hash, inTenMinutes()); err != nil {
 			t.Fatalf("create code: %v", err)
 		}
 		if _, err := repo.BindCode(ctx, hash, tg); err != nil {
 			t.Fatalf("bind: %v", err)
 		}
-		if _, err := contexts.UpdateUserTelegramContext(ctx, alice.ID, ptr("add_expense"), ptr("ask_amount"), nil, nil); err != nil {
+		if _, err := contexts.UpdateUserTelegramContext(ctx, alice.ID, testutil.Ptr("add_expense"), testutil.Ptr("ask_amount"), nil, nil); err != nil {
 			t.Fatalf("set conversation: %v", err)
 		}
 
@@ -180,7 +188,7 @@ func TestTelegramBindCodeRepository(t *testing.T) {
 	})
 
 	t.Run("unbinding a never-bound user succeeds", func(t *testing.T) {
-		if err := repo.UnbindTelegram(ctx, newUser(t).ID); err != nil {
+		if err := repo.UnbindTelegram(ctx, testutil.NewUser(t).ID); err != nil {
 			t.Fatalf("unbind: %v", err)
 		}
 	})
@@ -188,12 +196,12 @@ func TestTelegramBindCodeRepository(t *testing.T) {
 
 func TestUserTelegramContextRepository(t *testing.T) {
 	ctx := context.Background()
-	codes := rTelegramBindCode.NewTelegramBindCodeRepositoryImpl(testPool)
-	repo := rUserTelegramContext.NewUserTelegramContextRepositoryImpl(testPool)
+	codes := rTelegramBindCode.NewTelegramBindCodeRepositoryImpl(testutil.TestPool)
+	repo := rUserTelegramContext.NewUserTelegramContextRepositoryImpl(testutil.TestPool)
 
 	bind := func(t *testing.T) (*domain.User, string) {
 		t.Helper()
-		user, tg, hash := newUser(t), newTelegramID(), newCodeHash()
+		user, tg, hash := testutil.NewUser(t), testutil.NewTelegramID(), testutil.NewCodeHash()
 		if err := codes.CreateBindCode(ctx, user.ID, hash, time.Now().Add(10*time.Minute)); err != nil {
 			t.Fatalf("create code: %v", err)
 		}
@@ -204,7 +212,7 @@ func TestUserTelegramContextRepository(t *testing.T) {
 	}
 
 	t.Run("a user without a binding has no context", func(t *testing.T) {
-		if _, err := repo.GetUserTelegramContext(ctx, newUser(t).ID); !errors.Is(err, domain.ErrNotFound) {
+		if _, err := repo.GetUserTelegramContext(ctx, testutil.NewUser(t).ID); !errors.Is(err, domain.ErrNotFound) {
 			t.Fatalf("got %v, want domain.ErrNotFound", err)
 		}
 	})
@@ -224,11 +232,11 @@ func TestUserTelegramContextRepository(t *testing.T) {
 
 	t.Run("update changes only the fields that are set", func(t *testing.T) {
 		alice, _ := bind(t)
-		if _, err := repo.UpdateUserTelegramContext(ctx, alice.ID, ptr("add_expense"), ptr("ask_amount"), nil, nil); err != nil {
+		if _, err := repo.UpdateUserTelegramContext(ctx, alice.ID, testutil.Ptr("add_expense"), testutil.Ptr("ask_amount"), nil, nil); err != nil {
 			t.Fatalf("first update: %v", err)
 		}
 
-		got, err := repo.UpdateUserTelegramContext(ctx, alice.ID, nil, ptr("ask_category"), nil, nil)
+		got, err := repo.UpdateUserTelegramContext(ctx, alice.ID, nil, testutil.Ptr("ask_category"), nil, nil)
 
 		if err != nil {
 			t.Fatalf("second update: %v", err)
@@ -242,7 +250,7 @@ func TestUserTelegramContextRepository(t *testing.T) {
 	})
 
 	t.Run("updating a user without a context is not found", func(t *testing.T) {
-		if _, err := repo.UpdateUserTelegramContext(ctx, newUser(t).ID, ptr("x"), nil, nil, nil); !errors.Is(err, domain.ErrNotFound) {
+		if _, err := repo.UpdateUserTelegramContext(ctx, testutil.NewUser(t).ID, testutil.Ptr("x"), nil, nil, nil); !errors.Is(err, domain.ErrNotFound) {
 			t.Fatalf("got %v, want domain.ErrNotFound", err)
 		}
 	})
