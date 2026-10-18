@@ -2,16 +2,19 @@ schema:
   - graphql/schema/*.graphql
 
 exec:
-  package: graphql
+  package: grapqhl
   layout: follow-schema
   dir: gen/graphql
+
+autobind:
+  - "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql/error"
 
 model:
   package: model
   filename: gen/graphql/model/models_gen.go
 
 resolver:
-  package: graphql
+  package: resolver
   layout: follow-schema
-  dir: internal/delivery/graphql
+  dir: internal/delivery/graphql/resolver
   filename_template: "{name}.resolver.go"

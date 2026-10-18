@@ -3,11 +3,11 @@
 Review of `revirathya-finance-core` (Go gRPC + GraphQL service) against what a production deploy needs.
 Tick items off as they land.
 
-Last reviewed: 2026-10-11
+Last reviewed: 2026-10-17
 
 ## 1. Bugs found in the current code
 
-- [x] **Shutdown never runs gracefully.** `ctx` in [`cmd/api/main.go`](../cmd/api/main.go) is
+- [x] **Shutdown never runs gracefully.** `ctx` in [`cmd/main.go`](../cmd/main.go) is
   `context.Background()` and nothing ever cancels it, so `GracefulStop()` / `Shutdown()` in
   [`cmd/api/startup.go`](../cmd/api/startup.go) never run on SIGTERM and in-flight requests are killed.
   - [x] `main.go` uses `signal.NotifyContext(..., os.Interrupt, syscall.SIGTERM)`.
@@ -17,14 +17,14 @@ Last reviewed: 2026-10-11
   - [x] The GraphQL server uses `ListenAndServe()` on its own port, not the gRPC listener.
   - Verified: both servers listen (`:8080`, `:50051`), and SIGINT exits cleanly with no panic.
 - [x] **gRPC error codes are wrong and leak internals.** In
-  [`internal/delivery/grpc/category_handler.go`](../internal/delivery/grpc/category_handler.go) (and the other
-  handlers):
+  [`internal/delivery/grpc/handler/category_handler.go`](../internal/delivery/grpc/handler/category_handler.go) (and
+  the other handlers):
   - [x] `expense_handler.go` and `user_context_handler.go` already return `InvalidArgument` for bad input and
     `NotFound` for `domain.ErrNotFound`.
   - [x] `category_handler.go`: an invalid UUID now returns `codes.InvalidArgument`.
   - [x] `category_handler.go`: `domain.ErrNotFound` now returns `codes.NotFound`.
   - [x] All handlers: usecase errors go through the shared `toStatus` mapper
-    ([`internal/delivery/grpc/error.go`](../internal/delivery/grpc/error.go)), which logs the full error and returns
+    ([`internal/delivery/grpc/error/error.go`](../internal/delivery/grpc/error/error.go)), which logs the full error and returns
     a generic `internal error` to clients.
   - Optional follow-up: map foreign-key violations (e.g. unknown `category_id`) to a domain error, then to
     `InvalidArgument` in `toStatus`.
@@ -48,7 +48,7 @@ Last reviewed: 2026-10-11
 - [x] **`ErrorPresenter` hid GraphQL validation and parse errors.** Its `default` branch turns every unknown
   error into `internal error` / `INTERNAL`, including errors gqlgen produces itself before any resolver runs:
   unknown fields, missing required arguments, syntax errors. Clients can't see what's wrong with their query.
-  - Fix: in [`internal/delivery/graphql/error.go`](../internal/delivery/graphql/error.go), return the default
+  - Fix: in [`internal/delivery/graphql/error/error.go`](../internal/delivery/graphql/error/error.go), return the default
     presenter's error unchanged when its `code` extension is `errcode.ValidationFailed` or `errcode.ParseFailed`
     (`github.com/99designs/gqlgen/graphql/errcode`). These only describe the query, never server internals.
   - Done: validation and parse errors pass through unchanged. Verified: unknown fields, syntax errors and missing
@@ -63,7 +63,7 @@ Last reviewed: 2026-10-11
 - [x] **`make grpc-list` / `make grpc-describe` point at a missing file.** `GRPC_PROTOS` in the
   [`Makefile`](../Makefile) listed `user_contexts.proto`; the file is `user_telegram_contexts.proto`.
 - [x] **docker-compose references a service that doesn't exist.** In
-  [`docker-compose.yml`](../docker-compose.yml), `finance-core` had `depends_on: postgres`, but the service was
+  [`infra/docker/docker-compose.yaml`](../infra/docker/docker-compose.yaml), `finance-core` had `depends_on: postgres`, but the service was
   `finance-db`.
   - [x] Services renamed to `db` / `migration` / `core`, and `depends_on` uses the right names.
   - [x] `core` waits for `migration` to complete (`service_completed_successfully`).
@@ -105,8 +105,8 @@ Last reviewed: 2026-10-11
   - Later, if the API is ever reached over an untrusted network or by more services: mTLS instead of the shared
     API key.
 - [ ] **TLS** on both listeners, or terminated by a trusted proxy or mesh, with that decision documented.
-- [x] **GraphQL hardening.** The server is built with `handler.New` instead of `handler.NewDefaultServer`, and
-  covered by `cmd/api/graphql_test.go` against the production handler.
+- [x] **GraphQL hardening.** The server is built with `handler.New` instead of `handler.NewDefaultServer`. Its
+  tests against the production handler were removed in the restructuring; see **Tests** below.
   - [x] Only the `POST` transport; `GET`, websockets, multipart and APQ removed. Query cache kept.
   - [x] `extension.FixedComplexityLimit(200)` and `SetParserTokenLimit(5000)`. No separate depth limit: the
     schema has no recursive types, so complexity covers deep queries too.
@@ -130,8 +130,8 @@ Last reviewed: 2026-10-11
   - [x] Per-request context deadline for GraphQL (`http.TimeoutHandler`).
   - [ ] gRPC `MaxRecvMsgSize` and keepalive settings.
   - [ ] pgxpool settings: `MaxConns`, `MaxConnLifetime`, etc.
-- [x] **Panic recovery** interceptor on gRPC (gqlgen already recovers by default). First in the chain, so it also
-  covers the auth interceptors; logs the panic with a stack trace and returns `Internal`.
+- [x] **Panic recovery.** gRPC: an interceptor after `requestid` and `accesslog` and before the auth interceptors,
+  so it covers auth too; logs the panic with a stack trace and returns `Internal`. GraphQL: `RecoverFunc`.
 - [ ] **Config validation.**
   - [x] Fail fast on invalid values: required secrets, `JWT_SECRET` length, `JWT_TTL` duration.
   - [ ] Keep secrets in env or a secret manager.
@@ -168,18 +168,32 @@ Last reviewed: 2026-10-11
   - [ ] `govulncheck` (deferred, see section 5)
   - [x] Generated-code drift check (regenerate, then fail on any modified or untracked file)
   - [x] Migration test: `up`, `down --all`, `up` against a Postgres service container
-- [ ] **Tests.**
-  - [ ] Repository integration tests against real Postgres (testcontainers-go).
-  - [ ] gRPC handler and GraphQL resolver tests.
+  - [ ] Integration tests: the CI step still runs `go test -race -tags=integration ./internal/repository/...`, where
+    no integration tests remain after the move to `test/`, so it currently tests nothing. Point it at
+    `./test/...` (as `make test-integration` does).
+- [ ] **Tests.** Most tests live in `test/` (mirroring `internal/`); usecase tests stay next to their usecases.
+  - [x] Repository integration tests against real Postgres (testcontainers-go): `test/internal/repository/postgres`,
+    one container per package via `testutil.RunWithPostgres`; run with `make test-integration`.
   - [x] Usecase tests for every usecase, including `user`, `auth` and `telegrambindcode`.
-  - [x] Unit tests for the auth plumbing: API-key and Telegram interceptors, session tokens, HTTP auth
-    middleware, `ToStatus`, rate limiter.
+  - [x] Unit tests for the gRPC plumbing (all interceptors, `ToStatus`), config, logging, session tokens and the
+    rate limiter.
+  - [x] Restore the tests removed in the restructuring (`a38fd29`), now in `test/internal/delivery/graphql/`: the
+    production handler from `graphql.Setup`, `ChainMiddleware`, every HTTP middleware, health handlers, and
+    `ErrorPresenter` / `RecoverFunc` (with errors wrapped the way gqlgen wraps them).
+  - [ ] Fix the three bugs these tests found (they fail until then):
+    - [ ] `ChainMiddleware` skips the last middleware and reverses the order, so there are no HTTP access logs
+      and no GraphQL request timeout.
+    - [ ] The `"POST /graphql"` route makes the mux reject CORS preflight (`OPTIONS`) with 405, so browsers
+      can't call the API. Register `"/graphql"`; gqlgen still rejects non-`POST` requests.
+    - [ ] `ErrorPresenter` changes the message to "internal error" before logging the wrapped resolver error,
+      so the log loses the real cause. Log `gqlErr.Err` (the original error) before masking.
+  - [ ] gRPC handler and GraphQL resolver tests.
 
 ### Documentation
 - [ ] **README / runbook.**
-  - [ ] Local setup.
-  - [ ] Every env var with its default.
-  - [ ] Ports and endpoints.
+  - [x] Local setup.
+  - [x] Every env var with its default.
+  - [x] Ports and endpoints.
   - [ ] Deploy steps.
   - [ ] Migration rollback procedure.
 
@@ -210,7 +224,7 @@ Last reviewed: 2026-10-11
 - [ ] `docs/` with ADRs, such as "why both gRPC and GraphQL" or "money stored as numeric".
 
 ### Docker
-- [ ] Version-tagged images instead of `:latest`.
+- [x] Version-tagged images instead of `:latest` (`VERSION`, `MIGRATION_VERSION`).
 - [ ] Image scanning (Trivy).
 - [ ] Build-time version info via `-ldflags "-X main.version=..."`, exposed at `/version`.
 
@@ -250,30 +264,27 @@ files into client repos by hand.
   API.
 
 ### GraphQL
-- [ ] **Introspection** gated by environment: on in dev, off or behind auth in production.
+- [x] **Introspection** gated by `GQL_ENABLE_INTROSPECTION` (default `false`).
 - [ ] **`"""descriptions"""`** on SDL types and fields. GraphiQL and Apollo Sandbox show them as documentation.
 - [ ] **Playground** at `/playground`, enabled only in dev.
 - Schema registry (Hive, Apollo GraphOS): skip unless there are several GraphQL consumers or federation.
 
 ## 5. Later (after the production-readiness checklist)
 
-- [ ] **Set method to clear `description`.** Omitting `description` in `UpdateExpense` keeps the current value
-  (`COALESCE`), so there's no way to clear it. Add an explicit way, e.g. a dedicated RPC/mutation or a field mask.
+- [ ] **Make `description` non-nullable, with `""` to clear it.** Today `expenses.description` is nullable, and
+  omitting it in `UpdateExpense` keeps the current value (`COALESCE`), so there's no way to clear it. Change it to
+  `TEXT NOT NULL DEFAULT ''`: clients clear it by sending `""`, and omitting it still keeps the current value.
+  - Migration: backfill existing `NULL`s to `''`, then `SET DEFAULT ''` and `SET NOT NULL`; the down migration
+    drops both. Add it to `sqlc.yaml`.
+  - `CreateExpense` inserts `NULL` when no description is sent, which a `NOT NULL` column rejects: use
+    `COALESCE(sqlc.narg('description'), '')` in the query (or default to `""` before inserting).
+  - After `make sqlc-generate`, `description` in the generated rows becomes `string` instead of `*string`; adjust
+    the repository mapping. Input can keep `*string` (`nil` = keep, `""` = clear).
+  - Downstream (CLAUDE.md): GraphQL `Expense.description` can become `String!`, and gRPC responses always carry
+    a value. Clients that treat `null` as "no description" must accept `""`.
 - [ ] **Enable `govulncheck` in CI before the first deploy.** It's commented out in
   [`.github/workflows/ci.yaml`](../.github/workflows/ci.yaml) until a deployment target exists. Uncomment it, pin
   the latest release, and fix any reported vulnerabilities before the service goes live.
-- [ ] **Standardize module naming.** Use one name per concept across packages, files and types, e.g.
-  `usercontext` / `user_context` → `user_telegram_context`. The full list of renames is to be provided.
-- [ ] **Standardize middleware modules.** A cleaner, consistent structure for gRPC interceptors and GraphQL/HTTP
-  middleware (today they're spread over `internal/delivery/grpc/{auth,recovery}`, `internal/delivery/graphql/middleware.go`
-  and `cmd/api/{cors,middleware}.go`).
-- [ ] **Move the test suite out of `internal/`.** Put tests in a top-level `tests/` directory instead of next to the
-  code, and enforce a coverage target in CI (80% proposed; to be discussed). Go can't import `package main` and
-  external tests can't reach unexported code, so this needs two preparation steps first:
-  - [ ] Move the health handlers (`healthz`, `readyz`, `runHealthcheck`) and the GraphQL server setup
-    (`setupGraphQLServer`, `limitBody`, CORS) out of `cmd/api` into importable packages, so their tests can move.
-  - [ ] Export the unexported functions that tests currently reach from inside their package (e.g. `isTelegramID`,
-    `readyz`), or test them through exported entry points instead.
 
 ## 6. Suggested order
 

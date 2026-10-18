@@ -5,9 +5,11 @@ import (
 	"errors"
 	"log/slog"
 
-	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	// Internal
+	"github.com/revirathya/revirathya-finance-core/internal/domain"
 )
 
 // ToStatus converts a usecase error into a gRPC status error.

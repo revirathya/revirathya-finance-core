@@ -5,8 +5,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/shopspring/decimal"
+
+	// Internal
+	"github.com/revirathya/revirathya-finance-core/internal/domain"
 )
 
 // Usecase: Expense

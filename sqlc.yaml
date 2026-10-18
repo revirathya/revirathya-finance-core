@@ -6,11 +6,11 @@ sql:
       - "migrations/000002_add_user_auth.up.sql"
       - "migrations/000003_add_telegram_bind.up.sql"
       - "migrations/000004_categories_per_user.up.sql"
-    queries: "internal/repository/sqlc/queries"
+    queries: "sqlc/queries"
     gen:
       go:
-        package: "sqlcgen"
-        out: "internal/repository/sqlc/gen"
+        package: "sqlc"
+        out: "gen/sqlc"
         sql_package: "pgx/v5"
         emit_json_tags: true
         emit_interface: true

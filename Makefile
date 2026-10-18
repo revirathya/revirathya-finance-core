@@ -1,6 +1,7 @@
 -include .env
 export
 
+COMPOSE := docker compose --project-directory . -f infra/docker/docker-compose.yaml
 GRPC_ADDR ?= localhost:50051
 GRPC_PROTOS := -proto financecore/v1/categories.proto -proto financecore/v1/expenses.proto -proto financecore/v1/user_telegram_contexts.proto
 
@@ -12,16 +13,16 @@ GRPC_PROTOS := -proto financecore/v1/categories.proto -proto financecore/v1/expe
 	gql-init gql-generate
 
 run:
-	go run ./cmd/api
+	go run ./cmd
 
 build:
-	go build -o bin/api ./cmd/api
+	go build -o bin/financecore ./cmd
 
 test:
-	go test ./...
+	go test -count=1 ./test/...
 
 test-integration:
-	go test -race -tags=integration ./internal/repository/...
+	go test -race -count=1 -tags=integration ./test/internal/repository/...
 
 vet:
 	go vet ./...
@@ -40,17 +41,17 @@ tidy:
 docker-build: svc ?= core
 docker-build:
 	docker build \
-		-f $(if $(filter migration,$(svc)),migration.Dockerfile,Dockerfile) \
+		-f infra/docker/$(if $(filter migration,$(svc)),migration.Dockerfile,Dockerfile) \
 		-t revirathya/revirathya-finance-$(svc):$(if $(filter migration,$(svc)),$(MIGRATION_VERSION),$(VERSION)) .
 
 docker-up:
-	docker compose up -d $(svc)
+	$(COMPOSE) up -d $(svc)
 
 docker-down:
-	docker compose down $(args)
+	$(COMPOSE) down $(args)
 
 docker-logs:
-	docker compose logs -f $(svc)
+	$(COMPOSE) logs -f $(svc)
 
 ## --- migrations (golang-migrate) ---
 

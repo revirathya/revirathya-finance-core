@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Entity: Category
+// Entity
 type Category struct {
 	ID           uuid.UUID
 	UserID       uuid.UUID
@@ -17,7 +17,7 @@ type CategoryForm struct {
 	CategoryName string
 }
 
-// Repository: Category
+// Repository
 type CategoryRepository interface {
 	CreateCategory(ctx context.Context, userID uuid.UUID, input CategoryForm) (*Category, error)
 	GetCategoryByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*Category, error)

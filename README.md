@@ -27,7 +27,7 @@ Core services to managing financial data. Exposes gRPC and GraphQL as APIs backe
 ### Installing the Go-based tools
 
 All of these install with `go install`, into `$(go env GOPATH)/bin` (usually `~/go/bin`). Versions match the
-ones used in the `Dockerfile` and in the committed generated code.
+ones CI uses and the committed generated code.
 
 1. Make sure the Go bin directory is on your `PATH` (add this line to `~/.bashrc` or `~/.zshrc`):
 
@@ -97,6 +97,14 @@ make docker-up                    # Start db -> migration -> core
 
 In Docker mode the app is reachable on the host ports (gRPC `:51051`, GraphQL `:8180/graphql` by default).
 
+The Docker files live in `infra/docker/` (`Dockerfile`, `migration.Dockerfile`, `docker-compose.yaml`). The Makefile
+runs compose with `--project-directory .`, so it reads the root `.env` and keeps the project name
+`revirathya-finance-core` (and its `pgdata` volume). To run compose by hand, use the same flags:
+
+```sh
+docker compose --project-directory . -f infra/docker/docker-compose.yaml ps
+```
+
 Common commands for both modes:
 
 ```sh
@@ -114,7 +122,7 @@ through `args="..."` instead.
 
 |Variable|Used by|Default|Description|
 |:--|:--|:--|:--|
-|`svc`|`docker-build`|`core`|Image to build: `core` (`Dockerfile`) or `migration` (`migration.Dockerfile`)|
+|`svc`|`docker-build`|`core`|Image to build: `core` (`infra/docker/Dockerfile`) or `migration` (`infra/docker/migration.Dockerfile`)|
 |`svc`|`docker-up`, `docker-logs`|all services|Service(s) to start or follow, e.g. `svc=db` or `svc="db migration"`|
 |`VERSION`|`docker-build`, `docker-up`|from `.env`|Tag of the `core` image; override for one-off builds, e.g. `make docker-build VERSION=0.0.2`. Pass the same value to `docker-up` so compose runs the image you built.|
 |`MIGRATION_VERSION`|`docker-build svc=migration`, `docker-up`|from `.env`|Tag of the `migration` image; override the same way, e.g. `make docker-build svc=migration MIGRATION_VERSION=0.0.2`.|
@@ -165,7 +173,7 @@ These control which ports on your machine map to the containers. The ports insid
 ## Migrations
 
 - Local: `make migrate-up` / `make migrate-down` / `make migrate-create name=<X>` / `make migrate-version`
-- Docker: built from `migration.Dockerfile` (`migrate/migrate` + bundled `migrations`); the `migration`
+- Docker: built from `infra/docker/migration.Dockerfile` (`migrate/migrate` + bundled `migrations`); the `migration`
   service runs `up` automatically before `core` starts.
 
 ## Authentication
@@ -293,11 +301,30 @@ grpcurl -plaintext \
 ## Development
 
 ```sh
-make proto-generate # buf: gRPC stubs
-make sqlc-generate  # sqlc: query code
-make gql-generate   # gqlgen: GraphQL resolvers
-make check          # vet + test + proto-lint
+make run               # run the app locally (go run ./cmd)
+make build             # build the binary to bin/financecore
+make proto-generate    # buf: gRPC stubs        -> gen/go
+make sqlc-generate     # sqlc: query code       -> gen/sqlc  (queries in sqlc/queries)
+make gql-generate      # gqlgen: GraphQL code   -> gen/graphql
+make check             # vet + test + proto-lint
 ```
+
+All generated code lives in `gen/` and is committed; CI fails if it's out of date.
+
+### Tests
+
+```sh
+make test              # unit tests (go test ./test/...)
+make test-integration  # repository tests against a real Postgres (needs Docker)
+```
+
+Tests live in `test/`, mirroring the `internal/` package they cover (e.g. `test/internal/platform/logging`).
+Usecase tests stay next to their usecase in `internal/usecase/`. Integration tests carry the `integration` build
+tag; each package's `TestMain` calls `testutil.RunWithPostgres`, which starts a throwaway Postgres container,
+applies `migrations/` and provides `testutil.TestPool`. They never touch your dev database.
+
+To get editor support in integration test files, add the tag to gopls (e.g. `.vscode/settings.json`):
+`"gopls": { "buildFlags": ["-tags=integration"] }`.
 
 ## Changelog
 
