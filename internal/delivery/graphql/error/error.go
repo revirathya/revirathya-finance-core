@@ -80,9 +80,9 @@ func ErrorPresenter(ctx context.Context, err error) *gqlerror.Error {
 			"code": "BAD_USER_INPUT",
 		}
 	default:
+		slog.ErrorContext(ctx, "graphql request failed", "path", graphql.GetPath(ctx), "err", err)
 		gqlErr.Message = "internal error"
 		gqlErr.Extensions = map[string]any{"code": "INTERNAL"}
-		slog.ErrorContext(ctx, "graphql request failed", "path", graphql.GetPath(ctx), "err", err)
 	}
 
 	return gqlErr

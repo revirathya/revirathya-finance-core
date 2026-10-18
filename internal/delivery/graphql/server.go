@@ -91,7 +91,7 @@ func Setup(
 
 	// Set routing
 	mux.Handle(
-		"POST /graphql",
+		"/graphql",
 		middleware.ChainMiddleware(
 			gqlSrv,
 			limitbody.Middleware(maxRequestBodySize),
