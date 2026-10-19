@@ -172,11 +172,13 @@ Last reviewed: 2026-10-19
 
 ### Quality gates
 - [ ] **CI pipeline** ([`.github/workflows/ci.yaml`](../.github/workflows/ci.yaml)) running on every PR:
+  - [x] Runner hygiene: `ubuntu-24.04` pinned, `timeout-minutes: 10` on every job, superseded PR runs cancelled
+    (`concurrency`, PR-only, so `main` runs are never cancelled), `actions/checkout@v7` and `actions/setup-go@v7`.
   - [x] `go mod tidy -diff` and `go vet`
   - [x] `golangci-lint` v2 (`.golangci.yaml`: `standard` + `bodyclose`, `errorlint`, `gosec`, `misspell`; gofmt and
     goimports; `make lint`, part of `make check`; CI via `golangci/golangci-lint-action@v8`, pinned to `v2.15.0`).
     - Optional later: `revive` (naming, e.g. `uuidId` -> `uuidID`) and `noctx`.
-  - [x] `go test -race ./...`
+  - [x] `go test -race -tags=integration ./test/...` (unit and integration tests in one step)
   - [x] `buf lint`
   - [ ] `buf breaking --against main`. Optional: per CLAUDE.md, breaking gRPC changes are allowed because
     downstream services follow this repo, so this would only be useful as an informational check.

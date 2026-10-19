@@ -50,6 +50,19 @@ func TestUserValidation(t *testing.T) {
 		})
 	}
 
+	t.Run("update passes a blank last name to the repository as nil, which clears it", func(t *testing.T) {
+		repo := &fakeUserRepo{}
+		uc := user.NewUserUsecase(repo)
+		blank := "   "
+
+		if _, err := uc.UpdateUser(context.Background(), uuid.New(), "Avi", &blank); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if repo.gotUpdateLastName != nil {
+			t.Fatalf("repository received last name %q, want nil", *repo.gotUpdateLastName)
+		}
+	})
+
 	t.Run("update passes trimmed names to the repository", func(t *testing.T) {
 		repo := &fakeUserRepo{}
 		uc := user.NewUserUsecase(repo)

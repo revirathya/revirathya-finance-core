@@ -167,6 +167,25 @@ func TestUserValidate(t *testing.T) {
 		}
 	})
 
+	t.Run("patch: a last name that is empty after trimming becomes nil (cleared)", func(t *testing.T) {
+		for _, in := range []string{"", "   ", "\t\n"} {
+			patch := domain.UserPatch{FirstName: "Avi", LastName: ptr(in)}
+			if err := patch.Validate(); err != nil {
+				t.Fatalf("%q: unexpected error: %v", in, err)
+			}
+			if patch.LastName != nil {
+				t.Fatalf("%q: last name %q, want nil", in, *patch.LastName)
+			}
+		}
+	})
+
+	t.Run("patch: a non-empty last name is trimmed and kept", func(t *testing.T) {
+		patch := domain.UserPatch{FirstName: "Avi", LastName: ptr("  Leonardi ")}
+		if err := patch.Validate(); err != nil || patch.LastName == nil || *patch.LastName != "Leonardi" {
+			t.Fatalf("got %v, %v; want Leonardi", patch.LastName, err)
+		}
+	})
+
 	t.Run("patch rejects missing first name and too long names", func(t *testing.T) {
 		empty := domain.UserPatch{FirstName: ""}
 		wantField(t, empty.Validate(), "first_name")

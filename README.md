@@ -419,14 +419,13 @@ All generated code lives in `gen/` and is committed; CI fails if it's out of dat
 ### Tests
 
 ```sh
-make test              # unit tests (go test ./test/...)
-make test-integration  # all tests, including integration tests against a real Postgres (needs Docker)
+make test              # unit tests only: fast, no Docker (go test ./test/...)
+make test-integration  # everything: unit + integration tests, with -race, against a real Postgres (needs Docker)
 ```
 
 Tests live in `test/`, mirroring the `internal/` package they cover (e.g. `test/internal/usecase/category` tests
 `internal/usecase/category`); shared helpers are in `testutil/`. gRPC handlers and GraphQL resolvers are
-tested end-to-end against the real servers, usecases and Postgres, with only Google sign-in faked. CI also runs the unit tests with `-race`
-(`go test -race ./test/...`). Integration tests carry the `integration` build tag; each package's `TestMain` calls `testutil.RunWithPostgres`, which starts a throwaway Postgres container,
+tested end-to-end against the real servers, usecases and Postgres, with only Google sign-in faked. CI runs everything with `-race`, the same as `make test-integration`. Integration tests carry the `integration` build tag; each package's `TestMain` calls `testutil.RunWithPostgres`, which starts a throwaway Postgres container,
 applies `migrations/` and provides `testutil.TestPool`. They never touch your dev database.
 
 To get editor support in integration test files, add the tag to gopls (e.g. `.vscode/settings.json`):
