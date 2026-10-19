@@ -13,6 +13,7 @@ import (
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 
 	// Repository
 	rUser "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/user"
@@ -77,14 +78,14 @@ func TestUserRepository(t *testing.T) {
 			t.Fatalf("user %v, want %v", got.ID, alice.ID)
 		}
 
-		if _, err := repo.GetUserByGoogleSub(ctx, "google-"+uuid.NewString()); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("unknown sub: got %v, want domain.ErrNotFound", err)
+		if _, err := repo.GetUserByGoogleSub(ctx, "google-"+uuid.NewString()); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("unknown sub: got %v, want errDom.ErrNotFound", err)
 		}
 	})
 
 	t.Run("unknown ID is not found", func(t *testing.T) {
-		if _, err := repo.GetUserByID(ctx, uuid.New()); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("got %v, want domain.ErrNotFound", err)
+		if _, err := repo.GetUserByID(ctx, uuid.New()); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("got %v, want errDom.ErrNotFound", err)
 		}
 	})
 
@@ -95,8 +96,8 @@ func TestUserRepository(t *testing.T) {
 		}
 
 		_, err := repo.CreateUser(ctx, domain.UserForm{FirstName: "B", Email: strings.ToUpper(id) + "@TEST.LOCAL", GoogleSub: "google-b-" + id})
-		if !errors.Is(err, domain.ErrConflict) {
-			t.Fatalf("got %v, want domain.ErrConflict", err)
+		if !errors.Is(err, errDom.ErrConflict) {
+			t.Fatalf("got %v, want errDom.ErrConflict", err)
 		}
 	})
 
@@ -107,18 +108,18 @@ func TestUserRepository(t *testing.T) {
 		}
 
 		_, err := repo.CreateUser(ctx, domain.UserForm{FirstName: "B", Email: "b-" + id + "@test.local", GoogleSub: "google-" + id})
-		if !errors.Is(err, domain.ErrConflict) {
-			t.Fatalf("got %v, want domain.ErrConflict", err)
+		if !errors.Is(err, errDom.ErrConflict) {
+			t.Fatalf("got %v, want errDom.ErrConflict", err)
 		}
 	})
 
 	t.Run("update changes names, keeps email, and nil clears the last name", func(t *testing.T) {
 		alice := testutil.NewUser(t)
-		if _, err := repo.UpdateUser(ctx, alice.ID, "Alice", testutil.Ptr("Smith")); err != nil {
+		if _, err := repo.UpdateUser(ctx, alice.ID, domain.UserPatch{FirstName: "Alice", LastName: testutil.Ptr("Smith")}); err != nil {
 			t.Fatalf("first update: %v", err)
 		}
 
-		got, err := repo.UpdateUser(ctx, alice.ID, "Alicia", nil)
+		got, err := repo.UpdateUser(ctx, alice.ID, domain.UserPatch{FirstName: "Alicia"})
 
 		if err != nil {
 			t.Fatalf("second update: %v", err)
@@ -132,8 +133,8 @@ func TestUserRepository(t *testing.T) {
 	})
 
 	t.Run("updating an unknown user is not found", func(t *testing.T) {
-		if _, err := repo.UpdateUser(ctx, uuid.New(), "X", nil); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("got %v, want domain.ErrNotFound", err)
+		if _, err := repo.UpdateUser(ctx, uuid.New(), domain.UserPatch{FirstName: "X"}); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("got %v, want errDom.ErrNotFound", err)
 		}
 	})
 
@@ -152,8 +153,31 @@ func TestUserRepository(t *testing.T) {
 		if got, err := repo.CreateUser(cancelled, domain.UserForm{FirstName: "X", Email: id + "@test.local", GoogleSub: id}); err == nil || got != nil {
 			t.Fatalf("CreateUser: got user %v and error %v, want nil user and an error", got, err)
 		}
-		if got, err := repo.UpdateUser(cancelled, alice.ID, "X", nil); err == nil || got != nil {
+		if got, err := repo.UpdateUser(cancelled, alice.ID, domain.UserPatch{FirstName: "X"}); err == nil || got != nil {
 			t.Fatalf("UpdateUser: got user %v and error %v, want nil user and an error", got, err)
+		}
+	})
+}
+
+// Backstop for input that skipped Validate(): too long values come back as
+// ErrInvalidInput, not as an unknown (internal) error.
+func TestUserRepositoryLimits(t *testing.T) {
+	ctx := context.Background()
+	repo := rUser.NewUserRepositoryImpl(testutil.TestPool)
+	long := strings.Repeat("a", 101)
+
+	t.Run("too long first name on create is invalid input", func(t *testing.T) {
+		id := uuid.NewString()
+		_, err := repo.CreateUser(ctx, domain.UserForm{FirstName: long, Email: id + "@test.local", GoogleSub: id})
+		if !errors.Is(err, errDom.ErrInvalidInput) {
+			t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
+		}
+	})
+
+	t.Run("too long last name on update is invalid input", func(t *testing.T) {
+		_, err := repo.UpdateUser(ctx, testutil.NewUser(t).ID, domain.UserPatch{FirstName: "Avi", LastName: &long})
+		if !errors.Is(err, errDom.ErrInvalidInput) {
+			t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
 		}
 	})
 }

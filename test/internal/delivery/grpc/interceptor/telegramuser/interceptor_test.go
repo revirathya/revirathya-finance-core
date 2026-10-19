@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -31,7 +31,7 @@ func TestTelegramUser(t *testing.T) {
 		case "999":
 			return uuid.Nil, errors.New("db down")
 		default:
-			return uuid.Nil, domain.ErrNotFound
+			return uuid.Nil, errDom.ErrNotFound
 		}
 	}
 	interceptor := telegramuser.UnaryServerInterceptor(lookup, bindMethod)
@@ -92,7 +92,7 @@ func TestTelegramUser(t *testing.T) {
 				t.Fatalf("telegram ID in context: got %q, want %q", gotTelegramID, tt.wantTelegramID)
 			}
 			if tt.wantPrincipal == uuid.Nil {
-				if !errors.Is(principalErr, domain.ErrUnauthenticated) {
+				if !errors.Is(principalErr, errDom.ErrUnauthenticated) {
 					t.Fatalf("got principal %v, want none", gotPrincipal)
 				}
 				return

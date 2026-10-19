@@ -39,12 +39,12 @@ func (f *fakeUserContextRepo) GetUserTelegramContextByTelegramID(ctx context.Con
 	return f.getByTelegramIDResp, f.err
 }
 
-func (f *fakeUserContextRepo) UpdateUserTelegramContext(ctx context.Context, userID uuid.UUID, conversation *string, state *string, interactionChatID *string, interactionMessageID *string) (*domain.UserTelegramContext, error) {
+func (f *fakeUserContextRepo) UpdateUserTelegramContext(ctx context.Context, userID uuid.UUID, patch domain.UserTelegramContextPatch) (*domain.UserTelegramContext, error) {
 	f.gotUpdateUserID = userID
-	f.gotUpdateConversation = conversation
-	f.gotUpdateState = state
-	f.gotUpdateInteractionChatID = interactionChatID
-	f.gotUpdateInteractionMessageID = interactionMessageID
+	f.gotUpdateConversation = patch.Conversation
+	f.gotUpdateState = patch.State
+	f.gotUpdateInteractionChatID = patch.InteractionChatID
+	f.gotUpdateInteractionMessageID = patch.InteractionMessageID
 	return f.updateResp, f.err
 }
 

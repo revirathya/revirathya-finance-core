@@ -21,7 +21,7 @@ type fakeCategoryRepo struct {
 
 	gotCreateInput domain.CategoryForm
 	gotUpdateID    uuid.UUID
-	gotUpdatePatch domain.CategoryForm
+	gotUpdatePatch domain.CategoryPatch
 	gotDeleteID    uuid.UUID
 }
 
@@ -38,7 +38,7 @@ func (f *fakeCategoryRepo) CreateCategory(ctx context.Context, userID uuid.UUID,
 	return f.createResp, f.err
 }
 
-func (f *fakeCategoryRepo) UpdateCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.CategoryForm) (*domain.Category, error) {
+func (f *fakeCategoryRepo) UpdateCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.CategoryPatch) (*domain.Category, error) {
 	f.gotUpdateID = id
 	f.gotUpdatePatch = patch
 	return f.updateResp, f.err

@@ -61,6 +61,11 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
   logs carry the same request ID as the request's access log line.
 - GraphQL: a malformed request (e.g. a body that isn't valid JSON) returns `BAD_REQUEST` / "invalid request"
   instead of `INTERNAL`, and its body is no longer logged.
+- Input validation: text fields are trimmed and length-checked (category name, first and last name: 1-100
+  characters; description: at most 500; Telegram context fields: at most 100), amounts must be greater than 0
+  with at most 2 decimal places and below 10^12, and expense dates must be between 2000-01-01 and tomorrow.
+  Invalid input returns `INVALID_ARGUMENT` / `BAD_USER_INPUT` with a message naming the field (e.g.
+  `amount: must be greater than 0`), and also when only the database catches it.
 - `ListExpenses` returns newest `transaction_dt` first; `UpdateExpense` can no longer change an expense's owner.
 - `GRPC_PORT` / `GQL_PORT` are plain numbers (`50051`, not `:50051`). New required config: `GRPC_API_KEY`,
   `GOOGLE_CLIENT_ID`, `JWT_SECRET`, `MIGRATION_VERSION`.

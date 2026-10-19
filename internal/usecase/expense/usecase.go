@@ -23,13 +23,18 @@ func NewExpenseUsecase(expRepo domain.ExpenseRepository) *ExpenseUsecase {
 }
 
 func (uc *ExpenseUsecase) CreateExpense(ctx context.Context, userID uuid.UUID, categoryID uuid.UUID, transactionDt time.Time, description *string, amount decimal.Decimal) (*domain.Expense, error) {
-	input := domain.ExpenseForm{
+	form := domain.ExpenseForm{
+		UserID:        userID,
 		CategoryID:    categoryID,
 		TransactionDt: transactionDt,
 		Description:   description,
 		Amount:        amount,
 	}
-	return uc.expRepo.CreateExpense(ctx, userID, input)
+	if err := form.Validate(); err != nil {
+		return nil, err
+	}
+
+	return uc.expRepo.CreateExpense(ctx, form)
 }
 
 func (uc *ExpenseUsecase) GetExpenseByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Expense, error) {
@@ -41,12 +46,16 @@ func (uc *ExpenseUsecase) ListExpenses(ctx context.Context, userID uuid.UUID, tr
 }
 
 func (uc *ExpenseUsecase) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, categoryID uuid.UUID, transactionDt time.Time, description *string, amount decimal.Decimal) (*domain.Expense, error) {
-	patch := domain.ExpenseForm{
+	patch := domain.ExpensePatch{
 		CategoryID:    categoryID,
 		TransactionDt: transactionDt,
 		Description:   description,
 		Amount:        amount,
 	}
+	if err := patch.Validate(); err != nil {
+		return nil, err
+	}
+
 	return uc.expRepo.UpdateExpense(ctx, id, userID, patch)
 }
 

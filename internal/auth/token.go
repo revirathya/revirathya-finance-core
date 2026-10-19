@@ -6,7 +6,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 )
 
 const tokenIssuer = "revirathya-finance-core"
@@ -43,7 +43,7 @@ func (m *TokenManager) Issue(userId uuid.UUID) (string, time.Time, error) {
 }
 
 // Parse verifies a session token and returns its user ID.
-// Any invalid, expired or tampered token returns domain.ErrUnauthenticated.
+// Any invalid, expired or tampered token returns errDom.ErrUnauthenticated.
 func (m *TokenManager) Parse(token string) (uuid.UUID, error) {
 	var claims jwt.RegisteredClaims
 	_, err := jwt.ParseWithClaims(token, &claims,
@@ -55,12 +55,12 @@ func (m *TokenManager) Parse(token string) (uuid.UUID, error) {
 	)
 
 	if err != nil {
-		return uuid.Nil, domain.ErrUnauthenticated
+		return uuid.Nil, errDom.ErrUnauthenticated
 	}
 
 	userId, err := uuid.Parse(claims.Subject)
 	if err != nil {
-		return uuid.Nil, domain.ErrUnauthenticated
+		return uuid.Nil, errDom.ErrUnauthenticated
 	}
 
 	return userId, nil

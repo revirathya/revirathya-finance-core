@@ -3,7 +3,7 @@
 Review of `revirathya-finance-core` (Go gRPC + GraphQL service) against what a production deploy needs.
 Tick items off as they land.
 
-Last reviewed: 2026-10-17
+Last reviewed: 2026-10-19
 
 ## 1. Bugs found in the current code
 
@@ -113,8 +113,12 @@ Last reviewed: 2026-10-17
   - [x] Introspection and "Did you mean …?" suggestions off unless `GQL_ENABLE_INTROSPECTION=true`.
   - [x] Request body limited to 1 MB (`413`), including bodies sent without `Content-Length`.
   - [x] `COMPLEXITY_LIMIT_EXCEEDED` passed through `ErrorPresenter` instead of being masked as `INTERNAL`.
-- [ ] **Input validation**: UUIDs, positive amounts, valid dates, string lengths. Do it in the usecase or at the
-  edge; on the proto side, `protovalidate` is the usual tool.
+- [x] **Input validation**: forms and patches have `Validate()` (helpers in `internal/domain/validation`), called
+  by the usecases; errors are `errDom.ValidationError`, which unwraps to `ErrInvalidInput`, and clients get its
+  field message (`amount: must be greater than 0`). Postgres `22001` / `22003` map to `ErrInvalidInput` as a
+  backstop in every repository that writes text or amounts.
+  - Google names are validated, not cut: Google documents at most 60 characters per name field (Workspace), within
+    the 100-character limit. Optional: log a warning in `LoginWithGoogle` if Google's profile ever fails validation.
 
 ### Reliability
 - [x] **Health checks.**
@@ -168,10 +172,8 @@ Last reviewed: 2026-10-17
   - [ ] `govulncheck` (deferred, see section 5)
   - [x] Generated-code drift check (regenerate, then fail on any modified or untracked file)
   - [x] Migration test: `up`, `down --all`, `up` against a Postgres service container
-  - [ ] Integration tests: the CI step still runs `go test -race -tags=integration ./internal/repository/...`, where
-    no integration tests remain after the move to `test/`, so it currently tests nothing. Point it at
-    `./test/...` (as `make test-integration` does).
-- [ ] **Tests.** Most tests live in `test/` (mirroring `internal/`); usecase tests stay next to their usecases.
+  - [x] Integration tests: `go test -race -tags=integration ./test/internal/repository/...`.
+- [ ] **Tests.** All tests live in `test/`, mirroring `internal/`.
   - [x] Repository integration tests against real Postgres (testcontainers-go): `test/internal/repository/postgres`,
     one container per package via `testutil.RunWithPostgres`; run with `make test-integration`.
   - [x] Usecase tests for every usecase, including `user`, `auth` and `telegrambindcode`.
@@ -180,12 +182,12 @@ Last reviewed: 2026-10-17
   - [x] Restore the tests removed in the restructuring (`a38fd29`), now in `test/internal/delivery/graphql/`: the
     production handler from `graphql.Setup`, `ChainMiddleware`, every HTTP middleware, health handlers, and
     `ErrorPresenter` / `RecoverFunc` (with errors wrapped the way gqlgen wraps them).
-  - [ ] Fix the three bugs these tests found (they fail until then):
-    - [ ] `ChainMiddleware` skips the last middleware and reverses the order, so there are no HTTP access logs
+  - [x] Fix the three bugs these tests found:
+    - [x] `ChainMiddleware` skips the last middleware and reverses the order, so there are no HTTP access logs
       and no GraphQL request timeout.
-    - [ ] The `"POST /graphql"` route makes the mux reject CORS preflight (`OPTIONS`) with 405, so browsers
+    - [x] The `"POST /graphql"` route makes the mux reject CORS preflight (`OPTIONS`) with 405, so browsers
       can't call the API. Register `"/graphql"`; gqlgen still rejects non-`POST` requests.
-    - [ ] `ErrorPresenter` changes the message to "internal error" before logging the wrapped resolver error,
+    - [x] `ErrorPresenter` changes the message to "internal error" before logging the wrapped resolver error,
       so the log loses the real cause. Log `gqlErr.Err` (the original error) before masking.
   - [ ] gRPC handler and GraphQL resolver tests.
 

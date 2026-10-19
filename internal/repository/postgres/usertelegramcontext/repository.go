@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	// Generated
@@ -13,6 +14,7 @@ import (
 
 	// Repository
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
 )
 
@@ -30,7 +32,7 @@ func (r *userTelegramContextRepositoryImpl) GetUserTelegramContext(ctx context.C
 	row, err := r.query.GetUserTelegramContext(ctx, database.ToPgxUUID(userID))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrNotFound
+			return nil, errDom.ErrNotFound
 		}
 		return nil, err
 	}
@@ -51,7 +53,7 @@ func (r *userTelegramContextRepositoryImpl) GetUserTelegramContextByTelegramID(c
 	row, err := r.query.GetUserTelegramContextByTelegramID(ctx, &telegramChatID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrNotFound
+			return nil, errDom.ErrNotFound
 		}
 		return nil, err
 	}
@@ -68,19 +70,26 @@ func (r *userTelegramContextRepositoryImpl) GetUserTelegramContextByTelegramID(c
 	return result, nil
 }
 
-func (r *userTelegramContextRepositoryImpl) UpdateUserTelegramContext(ctx context.Context, userID uuid.UUID, conversation *string, state *string, interactionChatID *string, interactionMessageID *string) (*domain.UserTelegramContext, error) {
+func (r *userTelegramContextRepositoryImpl) UpdateUserTelegramContext(ctx context.Context, userID uuid.UUID, patch domain.UserTelegramContextPatch) (*domain.UserTelegramContext, error) {
 	args := sqlc.UpdateUserTelegramContextParams{
-		Conversation:         conversation,
-		State:                state,
-		InteractionChatID:    interactionChatID,
-		InteractionMessageID: interactionMessageID,
+		Conversation:         patch.Conversation,
+		State:                patch.State,
+		InteractionChatID:    patch.InteractionChatID,
+		InteractionMessageID: patch.InteractionMessageID,
 		UserID:               database.ToPgxUUID(userID),
 	}
 
 	row, err := r.query.UpdateUserTelegramContext(ctx, args)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrNotFound
+			return nil, errDom.ErrNotFound
+		}
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
+			switch pgErr.Code {
+			case "22001":
+				// Too long or out of range
+				return nil, errDom.ErrInvalidInput
+			}
 		}
 		return nil, err
 	}

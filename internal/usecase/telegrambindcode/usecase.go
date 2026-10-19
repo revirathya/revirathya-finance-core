@@ -9,6 +9,7 @@ import (
 
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 )
 
 type TelegramBindCodeUsecase struct {
@@ -42,15 +43,15 @@ func (u *TelegramBindCodeUsecase) CreateBindCode(ctx context.Context, userID uui
 func (u *TelegramBindCodeUsecase) BindTelegram(ctx context.Context, code string, telegramID string) (*domain.User, error) {
 	// Validate code pattern
 	if matched := auth.ValidateCode(code); (!matched) || (telegramID == "") {
-		return nil, domain.ErrInvalidInput
+		return nil, errDom.ErrInvalidInput
 	}
 
 	// Bind code
 	codeHash := auth.HashCode(code)
 	user, err := u.tbcRepo.BindCode(ctx, codeHash, telegramID)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			return nil, domain.ErrInvalidInput
+		if errors.Is(err, errDom.ErrNotFound) {
+			return nil, errDom.ErrInvalidInput
 		}
 		return nil, err
 	}

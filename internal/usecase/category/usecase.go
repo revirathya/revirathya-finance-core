@@ -21,10 +21,14 @@ func NewCategoryUsecase(ctgRepo domain.CategoryRepository) *CategoryUsecase {
 }
 
 func (uc *CategoryUsecase) CreateCategory(ctx context.Context, userID uuid.UUID, categoryName string) (*domain.Category, error) {
-	input := domain.CategoryForm{
+	form := domain.CategoryForm{
 		CategoryName: categoryName,
 	}
-	return uc.ctgRepo.CreateCategory(ctx, userID, input)
+	if err := form.Validate(); err != nil {
+		return nil, err
+	}
+
+	return uc.ctgRepo.CreateCategory(ctx, userID, form)
 }
 
 func (uc *CategoryUsecase) GetCategoryByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Category, error) {
@@ -36,9 +40,13 @@ func (uc *CategoryUsecase) ListCategories(ctx context.Context, userID uuid.UUID)
 }
 
 func (uc *CategoryUsecase) UpdateCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID, categoryName string) (*domain.Category, error) {
-	patch := domain.CategoryForm{
+	patch := domain.CategoryPatch{
 		CategoryName: categoryName,
 	}
+	if err := patch.Validate(); err != nil {
+		return nil, err
+	}
+
 	return uc.ctgRepo.UpdateCategory(ctx, id, userID, patch)
 }
 

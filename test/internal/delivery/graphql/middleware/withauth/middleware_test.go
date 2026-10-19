@@ -11,7 +11,7 @@ import (
 
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/graphql/middleware/withauth"
-	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 )
 
 func TestMiddleware(t *testing.T) {
@@ -63,7 +63,7 @@ func TestMiddleware(t *testing.T) {
 				t.Fatal("next handler was not called; requests must always pass through")
 			}
 			if tt.wantUserID == uuid.Nil {
-				if !errors.Is(gotErr, domain.ErrUnauthenticated) {
+				if !errors.Is(gotErr, errDom.ErrUnauthenticated) {
 					t.Fatalf("got principal %v (err %v), want no principal", gotID, gotErr)
 				}
 				return
