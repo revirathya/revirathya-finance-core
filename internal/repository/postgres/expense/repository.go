@@ -16,6 +16,7 @@ import (
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
 )
 
@@ -29,21 +30,26 @@ func NewExpenseRepositoryImpl(pool *pgxpool.Pool) domain.ExpenseRepository {
 	}
 }
 
-func (r *expenseRepositoryImpl) CreateExpense(ctx context.Context, userID uuid.UUID, input domain.ExpenseForm) (*domain.Expense, error) {
+func (r *expenseRepositoryImpl) CreateExpense(ctx context.Context, form domain.ExpenseForm) (*domain.Expense, error) {
 	args := sqlc.CreateExpenseParams{
-		UserID:        database.ToPgxUUID(userID),
-		CategoryID:    database.ToPgxUUID(input.CategoryID),
-		TransactionDt: database.ToPgxDate(input.TransactionDt),
-		Description:   input.Description,
-		Amount:        database.ToPgxNumeric(input.Amount),
+		UserID:        database.ToPgxUUID(form.UserID),
+		CategoryID:    database.ToPgxUUID(form.CategoryID),
+		TransactionDt: database.ToPgxDate(form.TransactionDt),
+		Description:   form.Description,
+		Amount:        database.ToPgxNumeric(form.Amount),
 	}
 
 	row, err := r.query.CreateExpense(ctx, args)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if (errors.As(err, &pgErr)) && (pgErr.Code == "23503") {
-			// Using other user's category
-			return nil, domain.ErrInvalidInput
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
+			switch pgErr.Code {
+			case "23503":
+				// Using other user's category
+				return nil, errDom.ErrInvalidInput
+			case "22001", "22003":
+				// Too long or out of range
+				return nil, errDom.ErrInvalidInput
+			}
 		}
 		return nil, err
 	}
@@ -68,7 +74,7 @@ func (r *expenseRepositoryImpl) GetExpenseByID(ctx context.Context, id uuid.UUID
 	row, err := r.query.GetExpenseByID(ctx, args)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrNotFound
+			return nil, errDom.ErrNotFound
 		}
 		return nil, err
 	}
@@ -111,7 +117,7 @@ func (r *expenseRepositoryImpl) ListExpenses(ctx context.Context, userID uuid.UU
 	return results, nil
 }
 
-func (r *expenseRepositoryImpl) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.ExpenseForm) (*domain.Expense, error) {
+func (r *expenseRepositoryImpl) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.ExpensePatch) (*domain.Expense, error) {
 	args := sqlc.UpdateExpenseParams{
 		CategoryID:    database.ToPgxUUID(patch.CategoryID),
 		TransactionDt: database.ToPgxDate(patch.TransactionDt),
@@ -123,14 +129,19 @@ func (r *expenseRepositoryImpl) UpdateExpense(ctx context.Context, id uuid.UUID,
 
 	row, err := r.query.UpdateExpense(ctx, args)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if (errors.As(err, &pgErr)) && (pgErr.Code == "23503") {
-			// Using other user's category
-			return nil, domain.ErrInvalidInput
-		}
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Not found to-be-updated expense
-			return nil, domain.ErrNotFound
+			return nil, errDom.ErrNotFound
+		}
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
+			switch pgErr.Code {
+			case "23503":
+				// Using other user's category
+				return nil, errDom.ErrInvalidInput
+			case "22001", "22003":
+				// Too long or out of range
+				return nil, errDom.ErrInvalidInput
+			}
 		}
 		return nil, err
 	}
@@ -157,7 +168,7 @@ func (r *expenseRepositoryImpl) DeleteExpense(ctx context.Context, id uuid.UUID,
 		return err
 	}
 	if rowCnt == 0 {
-		return domain.ErrNotFound
+		return errDom.ErrNotFound
 	}
 	return nil
 }

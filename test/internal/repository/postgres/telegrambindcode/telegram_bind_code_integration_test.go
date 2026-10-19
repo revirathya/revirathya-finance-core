@@ -6,11 +6,13 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 
 	// Repository
 	rTelegramBindCode "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/telegrambindcode"
@@ -58,8 +60,8 @@ func TestTelegramBindCodeRepository(t *testing.T) {
 			t.Fatalf("first bind: %v", err)
 		}
 
-		if _, err := repo.BindCode(ctx, hash, testutil.NewTelegramID()); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("second bind: got %v, want domain.ErrNotFound", err)
+		if _, err := repo.BindCode(ctx, hash, testutil.NewTelegramID()); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("second bind: got %v, want errDom.ErrNotFound", err)
 		}
 	})
 
@@ -69,14 +71,14 @@ func TestTelegramBindCodeRepository(t *testing.T) {
 			t.Fatalf("create code: %v", err)
 		}
 
-		if _, err := repo.BindCode(ctx, hash, testutil.NewTelegramID()); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("got %v, want domain.ErrNotFound", err)
+		if _, err := repo.BindCode(ctx, hash, testutil.NewTelegramID()); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("got %v, want errDom.ErrNotFound", err)
 		}
 	})
 
 	t.Run("an unknown code is rejected", func(t *testing.T) {
-		if _, err := repo.BindCode(ctx, testutil.NewCodeHash(), testutil.NewTelegramID()); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("got %v, want domain.ErrNotFound", err)
+		if _, err := repo.BindCode(ctx, testutil.NewCodeHash(), testutil.NewTelegramID()); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("got %v, want errDom.ErrNotFound", err)
 		}
 	})
 
@@ -89,8 +91,8 @@ func TestTelegramBindCodeRepository(t *testing.T) {
 			t.Fatalf("create new code: %v", err)
 		}
 
-		if _, err := repo.BindCode(ctx, oldHash, testutil.NewTelegramID()); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("old code: got %v, want domain.ErrNotFound", err)
+		if _, err := repo.BindCode(ctx, oldHash, testutil.NewTelegramID()); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("old code: got %v, want errDom.ErrNotFound", err)
 		}
 		if _, err := repo.BindCode(ctx, newHash, testutil.NewTelegramID()); err != nil {
 			t.Fatalf("new code: %v", err)
@@ -110,8 +112,8 @@ func TestTelegramBindCodeRepository(t *testing.T) {
 			t.Fatalf("create bob code: %v", err)
 		}
 
-		if _, err := repo.BindCode(ctx, bobHash, tg); !errors.Is(err, domain.ErrConflict) {
-			t.Fatalf("bind bob to alice's telegram: got %v, want domain.ErrConflict", err)
+		if _, err := repo.BindCode(ctx, bobHash, tg); !errors.Is(err, errDom.ErrConflict) {
+			t.Fatalf("bind bob to alice's telegram: got %v, want errDom.ErrConflict", err)
 		}
 
 		// The failed bind must have rolled back, so bob's code is still unused.
@@ -136,7 +138,7 @@ func TestTelegramBindCodeRepository(t *testing.T) {
 		if _, err := repo.BindCode(ctx, firstHash, firstTG); err != nil {
 			t.Fatalf("first bind: %v", err)
 		}
-		if _, err := contexts.UpdateUserTelegramContext(ctx, alice.ID, testutil.Ptr("add_expense"), testutil.Ptr("ask_amount"), testutil.Ptr("1"), testutil.Ptr("2")); err != nil {
+		if _, err := contexts.UpdateUserTelegramContext(ctx, alice.ID, domain.UserTelegramContextPatch{Conversation: testutil.Ptr("add_expense"), State: testutil.Ptr("ask_amount"), InteractionChatID: testutil.Ptr("1"), InteractionMessageID: testutil.Ptr("2")}); err != nil {
 			t.Fatalf("set conversation: %v", err)
 		}
 		if err := repo.CreateBindCode(ctx, alice.ID, secondHash, inTenMinutes()); err != nil {
@@ -167,7 +169,7 @@ func TestTelegramBindCodeRepository(t *testing.T) {
 		if _, err := repo.BindCode(ctx, hash, tg); err != nil {
 			t.Fatalf("bind: %v", err)
 		}
-		if _, err := contexts.UpdateUserTelegramContext(ctx, alice.ID, testutil.Ptr("add_expense"), testutil.Ptr("ask_amount"), nil, nil); err != nil {
+		if _, err := contexts.UpdateUserTelegramContext(ctx, alice.ID, domain.UserTelegramContextPatch{Conversation: testutil.Ptr("add_expense"), State: testutil.Ptr("ask_amount")}); err != nil {
 			t.Fatalf("set conversation: %v", err)
 		}
 
@@ -182,8 +184,8 @@ func TestTelegramBindCodeRepository(t *testing.T) {
 		if got.TelegramChatID != nil || got.Conversation != nil || got.State != nil {
 			t.Fatalf("binding not cleared: %+v", got)
 		}
-		if _, err := contexts.GetUserTelegramContextByTelegramID(ctx, tg); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("lookup by old telegram ID: got %v, want domain.ErrNotFound", err)
+		if _, err := contexts.GetUserTelegramContextByTelegramID(ctx, tg); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("lookup by old telegram ID: got %v, want errDom.ErrNotFound", err)
 		}
 	})
 
@@ -212,8 +214,8 @@ func TestUserTelegramContextRepository(t *testing.T) {
 	}
 
 	t.Run("a user without a binding has no context", func(t *testing.T) {
-		if _, err := repo.GetUserTelegramContext(ctx, testutil.NewUser(t).ID); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("got %v, want domain.ErrNotFound", err)
+		if _, err := repo.GetUserTelegramContext(ctx, testutil.NewUser(t).ID); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("got %v, want errDom.ErrNotFound", err)
 		}
 	})
 
@@ -232,11 +234,11 @@ func TestUserTelegramContextRepository(t *testing.T) {
 
 	t.Run("update changes only the fields that are set", func(t *testing.T) {
 		alice, _ := bind(t)
-		if _, err := repo.UpdateUserTelegramContext(ctx, alice.ID, testutil.Ptr("add_expense"), testutil.Ptr("ask_amount"), nil, nil); err != nil {
+		if _, err := repo.UpdateUserTelegramContext(ctx, alice.ID, domain.UserTelegramContextPatch{Conversation: testutil.Ptr("add_expense"), State: testutil.Ptr("ask_amount")}); err != nil {
 			t.Fatalf("first update: %v", err)
 		}
 
-		got, err := repo.UpdateUserTelegramContext(ctx, alice.ID, nil, testutil.Ptr("ask_category"), nil, nil)
+		got, err := repo.UpdateUserTelegramContext(ctx, alice.ID, domain.UserTelegramContextPatch{State: testutil.Ptr("ask_category")})
 
 		if err != nil {
 			t.Fatalf("second update: %v", err)
@@ -250,8 +252,18 @@ func TestUserTelegramContextRepository(t *testing.T) {
 	})
 
 	t.Run("updating a user without a context is not found", func(t *testing.T) {
-		if _, err := repo.UpdateUserTelegramContext(ctx, testutil.NewUser(t).ID, testutil.Ptr("x"), nil, nil, nil); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("got %v, want domain.ErrNotFound", err)
+		if _, err := repo.UpdateUserTelegramContext(ctx, testutil.NewUser(t).ID, domain.UserTelegramContextPatch{Conversation: testutil.Ptr("x")}); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("got %v, want errDom.ErrNotFound", err)
+		}
+	})
+
+	// Backstop for input that skipped Validate(): too long values come back as
+	// ErrInvalidInput, not as an unknown (internal) error.
+	t.Run("too long field is invalid input", func(t *testing.T) {
+		alice, _ := bind(t)
+		_, err := repo.UpdateUserTelegramContext(ctx, alice.ID, domain.UserTelegramContextPatch{State: testutil.Ptr(strings.Repeat("a", 101))})
+		if !errors.Is(err, errDom.ErrInvalidInput) {
+			t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
 		}
 	})
 }

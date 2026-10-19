@@ -246,6 +246,22 @@ Introspection is off unless `GQL_ENABLE_INTROSPECTION=true`. With it off, tools 
 the server (e.g. Postman's "fetch schema", GraphQL codegen); point them at the committed schema in
 `graphql/schema/*.graphql` instead, or enable it in development.
 
+## Input validation
+
+Both APIs validate input the same way, after trimming surrounding whitespace from text:
+
+|Field|Rule|
+|:--|:--|
+|Category name, first name|Required, at most 100 characters|
+|Last name|Optional, at most 100 characters|
+|Expense amount|Greater than 0, at most 2 decimal places, below 1,000,000,000,000|
+|Expense date|From 2000-01-01 to tomorrow (Asia/Jakarta)|
+|Expense description|Optional, at most 500 characters|
+|Telegram context fields|Optional, at most 100 characters each|
+
+Invalid input returns `INVALID_ARGUMENT` (gRPC) or `BAD_USER_INPUT` (GraphQL) with a message naming the field,
+e.g. `amount: must be greater than 0`. Lengths count characters, not bytes.
+
 ## Request IDs
 
 Every request gets a request ID, added to the logs for that request so they can be found together. Send
@@ -318,9 +334,9 @@ make test              # unit tests (go test ./test/...)
 make test-integration  # repository tests against a real Postgres (needs Docker)
 ```
 
-Tests live in `test/`, mirroring the `internal/` package they cover (e.g. `test/internal/platform/logging`).
-Usecase tests stay next to their usecase in `internal/usecase/`. Integration tests carry the `integration` build
-tag; each package's `TestMain` calls `testutil.RunWithPostgres`, which starts a throwaway Postgres container,
+Tests live in `test/`, mirroring the `internal/` package they cover (e.g. `test/internal/usecase/category` tests
+`internal/usecase/category`); shared helpers are in `testutil/`. CI also runs the unit tests with `-race`
+(`go test -race ./test/...`). Integration tests carry the `integration` build tag; each package's `TestMain` calls `testutil.RunWithPostgres`, which starts a throwaway Postgres container,
 applies `migrations/` and provides `testutil.TestPool`. They never touch your dev database.
 
 To get editor support in integration test files, add the tag to gopls (e.g. `.vscode/settings.json`):

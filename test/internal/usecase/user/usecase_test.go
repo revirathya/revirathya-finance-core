@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/user"
 )
 
@@ -42,10 +43,10 @@ func (f *fakeUserRepo) CreateUser(ctx context.Context, form domain.UserForm) (*d
 	return f.createResp, f.err
 }
 
-func (f *fakeUserRepo) UpdateUser(ctx context.Context, id uuid.UUID, firstName string, lastName *string) (*domain.User, error) {
+func (f *fakeUserRepo) UpdateUser(ctx context.Context, id uuid.UUID, patch domain.UserPatch) (*domain.User, error) {
 	f.gotUpdateID = id
-	f.gotUpdateFirst = firstName
-	f.gotUpdateLastName = lastName
+	f.gotUpdateFirst = patch.FirstName
+	f.gotUpdateLastName = patch.LastName
 	return f.updateResp, f.err
 }
 
@@ -72,11 +73,11 @@ func TestGetUserByID(t *testing.T) {
 	})
 
 	t.Run("propagates not found", func(t *testing.T) {
-		repo := &fakeUserRepo{err: domain.ErrNotFound}
+		repo := &fakeUserRepo{err: errDom.ErrNotFound}
 		uc := user.NewUserUsecase(repo)
 
-		if _, err := uc.GetUserByID(context.Background(), id); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("got %v, want domain.ErrNotFound", err)
+		if _, err := uc.GetUserByID(context.Background(), id); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("got %v, want errDom.ErrNotFound", err)
 		}
 	})
 }
@@ -103,30 +104,27 @@ func TestGetUserByGoogleSub(t *testing.T) {
 	})
 
 	t.Run("propagates not found", func(t *testing.T) {
-		repo := &fakeUserRepo{err: domain.ErrNotFound}
+		repo := &fakeUserRepo{err: errDom.ErrNotFound}
 		uc := user.NewUserUsecase(repo)
 
-		if _, err := uc.GetUserByGoogleSub(context.Background(), sub); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("got %v, want domain.ErrNotFound", err)
+		if _, err := uc.GetUserByGoogleSub(context.Background(), sub); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("got %v, want errDom.ErrNotFound", err)
 		}
 	})
 }
 
 func TestCreateUser(t *testing.T) {
 	lastName := "Leonardi"
-	form := domain.UserForm{
-		FirstName: "Avi",
-		LastName:  &lastName,
-		Email:     "avi@example.com",
-		GoogleSub: "google-sub-123",
-	}
+	firstName := "Avi"
+	email := "avi@example.com"
+	googleSub := "google-sub-123"
 	want := &domain.User{ID: uuid.New(), FirstName: "Avi", LastName: &lastName, Email: "avi@example.com"}
 
 	t.Run("creates and returns user", func(t *testing.T) {
 		repo := &fakeUserRepo{createResp: want}
 		uc := user.NewUserUsecase(repo)
 
-		got, err := uc.CreateUser(context.Background(), form)
+		got, err := uc.CreateUser(context.Background(), firstName, &lastName, email, googleSub)
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -134,17 +132,14 @@ func TestCreateUser(t *testing.T) {
 		if !reflect.DeepEqual(got, want) {
 			t.Fatalf("got %v, want %v", got, want)
 		}
-		if !reflect.DeepEqual(repo.gotCreateForm, form) {
-			t.Fatalf("repo received form %+v, want %+v", repo.gotCreateForm, form)
-		}
 	})
 
 	t.Run("propagates conflict", func(t *testing.T) {
-		repo := &fakeUserRepo{err: domain.ErrConflict}
+		repo := &fakeUserRepo{err: errDom.ErrConflict}
 		uc := user.NewUserUsecase(repo)
 
-		if _, err := uc.CreateUser(context.Background(), form); !errors.Is(err, domain.ErrConflict) {
-			t.Fatalf("got %v, want domain.ErrConflict", err)
+		if _, err := uc.CreateUser(context.Background(), firstName, &lastName, email, googleSub); !errors.Is(err, errDom.ErrConflict) {
+			t.Fatalf("got %v, want errDom.ErrConflict", err)
 		}
 	})
 }
@@ -166,9 +161,9 @@ func TestUpdateUser(t *testing.T) {
 		if !reflect.DeepEqual(got, want) {
 			t.Fatalf("got %v, want %v", got, want)
 		}
-		if repo.gotUpdateID != id || repo.gotUpdateFirst != "Avi" || repo.gotUpdateLastName != &lastName {
-			t.Fatalf("repo received (%v, %q, %v), want (%v, %q, %v)",
-				repo.gotUpdateID, repo.gotUpdateFirst, repo.gotUpdateLastName, id, "Avi", &lastName)
+		if repo.gotUpdateID != id || repo.gotUpdateFirst != "Avi" || repo.gotUpdateLastName == nil || *repo.gotUpdateLastName != lastName {
+			t.Fatalf("repo received (%v, %q, %v), want (%v, %q, %q)",
+				repo.gotUpdateID, repo.gotUpdateFirst, repo.gotUpdateLastName, id, "Avi", lastName)
 		}
 	})
 
@@ -185,11 +180,11 @@ func TestUpdateUser(t *testing.T) {
 	})
 
 	t.Run("propagates not found", func(t *testing.T) {
-		repo := &fakeUserRepo{err: domain.ErrNotFound}
+		repo := &fakeUserRepo{err: errDom.ErrNotFound}
 		uc := user.NewUserUsecase(repo)
 
-		if _, err := uc.UpdateUser(context.Background(), id, "Avi", &lastName); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("got %v, want domain.ErrNotFound", err)
+		if _, err := uc.UpdateUser(context.Background(), id, "Avi", &lastName); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("got %v, want errDom.ErrNotFound", err)
 		}
 	})
 }

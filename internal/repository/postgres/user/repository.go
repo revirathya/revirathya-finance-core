@@ -15,6 +15,7 @@ import (
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
 )
 
@@ -32,7 +33,7 @@ func (r *userRepositoryImpl) GetUserByID(ctx context.Context, id uuid.UUID) (*do
 	row, err := r.query.GetUserByID(ctx, database.ToPgxUUID(id))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrNotFound
+			return nil, errDom.ErrNotFound
 		}
 		return nil, err
 	}
@@ -51,7 +52,7 @@ func (r *userRepositoryImpl) GetUserByGoogleSub(ctx context.Context, googleSub s
 	row, err := r.query.GetUserByGoogleSub(ctx, &googleSub)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrNotFound
+			return nil, errDom.ErrNotFound
 		}
 		return nil, err
 	}
@@ -74,11 +75,17 @@ func (r *userRepositoryImpl) CreateUser(ctx context.Context, form domain.UserFor
 		GoogleSub: &form.GoogleSub,
 	}
 
-	var pgErr *pgconn.PgError
 	row, err := r.query.CreateUser(ctx, args)
 	if err != nil {
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // pgErr: Conflict
-			return nil, domain.ErrConflict
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
+			switch pgErr.Code {
+			case "23505":
+				// Conflict
+				return nil, errDom.ErrConflict
+			case "22001":
+				// Too long or out of range
+				return nil, errDom.ErrInvalidInput
+			}
 		}
 		return nil, err
 	}
@@ -86,17 +93,24 @@ func (r *userRepositoryImpl) CreateUser(ctx context.Context, form domain.UserFor
 	return r.GetUserByID(ctx, database.FromPgxUUID(row))
 }
 
-func (r *userRepositoryImpl) UpdateUser(ctx context.Context, id uuid.UUID, firstName string, lastName *string) (*domain.User, error) {
+func (r *userRepositoryImpl) UpdateUser(ctx context.Context, id uuid.UUID, patch domain.UserPatch) (*domain.User, error) {
 	args := sqlc.UpdateUserParams{
-		FirstName: firstName,
-		LastName:  lastName,
+		FirstName: patch.FirstName,
+		LastName:  patch.LastName,
 		ID:        database.ToPgxUUID(id),
 	}
 
 	row, err := r.query.UpdateUser(ctx, args)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrNotFound
+			return nil, errDom.ErrNotFound
+		}
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
+			switch pgErr.Code {
+			case "22001":
+				// Too long or out of range
+				return nil, errDom.ErrInvalidInput
+			}
 		}
 		return nil, err
 	}

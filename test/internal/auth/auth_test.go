@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
-	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 )
 
 func TestUserIDFrom(t *testing.T) {
@@ -27,8 +27,8 @@ func TestUserIDFrom(t *testing.T) {
 
 	t.Run("no principal is unauthenticated", func(t *testing.T) {
 		_, err := auth.UserIDFrom(context.Background())
-		if !errors.Is(err, domain.ErrUnauthenticated) {
-			t.Fatalf("got %v, want domain.ErrUnauthenticated", err)
+		if !errors.Is(err, errDom.ErrUnauthenticated) {
+			t.Fatalf("got %v, want errDom.ErrUnauthenticated", err)
 		}
 	})
 }

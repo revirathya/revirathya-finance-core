@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
-	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 )
 
 const testSecret = "0123456789abcdef0123456789abcdef"
@@ -97,8 +97,8 @@ func TestTokenManagerParseRejects(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tokens.Parse(tt.token)
-			if !errors.Is(err, domain.ErrUnauthenticated) {
-				t.Fatalf("got error %v, want domain.ErrUnauthenticated", err)
+			if !errors.Is(err, errDom.ErrUnauthenticated) {
+				t.Fatalf("got error %v, want errDom.ErrUnauthenticated", err)
 			}
 			if got != uuid.Nil {
 				t.Fatalf("got user ID %v, want uuid.Nil", got)

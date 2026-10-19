@@ -10,7 +10,7 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 
 	// Internal
-	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 )
 
 type InvalidInputError struct{ err error }
@@ -31,6 +31,7 @@ var passThroughCodes = map[string]bool{
 }
 
 func ErrorPresenter(ctx context.Context, err error) *gqlerror.Error {
+	var vErr *errDom.ValidationError
 	gqlErr := graphql.DefaultErrorPresenter(ctx, err)
 
 	if code, _ := gqlErr.Extensions["code"].(string); passThroughCodes[code] {
@@ -54,27 +55,30 @@ func ErrorPresenter(ctx context.Context, err error) *gqlerror.Error {
 		gqlErr.Extensions = map[string]any{
 			"code": "INTERNAL",
 		}
-	case errors.Is(err, domain.ErrNotFound):
+	case errors.Is(err, errDom.ErrNotFound):
 		gqlErr.Message = "resource not found"
 		gqlErr.Extensions = map[string]any{"code": "NOT_FOUND"}
+	case errors.As(err, &vErr):
+		gqlErr.Message = vErr.Error()
+		gqlErr.Extensions = map[string]any{"code": "BAD_USER_INPUT"}
 	case errors.As(err, &InvalidInputError{}):
 		gqlErr.Extensions = map[string]any{"code": "BAD_USER_INPUT"}
-	case errors.Is(err, domain.ErrUnauthenticated):
+	case errors.Is(err, errDom.ErrUnauthenticated):
 		gqlErr.Message = "authentication required"
 		gqlErr.Extensions = map[string]any{
 			"code": "UNAUTHENTICATED",
 		}
-	case errors.Is(err, domain.ErrForbidden):
+	case errors.Is(err, errDom.ErrForbidden):
 		gqlErr.Message = "permission denied"
 		gqlErr.Extensions = map[string]any{
 			"code": "FORBIDDEN",
 		}
-	case errors.Is(err, domain.ErrConflict):
+	case errors.Is(err, errDom.ErrConflict):
 		gqlErr.Message = "resource already exists"
 		gqlErr.Extensions = map[string]any{
 			"code": "CONFLICT",
 		}
-	case errors.Is(err, domain.ErrInvalidInput):
+	case errors.Is(err, errDom.ErrInvalidInput):
 		gqlErr.Message = "invalid argument"
 		gqlErr.Extensions = map[string]any{
 			"code": "BAD_USER_INPUT",

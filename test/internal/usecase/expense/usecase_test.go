@@ -27,12 +27,12 @@ type fakeExpenseRepo struct {
 	gotListDt      *time.Time
 
 	gotUpdateID    uuid.UUID
-	gotUpdatePatch domain.ExpenseForm
+	gotUpdatePatch domain.ExpensePatch
 
 	gotDeleteID uuid.UUID
 }
 
-func (f *fakeExpenseRepo) CreateExpense(ctx context.Context, userID uuid.UUID, input domain.ExpenseForm) (*domain.Expense, error) {
+func (f *fakeExpenseRepo) CreateExpense(ctx context.Context, input domain.ExpenseForm) (*domain.Expense, error) {
 	f.gotCreateInput = input
 	return f.createResp, f.err
 }
@@ -48,7 +48,7 @@ func (f *fakeExpenseRepo) ListExpenses(ctx context.Context, userID uuid.UUID, tr
 	return f.listResp, f.err
 }
 
-func (f *fakeExpenseRepo) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.ExpenseForm) (*domain.Expense, error) {
+func (f *fakeExpenseRepo) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.ExpensePatch) (*domain.Expense, error) {
 	f.gotUpdateID = id
 	f.gotUpdatePatch = patch
 	return f.updateResp, f.err
@@ -81,6 +81,7 @@ func TestCreateExpense(t *testing.T) {
 		}
 
 		wantInput := domain.ExpenseForm{
+			UserID:        userID,
 			CategoryID:    categoryID,
 			TransactionDt: dt,
 			Description:   &description,
@@ -204,7 +205,7 @@ func TestUpdateExpense(t *testing.T) {
 			t.Fatalf("repo received id %v, want %v", repo.gotUpdateID, id)
 		}
 
-		wantPatch := domain.ExpenseForm{
+		wantPatch := domain.ExpensePatch{
 			CategoryID:    categoryID,
 			TransactionDt: dt,
 			Description:   &description,

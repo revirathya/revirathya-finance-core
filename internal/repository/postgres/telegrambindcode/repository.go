@@ -15,6 +15,7 @@ import (
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
 )
 
@@ -79,7 +80,7 @@ func (r *telegramBindCodeRepositoryImpl) BindCode(ctx context.Context, codeHash 
 	userID, err := q.ConsumeBindCode(ctx, codeHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrNotFound
+			return nil, errDom.ErrNotFound
 		}
 		return nil, err
 	}
@@ -94,7 +95,7 @@ func (r *telegramBindCodeRepositoryImpl) BindCode(ctx context.Context, codeHash 
 		var pgErr *pgconn.PgError
 		if (errors.As(err, &pgErr)) && (pgErr.Code == "23505") {
 			// Telegram ID are used by other users
-			return nil, domain.ErrConflict
+			return nil, errDom.ErrConflict
 		}
 		return nil, err
 	}
@@ -108,7 +109,7 @@ func (r *telegramBindCodeRepositoryImpl) BindCode(ctx context.Context, codeHash 
 	row, err := r.query.GetUserByID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrNotFound
+			return nil, errDom.ErrNotFound
 		}
 		return nil, err
 	}

@@ -12,6 +12,7 @@ import (
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 
 	// Repository
 	rCategory "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/category"
@@ -33,7 +34,8 @@ func TestExpenseRepository(t *testing.T) {
 		alice := testutil.NewUser(t)
 		food := testutil.NewCategory(t, alice.ID, "Food")
 
-		created, err := repo.CreateExpense(ctx, alice.ID, domain.ExpenseForm{
+		created, err := repo.CreateExpense(ctx, domain.ExpenseForm{
+			UserID:        alice.ID,
 			CategoryID:    food.ID,
 			TransactionDt: testutil.Day(t, "2026-01-15"),
 			Description:   testutil.Ptr("Lunch"),
@@ -78,13 +80,14 @@ func TestExpenseRepository(t *testing.T) {
 		alice, bob := testutil.NewUser(t), testutil.NewUser(t)
 		bobsFood := testutil.NewCategory(t, bob.ID, "Food")
 
-		_, err := repo.CreateExpense(ctx, alice.ID, domain.ExpenseForm{
+		_, err := repo.CreateExpense(ctx, domain.ExpenseForm{
+			UserID:        alice.ID,
 			CategoryID:    bobsFood.ID,
 			TransactionDt: testutil.Day(t, "2026-01-15"),
 			Amount:        decimal.RequireFromString("10"),
 		})
-		if !errors.Is(err, domain.ErrInvalidInput) {
-			t.Fatalf("got %v, want domain.ErrInvalidInput", err)
+		if !errors.Is(err, errDom.ErrInvalidInput) {
+			t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
 		}
 	})
 
@@ -93,13 +96,13 @@ func TestExpenseRepository(t *testing.T) {
 		expense := testutil.NewExpense(t, alice.ID, testutil.NewCategory(t, alice.ID, "Food").ID, "2026-01-15", "10")
 		bobsFood := testutil.NewCategory(t, bob.ID, "Food")
 
-		_, err := repo.UpdateExpense(ctx, expense.ID, alice.ID, domain.ExpenseForm{
+		_, err := repo.UpdateExpense(ctx, expense.ID, alice.ID, domain.ExpensePatch{
 			CategoryID:    bobsFood.ID,
 			TransactionDt: testutil.Day(t, "2026-01-15"),
 			Amount:        decimal.RequireFromString("10"),
 		})
-		if !errors.Is(err, domain.ErrInvalidInput) {
-			t.Fatalf("got %v, want domain.ErrInvalidInput", err)
+		if !errors.Is(err, errDom.ErrInvalidInput) {
+			t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
 		}
 	})
 
@@ -108,7 +111,7 @@ func TestExpenseRepository(t *testing.T) {
 		food, bills := testutil.NewCategory(t, alice.ID, "Food"), testutil.NewCategory(t, alice.ID, "Bills")
 		expense := testutil.NewExpense(t, alice.ID, food.ID, "2026-01-15", "10")
 
-		updated, err := repo.UpdateExpense(ctx, expense.ID, alice.ID, domain.ExpenseForm{
+		updated, err := repo.UpdateExpense(ctx, expense.ID, alice.ID, domain.ExpensePatch{
 			CategoryID:    bills.ID,
 			TransactionDt: testutil.Day(t, "2026-01-20"),
 			Amount:        decimal.RequireFromString("99.99"),
@@ -123,8 +126,8 @@ func TestExpenseRepository(t *testing.T) {
 		if err := repo.DeleteExpense(ctx, expense.ID, alice.ID); err != nil {
 			t.Fatalf("delete: %v", err)
 		}
-		if err := repo.DeleteExpense(ctx, expense.ID, alice.ID); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("delete twice: got %v, want domain.ErrNotFound", err)
+		if err := repo.DeleteExpense(ctx, expense.ID, alice.ID); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("delete twice: got %v, want errDom.ErrNotFound", err)
 		}
 	})
 
@@ -133,19 +136,19 @@ func TestExpenseRepository(t *testing.T) {
 		expense := testutil.NewExpense(t, alice.ID, testutil.NewCategory(t, alice.ID, "Food").ID, "2026-01-15", "10")
 		bobsFood := testutil.NewCategory(t, bob.ID, "Food")
 
-		if _, err := repo.GetExpenseByID(ctx, expense.ID, bob.ID); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("get: got %v, want domain.ErrNotFound", err)
+		if _, err := repo.GetExpenseByID(ctx, expense.ID, bob.ID); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("get: got %v, want errDom.ErrNotFound", err)
 		}
-		_, err := repo.UpdateExpense(ctx, expense.ID, bob.ID, domain.ExpenseForm{
+		_, err := repo.UpdateExpense(ctx, expense.ID, bob.ID, domain.ExpensePatch{
 			CategoryID:    bobsFood.ID,
 			TransactionDt: testutil.Day(t, "2026-01-15"),
 			Amount:        decimal.RequireFromString("0"),
 		})
-		if !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("update: got %v, want domain.ErrNotFound", err)
+		if !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("update: got %v, want errDom.ErrNotFound", err)
 		}
-		if err := repo.DeleteExpense(ctx, expense.ID, bob.ID); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("delete: got %v, want domain.ErrNotFound", err)
+		if err := repo.DeleteExpense(ctx, expense.ID, bob.ID); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("delete: got %v, want errDom.ErrNotFound", err)
 		}
 
 		// Bob's attempts must not have changed anything.
@@ -216,11 +219,51 @@ func TestExpenseRepository(t *testing.T) {
 			t.Fatalf("delete user: %v", err)
 		}
 
-		if _, err := repo.GetExpenseByID(ctx, expense.ID, alice.ID); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("expense: got %v, want domain.ErrNotFound", err)
+		if _, err := repo.GetExpenseByID(ctx, expense.ID, alice.ID); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("expense: got %v, want errDom.ErrNotFound", err)
 		}
-		if _, err := rCategory.NewCategoryRepositoryImpl(testutil.TestPool).GetCategoryByID(ctx, food.ID, alice.ID); !errors.Is(err, domain.ErrNotFound) {
-			t.Fatalf("category: got %v, want domain.ErrNotFound", err)
+		if _, err := rCategory.NewCategoryRepositoryImpl(testutil.TestPool).GetCategoryByID(ctx, food.ID, alice.ID); !errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("category: got %v, want errDom.ErrNotFound", err)
+		}
+	})
+}
+
+// Backstop for input that skipped Validate(): amount is NUMERIC(14, 2), and an amount
+// that doesn't fit comes back as ErrInvalidInput, not as an unknown (internal) error.
+func TestExpenseRepositoryLimits(t *testing.T) {
+	ctx := context.Background()
+	repo := rExpense.NewExpenseRepositoryImpl(testutil.TestPool)
+
+	t.Run("largest amount the column holds is stored", func(t *testing.T) {
+		alice := testutil.NewUser(t)
+		testutil.NewExpense(t, alice.ID, testutil.NewCategory(t, alice.ID, "Food").ID, "2026-01-15", "999999999999.99")
+	})
+
+	t.Run("amount of 10^12 on create is invalid input", func(t *testing.T) {
+		alice := testutil.NewUser(t)
+		_, err := repo.CreateExpense(ctx, domain.ExpenseForm{
+			UserID:        alice.ID,
+			CategoryID:    testutil.NewCategory(t, alice.ID, "Food").ID,
+			TransactionDt: testutil.Day(t, "2026-01-15"),
+			Amount:        decimal.RequireFromString("1000000000000"),
+		})
+		if !errors.Is(err, errDom.ErrInvalidInput) {
+			t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
+		}
+	})
+
+	t.Run("amount of 10^12 on update is invalid input", func(t *testing.T) {
+		alice := testutil.NewUser(t)
+		food := testutil.NewCategory(t, alice.ID, "Food")
+		expense := testutil.NewExpense(t, alice.ID, food.ID, "2026-01-15", "10")
+
+		_, err := repo.UpdateExpense(ctx, expense.ID, alice.ID, domain.ExpensePatch{
+			CategoryID:    food.ID,
+			TransactionDt: testutil.Day(t, "2026-01-15"),
+			Amount:        decimal.RequireFromString("1000000000000"),
+		})
+		if !errors.Is(err, errDom.ErrInvalidInput) {
+			t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
 		}
 	})
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/auth"
 )
 
@@ -57,7 +58,7 @@ func (f *fakeUserRepo) CreateUser(ctx context.Context, form domain.UserForm) (*d
 	return f.createResp, f.createErr
 }
 
-func (f *fakeUserRepo) UpdateUser(ctx context.Context, id uuid.UUID, firstName string, lastName *string) (*domain.User, error) {
+func (f *fakeUserRepo) UpdateUser(ctx context.Context, id uuid.UUID, patch domain.UserPatch) (*domain.User, error) {
 	return nil, errors.New("not used")
 }
 
@@ -99,7 +100,7 @@ func TestLoginWithGoogle(t *testing.T) {
 	t.Run("creates new user from Google identity", func(t *testing.T) {
 		verifier := &fakeVerifier{identity: identity()}
 		repo := &fakeUserRepo{
-			lookups:    []lookupResult{{err: domain.ErrNotFound}},
+			lookups:    []lookupResult{{err: errDom.ErrNotFound}},
 			createResp: created,
 		}
 		uc := auth.NewAuthUsecase(verifier, repo)
@@ -130,7 +131,7 @@ func TestLoginWithGoogle(t *testing.T) {
 		id.FamilyName = ""
 		verifier := &fakeVerifier{identity: id}
 		repo := &fakeUserRepo{
-			lookups:    []lookupResult{{err: domain.ErrNotFound}},
+			lookups:    []lookupResult{{err: errDom.ErrNotFound}},
 			createResp: created,
 		}
 		uc := auth.NewAuthUsecase(verifier, repo)
@@ -147,12 +148,12 @@ func TestLoginWithGoogle(t *testing.T) {
 	})
 
 	t.Run("rejects invalid token", func(t *testing.T) {
-		verifier := &fakeVerifier{err: domain.ErrUnauthenticated}
+		verifier := &fakeVerifier{err: errDom.ErrUnauthenticated}
 		repo := &fakeUserRepo{}
 		uc := auth.NewAuthUsecase(verifier, repo)
 
-		if _, err := uc.LoginWithGoogle(context.Background(), "bad"); !errors.Is(err, domain.ErrUnauthenticated) {
-			t.Fatalf("got %v, want domain.ErrUnauthenticated", err)
+		if _, err := uc.LoginWithGoogle(context.Background(), "bad"); !errors.Is(err, errDom.ErrUnauthenticated) {
+			t.Fatalf("got %v, want errDom.ErrUnauthenticated", err)
 		}
 		if repo.lookupCalls != 0 || repo.createCalls != 0 {
 			t.Fatal("repository must not be called for an invalid token")
@@ -166,8 +167,8 @@ func TestLoginWithGoogle(t *testing.T) {
 		repo := &fakeUserRepo{}
 		uc := auth.NewAuthUsecase(verifier, repo)
 
-		if _, err := uc.LoginWithGoogle(context.Background(), "id-token"); !errors.Is(err, domain.ErrUnauthenticated) {
-			t.Fatalf("got %v, want domain.ErrUnauthenticated", err)
+		if _, err := uc.LoginWithGoogle(context.Background(), "id-token"); !errors.Is(err, errDom.ErrUnauthenticated) {
+			t.Fatalf("got %v, want errDom.ErrUnauthenticated", err)
 		}
 		if repo.lookupCalls != 0 || repo.createCalls != 0 {
 			t.Fatal("repository must not be called for an unverified email")
@@ -191,8 +192,8 @@ func TestLoginWithGoogle(t *testing.T) {
 	t.Run("registration race returns the user created concurrently", func(t *testing.T) {
 		verifier := &fakeVerifier{identity: identity()}
 		repo := &fakeUserRepo{
-			lookups:   []lookupResult{{err: domain.ErrNotFound}, {user: existing}},
-			createErr: domain.ErrConflict,
+			lookups:   []lookupResult{{err: errDom.ErrNotFound}, {user: existing}},
+			createErr: errDom.ErrConflict,
 		}
 		uc := auth.NewAuthUsecase(verifier, repo)
 
@@ -209,13 +210,13 @@ func TestLoginWithGoogle(t *testing.T) {
 	t.Run("email taken by another Google account is a conflict", func(t *testing.T) {
 		verifier := &fakeVerifier{identity: identity()}
 		repo := &fakeUserRepo{
-			lookups:   []lookupResult{{err: domain.ErrNotFound}, {err: domain.ErrNotFound}},
-			createErr: domain.ErrConflict,
+			lookups:   []lookupResult{{err: errDom.ErrNotFound}, {err: errDom.ErrNotFound}},
+			createErr: errDom.ErrConflict,
 		}
 		uc := auth.NewAuthUsecase(verifier, repo)
 
-		if _, err := uc.LoginWithGoogle(context.Background(), "id-token"); !errors.Is(err, domain.ErrConflict) {
-			t.Fatalf("got %v, want domain.ErrConflict", err)
+		if _, err := uc.LoginWithGoogle(context.Background(), "id-token"); !errors.Is(err, errDom.ErrConflict) {
+			t.Fatalf("got %v, want errDom.ErrConflict", err)
 		}
 	})
 
@@ -223,7 +224,7 @@ func TestLoginWithGoogle(t *testing.T) {
 		dbErr := errors.New("db down")
 		verifier := &fakeVerifier{identity: identity()}
 		repo := &fakeUserRepo{
-			lookups:   []lookupResult{{err: domain.ErrNotFound}},
+			lookups:   []lookupResult{{err: errDom.ErrNotFound}},
 			createErr: dbErr,
 		}
 		uc := auth.NewAuthUsecase(verifier, repo)

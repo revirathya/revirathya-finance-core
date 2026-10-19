@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	grpcErr "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/error"
-	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/logging"
 )
 
@@ -26,12 +26,14 @@ func TestToStatus(t *testing.T) {
 		wantCode codes.Code
 		wantMsg  string
 	}{
-		{"not found", domain.ErrNotFound, codes.NotFound, "get expense 1: not found"},
-		{"wrapped not found", fmt.Errorf("repo: %w", domain.ErrNotFound), codes.NotFound, "get expense 1: not found"},
-		{"unauthenticated", domain.ErrUnauthenticated, codes.Unauthenticated, "authentication required"},
-		{"forbidden", domain.ErrForbidden, codes.PermissionDenied, "get expense 1: permission denied"},
-		{"conflict", domain.ErrConflict, codes.AlreadyExists, "get expense 1: resource already exists"},
-		{"invalid input", domain.ErrInvalidInput, codes.InvalidArgument, "invalid argument"},
+		{"not found", errDom.ErrNotFound, codes.NotFound, "get expense 1: not found"},
+		{"wrapped not found", fmt.Errorf("repo: %w", errDom.ErrNotFound), codes.NotFound, "get expense 1: not found"},
+		{"unauthenticated", errDom.ErrUnauthenticated, codes.Unauthenticated, "authentication required"},
+		{"forbidden", errDom.ErrForbidden, codes.PermissionDenied, "get expense 1: permission denied"},
+		{"conflict", errDom.ErrConflict, codes.AlreadyExists, "get expense 1: resource already exists"},
+		{"invalid input", errDom.ErrInvalidInput, codes.InvalidArgument, "invalid argument"},
+		{"validation error keeps its field message", &errDom.ValidationError{Field: "amount", Reason: "must be greater than 0"}, codes.InvalidArgument, "amount: must be greater than 0"},
+		{"wrapped validation error keeps its field message", fmt.Errorf("create expense: %w", &errDom.ValidationError{Field: "amount", Reason: "must be greater than 0"}), codes.InvalidArgument, "amount: must be greater than 0"},
 		{"unknown error is hidden", errors.New(`pq: relation "app.expenses" does not exist`), codes.Internal, "internal error"},
 	}
 
@@ -86,8 +88,8 @@ func TestToStatusLogging(t *testing.T) {
 
 	t.Run("known domain errors are not logged", func(t *testing.T) {
 		for _, err := range []error{
-			domain.ErrNotFound, domain.ErrUnauthenticated, domain.ErrForbidden,
-			domain.ErrConflict, domain.ErrInvalidInput,
+			errDom.ErrNotFound, errDom.ErrUnauthenticated, errDom.ErrForbidden,
+			errDom.ErrConflict, errDom.ErrInvalidInput,
 		} {
 			logs := useLogger(t)
 

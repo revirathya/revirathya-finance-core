@@ -12,7 +12,7 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 
 	errGql "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql/error"
-	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/logging"
 	"github.com/revirathya/revirathya-finance-core/testutil"
 )
@@ -24,12 +24,13 @@ func TestErrorPresenterCodes(t *testing.T) {
 		wantCode string
 		wantMsg  string
 	}{
-		{"not found", domain.ErrNotFound, "NOT_FOUND", "resource not found"},
-		{"wrapped not found", fmt.Errorf("repo: %w", domain.ErrNotFound), "NOT_FOUND", "resource not found"},
-		{"unauthenticated", domain.ErrUnauthenticated, "UNAUTHENTICATED", "authentication required"},
-		{"forbidden", domain.ErrForbidden, "FORBIDDEN", "permission denied"},
-		{"conflict", domain.ErrConflict, "CONFLICT", "resource already exists"},
-		{"domain invalid input", domain.ErrInvalidInput, "BAD_USER_INPUT", "invalid argument"},
+		{"not found", errDom.ErrNotFound, "NOT_FOUND", "resource not found"},
+		{"wrapped not found", fmt.Errorf("repo: %w", errDom.ErrNotFound), "NOT_FOUND", "resource not found"},
+		{"unauthenticated", errDom.ErrUnauthenticated, "UNAUTHENTICATED", "authentication required"},
+		{"forbidden", errDom.ErrForbidden, "FORBIDDEN", "permission denied"},
+		{"conflict", errDom.ErrConflict, "CONFLICT", "resource already exists"},
+		{"domain invalid input", errDom.ErrInvalidInput, "BAD_USER_INPUT", "invalid argument"},
+		{"validation error keeps its field message", resolverError(&errDom.ValidationError{Field: "amount", Reason: "must be greater than 0"}), "BAD_USER_INPUT", "amount: must be greater than 0"},
 		{"resolver input error keeps its message", errGql.NewInvalidInputError(errors.New("invalid id UUID format")), "BAD_USER_INPUT", "invalid id UUID format"},
 		{"unknown error is masked", resolverError(errors.New(`pq: relation "app.expenses" does not exist`)), "INTERNAL", "internal error"},
 	}
@@ -98,8 +99,8 @@ func TestErrorPresenterLogging(t *testing.T) {
 
 	t.Run("known errors are not logged", func(t *testing.T) {
 		for _, err := range []error{
-			domain.ErrNotFound, domain.ErrUnauthenticated, domain.ErrForbidden,
-			domain.ErrConflict, domain.ErrInvalidInput, errGql.NewInvalidInputError(errors.New("bad")),
+			errDom.ErrNotFound, errDom.ErrUnauthenticated, errDom.ErrForbidden,
+			errDom.ErrConflict, errDom.ErrInvalidInput, errGql.NewInvalidInputError(errors.New("bad")),
 		} {
 			logs := testutil.CaptureLogs(t)
 

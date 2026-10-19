@@ -13,7 +13,7 @@ import (
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
-	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 
 	// Internal - gRPC
 	errGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/error"
@@ -51,9 +51,9 @@ func UnaryServerInterceptor(lookup TelegramUserLookup, unboundMethods ...string)
 		switch {
 		case err == nil:
 			ctx = auth.WithPrincipal(ctx, auth.Principal{UserID: userID})
-		case errors.Is(err, domain.ErrNotFound) && allowUnbound[info.FullMethod]:
+		case errors.Is(err, errDom.ErrNotFound) && allowUnbound[info.FullMethod]:
 			// Not bounded
-		case errors.Is(err, domain.ErrNotFound):
+		case errors.Is(err, errDom.ErrNotFound):
 			return nil, status.Error(codes.Unauthenticated, "telegram accoount not bound")
 		default:
 			return nil, errGrpc.ToStatus(ctx, "look up telegram user", err)

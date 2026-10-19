@@ -7,6 +7,7 @@ import (
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 )
 
 type AuthUsecase struct {
@@ -29,13 +30,13 @@ func (u *AuthUsecase) LoginWithGoogle(ctx context.Context, idToken string) (*dom
 	}
 
 	if !userGoog.EmailVerified {
-		return nil, domain.ErrUnauthenticated
+		return nil, errDom.ErrUnauthenticated
 	}
 
 	// Check User
 	user, err := u.usrRepo.GetUserByGoogleSub(ctx, userGoog.Subject)
 	if err != nil {
-		if !errors.Is(err, domain.ErrNotFound) {
+		if !errors.Is(err, errDom.ErrNotFound) {
 			return nil, err
 		} else {
 			// Handle new user
@@ -55,14 +56,18 @@ func (u *AuthUsecase) LoginWithGoogle(ctx context.Context, idToken string) (*dom
 				Email:     userGoog.Email,
 				GoogleSub: userGoog.Subject,
 			}
+
+			if err = form.Validate(); err != nil {
+				return nil, err
+			}
 			user, err = u.usrRepo.CreateUser(ctx, form)
 			if err != nil {
-				if errors.Is(err, domain.ErrConflict) {
+				if errors.Is(err, errDom.ErrConflict) {
 					// Handle register race-condition (fetch if already created by other ops)
 					user, err = u.usrRepo.GetUserByGoogleSub(ctx, userGoog.Subject)
 					if err != nil {
-						if errors.Is(err, domain.ErrNotFound) {
-							return nil, domain.ErrConflict
+						if errors.Is(err, errDom.ErrNotFound) {
+							return nil, errDom.ErrConflict
 						}
 						return nil, err
 					}

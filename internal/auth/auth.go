@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 )
 
 // Authenticated user for current request
@@ -24,11 +24,11 @@ func WithTelegramUserID(ctx context.Context, id string) context.Context {
 	return context.WithValue(ctx, "telegramID", id)
 }
 
-// UserIDFrom returns authenticated user's ID, or domain.ErrUnauthenticated (if missing principal)
+// UserIDFrom returns authenticated user's ID, or errDom.ErrUnauthenticated (if missing principal)
 func UserIDFrom(ctx context.Context) (uuid.UUID, error) {
 	p, ok := ctx.Value(principalKey{}).(Principal)
 	if !ok {
-		return uuid.Nil, domain.ErrUnauthenticated
+		return uuid.Nil, errDom.ErrUnauthenticated
 	}
 	return p.UserID, nil
 }
@@ -36,7 +36,7 @@ func UserIDFrom(ctx context.Context) (uuid.UUID, error) {
 func TelegramUserIDFrom(ctx context.Context) (string, error) {
 	telegramID, ok := ctx.Value("telegramID").(string)
 	if !ok {
-		return "", domain.ErrUnauthenticated
+		return "", errDom.ErrUnauthenticated
 	}
 	return telegramID, nil
 }

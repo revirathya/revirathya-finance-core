@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/telegrambindcode"
 )
 
@@ -180,8 +181,8 @@ func TestBindTelegram(t *testing.T) {
 			repo := &fakeBindCodeRepo{bindUser: user}
 			uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
-			if _, err := uc.BindTelegram(context.Background(), input, "123456789"); !errors.Is(err, domain.ErrInvalidInput) {
-				t.Fatalf("bind %q: got %v, want domain.ErrInvalidInput", input, err)
+			if _, err := uc.BindTelegram(context.Background(), input, "123456789"); !errors.Is(err, errDom.ErrInvalidInput) {
+				t.Fatalf("bind %q: got %v, want errDom.ErrInvalidInput", input, err)
 			}
 			if repo.bindCalls != 0 {
 				t.Fatalf("bind %q: repo called %d times, want 0", input, repo.bindCalls)
@@ -194,8 +195,8 @@ func TestBindTelegram(t *testing.T) {
 			repo := &fakeBindCodeRepo{bindUser: user}
 			uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
-			if _, err := uc.BindTelegram(context.Background(), input, "123456789"); !errors.Is(err, domain.ErrInvalidInput) {
-				t.Fatalf("bind %q: got %v, want domain.ErrInvalidInput", input, err)
+			if _, err := uc.BindTelegram(context.Background(), input, "123456789"); !errors.Is(err, errDom.ErrInvalidInput) {
+				t.Fatalf("bind %q: got %v, want errDom.ErrInvalidInput", input, err)
 			}
 			if repo.bindCalls != 0 {
 				t.Fatalf("bind %q: repo called %d times, want 0", input, repo.bindCalls)
@@ -207,8 +208,8 @@ func TestBindTelegram(t *testing.T) {
 		repo := &fakeBindCodeRepo{bindUser: user}
 		uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
-		if _, err := uc.BindTelegram(context.Background(), canonical, ""); !errors.Is(err, domain.ErrInvalidInput) {
-			t.Fatalf("got %v, want domain.ErrInvalidInput", err)
+		if _, err := uc.BindTelegram(context.Background(), canonical, ""); !errors.Is(err, errDom.ErrInvalidInput) {
+			t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
 		}
 		if repo.bindCalls != 0 {
 			t.Fatalf("repo called %d times, want 0", repo.bindCalls)
@@ -216,20 +217,20 @@ func TestBindTelegram(t *testing.T) {
 	})
 
 	t.Run("unknown, expired or used code is invalid input", func(t *testing.T) {
-		repo := &fakeBindCodeRepo{bindErr: domain.ErrNotFound}
+		repo := &fakeBindCodeRepo{bindErr: errDom.ErrNotFound}
 		uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
-		if _, err := uc.BindTelegram(context.Background(), canonical, "123456789"); !errors.Is(err, domain.ErrInvalidInput) {
-			t.Fatalf("got %v, want domain.ErrInvalidInput", err)
+		if _, err := uc.BindTelegram(context.Background(), canonical, "123456789"); !errors.Is(err, errDom.ErrInvalidInput) {
+			t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
 		}
 	})
 
 	t.Run("telegram account bound to another user is a conflict", func(t *testing.T) {
-		repo := &fakeBindCodeRepo{bindErr: domain.ErrConflict}
+		repo := &fakeBindCodeRepo{bindErr: errDom.ErrConflict}
 		uc := telegrambindcode.NewTelegramBindCodeUsecase(repo)
 
-		if _, err := uc.BindTelegram(context.Background(), canonical, "123456789"); !errors.Is(err, domain.ErrConflict) {
-			t.Fatalf("got %v, want domain.ErrConflict", err)
+		if _, err := uc.BindTelegram(context.Background(), canonical, "123456789"); !errors.Is(err, errDom.ErrConflict) {
+			t.Fatalf("got %v, want errDom.ErrConflict", err)
 		}
 	})
 
