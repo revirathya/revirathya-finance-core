@@ -3,11 +3,15 @@
 package expense_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
 	// Internal
@@ -208,7 +212,7 @@ func TestExpenseRepository(t *testing.T) {
 		testutil.NewExpense(t, alice.ID, food.ID, "2026-01-15", "3")
 		testutil.NewExpense(t, bob.ID, testutil.NewCategory(t, bob.ID, "Food").ID, "2026-01-25", "4")
 
-		got, err := repo.ListExpenses(ctx, alice.ID, nil)
+		got, err := repo.ListExpenses(ctx, alice.ID, domain.ExpenseListQuery{Limit: 50})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -234,7 +238,7 @@ func TestExpenseRepository(t *testing.T) {
 		testutil.NewExpense(t, alice.ID, food.ID, "2026-01-15", "3")
 
 		filter := testutil.Day(t, "2026-01-15")
-		got, err := repo.ListExpenses(ctx, alice.ID, &filter)
+		got, err := repo.ListExpenses(ctx, alice.ID, domain.ExpenseListQuery{TransactionDt: &filter, Limit: 50})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -303,6 +307,113 @@ func TestExpenseRepositoryLimits(t *testing.T) {
 		})
 		if !errors.Is(err, errDom.ErrInvalidInput) {
 			t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
+		}
+	})
+}
+
+func TestExpenseRepositoryPagination(t *testing.T) {
+	ctx := context.Background()
+	repo := rExpense.NewExpenseRepositoryImpl(testutil.TestPool)
+
+	// walk reads every page of size n the way the usecase does (n+1 rows, cursor = last kept row).
+	walk := func(t *testing.T, userID uuid.UUID, filter *time.Time, n int) []domain.Expense {
+		t.Helper()
+		var all []domain.Expense
+		query := domain.ExpenseListQuery{TransactionDt: filter, Limit: n + 1}
+		for range 100 {
+			rows, err := repo.ListExpenses(ctx, userID, query)
+			if err != nil {
+				t.Fatalf("list: %v", err)
+			}
+			if len(rows) <= n {
+				return append(all, rows...)
+			}
+			rows = rows[:n]
+			all = append(all, rows...)
+			last := rows[n-1]
+			query.After = &domain.ExpenseCursor{TransactionDt: last.TransactionDt, ID: last.ID}
+		}
+		t.Fatal("pagination did not end")
+		return nil
+	}
+
+	// Seven expenses, several on the same day, so the id tiebreaker matters.
+	alice := testutil.NewUser(t)
+	food := testutil.NewCategory(t, alice.ID, "Food")
+	dates := []string{"2026-01-20", "2026-01-15", "2026-01-15", "2026-01-15", "2026-01-10", "2026-01-10", "2026-01-05"}
+	created := map[uuid.UUID]bool{}
+	for _, d := range dates {
+		created[testutil.NewExpense(t, alice.ID, food.ID, d, "1").ID] = true
+	}
+
+	for _, size := range []int{1, 2, 3, 7, 50} {
+		t.Run(fmt.Sprintf("pages of %d return every expense once, in order", size), func(t *testing.T) {
+			got := walk(t, alice.ID, nil, size)
+
+			if len(got) != len(dates) {
+				t.Fatalf("got %d expenses, want %d", len(got), len(dates))
+			}
+			seen := map[uuid.UUID]bool{}
+			for i, e := range got {
+				if !created[e.ID] || seen[e.ID] {
+					t.Fatalf("expense %v is unknown or repeated", e.ID)
+				}
+				seen[e.ID] = true
+				if i > 0 {
+					prev := got[i-1]
+					after := prev.TransactionDt.After(e.TransactionDt) ||
+						(prev.TransactionDt.Equal(e.TransactionDt) && bytes.Compare(prev.ID[:], e.ID[:]) > 0)
+					if !after {
+						t.Fatalf("row %d (%s %v) is not after row %d (%s %v) in (date, id) DESC order",
+							i, e.TransactionDt.Format("2006-01-02"), e.ID, i-1, prev.TransactionDt.Format("2006-01-02"), prev.ID)
+					}
+				}
+			}
+		})
+	}
+
+	t.Run("date filter applies on every page", func(t *testing.T) {
+		filter := testutil.Day(t, "2026-01-15")
+
+		got := walk(t, alice.ID, &filter, 2)
+
+		if len(got) != 3 {
+			t.Fatalf("got %d expenses, want the 3 on 2026-01-15", len(got))
+		}
+		for _, e := range got {
+			if !e.TransactionDt.Equal(filter) {
+				t.Fatalf("expense on %v, want only 2026-01-15", e.TransactionDt)
+			}
+		}
+	})
+
+	t.Run("a cursor from another user's expense only returns the caller's own rows", func(t *testing.T) {
+		bob := testutil.NewUser(t)
+		bobs := testutil.NewExpense(t, bob.ID, testutil.NewCategory(t, bob.ID, "Food").ID, "2026-02-01", "1")
+
+		got, err := repo.ListExpenses(ctx, alice.ID, domain.ExpenseListQuery{
+			After: &domain.ExpenseCursor{TransactionDt: bobs.TransactionDt, ID: bobs.ID},
+			Limit: 50,
+		})
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(got) != len(dates) {
+			t.Fatalf("got %d expenses, want alice's %d", len(got), len(dates))
+		}
+		for _, e := range got {
+			if e.UserID != alice.ID {
+				t.Fatalf("expense %v belongs to %v, want only alice's", e.ID, e.UserID)
+			}
+		}
+	})
+
+	t.Run("limit caps the rows returned", func(t *testing.T) {
+		got, err := repo.ListExpenses(ctx, alice.ID, domain.ExpenseListQuery{Limit: 3})
+
+		if err != nil || len(got) != 3 {
+			t.Fatalf("got %d rows, %v; want 3", len(got), err)
 		}
 	})
 }

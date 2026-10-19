@@ -128,15 +128,15 @@ func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.Li
 	}
 
 	// List expenses
-	expenses, err := h.expUc.ListExpenses(ctx, userID, ntmTransactionDt)
+	expensePage, err := h.expUc.ListExpenses(ctx, userID, ntmTransactionDt, int(req.PageSize), req.PageToken)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "list expenses", err)
 	}
 
 	resp := &financecorev1.ListExpensesResponse{
-		Expenses: make([]*financecorev1.ExpenseResponse, 0, len(expenses)),
+		Expenses: make([]*financecorev1.ExpenseResponse, 0, len(expensePage.Expenses)),
 	}
-	for _, expense := range expenses {
+	for _, expense := range expensePage.Expenses {
 		resp.Expenses = append(resp.Expenses, &financecorev1.ExpenseResponse{
 			Id:            expense.ID.String(),
 			UserId:        expense.UserID.String(),
@@ -146,6 +146,10 @@ func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.Li
 			Description:   expense.Description,
 			Amount:        expense.Amount.String(),
 		})
+	}
+
+	if expensePage.NextCursor != nil {
+		resp.NextPageToken = expensePage.NextCursor.Encode()
 	}
 
 	return resp, nil

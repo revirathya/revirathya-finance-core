@@ -91,10 +91,22 @@ func (r *expenseRepositoryImpl) GetExpenseByID(ctx context.Context, id uuid.UUID
 	return result, nil
 }
 
-func (r *expenseRepositoryImpl) ListExpenses(ctx context.Context, userID uuid.UUID, transactionDt *time.Time) ([]domain.Expense, error) {
+func (r *expenseRepositoryImpl) ListExpenses(ctx context.Context, userID uuid.UUID, query domain.ExpenseListQuery) ([]domain.Expense, error) {
+	var afterID *uuid.UUID
+	var afterTransactionDt *time.Time
+	if query.After != nil {
+		afterID = &query.After.ID
+		afterTransactionDt = &query.After.TransactionDt
+	}
+
+	limit := min(max(query.Limit, 1), domain.MaxPageSize+1)
+
 	args := sqlc.ListExpensesParams{
 		UserID:        database.ToPgxUUID(userID),
-		TransactionDt: database.ToNullablePgxDate(transactionDt),
+		TransactionDt: database.ToNullablePgxDate(query.TransactionDt),
+		AfterID:       database.ToNullablePgxUUID(afterID),
+		AfterDt:       database.ToNullablePgxDate(afterTransactionDt),
+		RowLimit:      int32(limit),
 	}
 
 	rows, err := r.query.ListExpenses(ctx, args)

@@ -91,12 +91,19 @@ message CreateExpenseResponse {
 
 message ListExpensesRequest {
     // If set, only returns expenses on this date (YYYY-MM-DD).
-    optional string transaction_dt = 2;
+    optional string transaction_dt = 1;
+
+    // Max expenses to return. default 20, max 50
+    int32 page_size = 2;
+
+    // next_page_token from previous response; empty for the first page
+    string page_token = 3;
 }
 
 message ListExpensesResponse {
     // Expenses ordered by transaction_dt, newest first.
     repeated ExpenseResponse expenses = 1;
+    string next_page_token = 2;
 }
 
 message GetExpenseByIDRequest {

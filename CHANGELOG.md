@@ -40,6 +40,11 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
 - **Breaking (GraphQL):** mutation inputs are required (`CreateExpenseInput!`, `UpdateExpenseInput!`,
   `UpdateUserInput!`), `UpdateCategoryInput.categoryName` is required, and `deleteExpense` / `deleteCategory`
   return `ID!`.
+- **Breaking (GraphQL):** `expenses` is paged and returns `ExpenseConnection!` (`nodes`, `pageInfo { hasNextPage
+  endCursor }`) instead of `[Expense!]!`; new arguments `first` (default 20, max 50) and `after`.
+- **Breaking (gRPC):** `ListExpenses` is paged: new `page_size` (default 20, max 50) and `page_token`, and
+  `next_page_token` in the response. A client that doesn't page gets only the first 20 expenses.
+  `ListExpensesRequest.transaction_dt` is renumbered from 2 to 1.
 - **Breaking (GraphQL):** `Expense.description` is `String!`: it is never `null`, and an expense without one returns
   `""`. Inputs are unchanged; `updateExpense` keeps the description when it's omitted and clears it with `""`.
 - **Breaking (gRPC):** `description` in expense responses is a plain `string` (was `optional`), so generated clients

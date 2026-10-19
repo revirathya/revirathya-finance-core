@@ -20,6 +20,14 @@ func ToPgxUUID(val uuid.UUID) pgtype.UUID {
 	}
 }
 
+func ToNullablePgxUUID(val *uuid.UUID) pgtype.UUID {
+	res := pgtype.UUID{Valid: val != nil}
+	if res.Valid {
+		res.Bytes = *val
+	}
+	return res
+}
+
 // Date
 func FromPgxDate(val pgtype.Date) time.Time {
 	return val.Time
