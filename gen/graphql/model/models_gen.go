@@ -2,6 +2,13 @@
 
 package model
 
+import (
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
+)
+
 type AuthPayload struct {
 	Token     string `json:"token"`
 	ExpiresAt string `json:"expiresAt"`
@@ -9,8 +16,8 @@ type AuthPayload struct {
 }
 
 type Category struct {
-	ID           string `json:"id"`
-	CategoryName string `json:"categoryName"`
+	ID           uuid.UUID `json:"id"`
+	CategoryName string    `json:"categoryName"`
 }
 
 type CreateCategoryInput struct {
@@ -18,20 +25,20 @@ type CreateCategoryInput struct {
 }
 
 type CreateExpenseInput struct {
-	TransactionDt string  `json:"transactionDt"`
-	CategoryID    string  `json:"categoryId"`
-	Description   *string `json:"description,omitempty"`
-	Amount        string  `json:"amount"`
+	TransactionDt time.Time       `json:"transactionDt"`
+	CategoryID    uuid.UUID       `json:"categoryId"`
+	Description   *string         `json:"description,omitempty"`
+	Amount        decimal.Decimal `json:"amount"`
 }
 
 type Expense struct {
-	ID            string `json:"id"`
-	UserID        string `json:"userId"`
-	TransactionDt string `json:"transactionDt"`
-	CategoryID    string `json:"categoryId"`
-	CategoryName  string `json:"categoryName"`
-	Description   string `json:"description"`
-	Amount        string `json:"amount"`
+	ID            uuid.UUID       `json:"id"`
+	UserID        uuid.UUID       `json:"userId"`
+	TransactionDt time.Time       `json:"transactionDt"`
+	CategoryID    uuid.UUID       `json:"categoryId"`
+	CategoryName  string          `json:"categoryName"`
+	Description   string          `json:"description"`
+	Amount        decimal.Decimal `json:"amount"`
 }
 
 type ExpenseConnection struct {
@@ -61,10 +68,10 @@ type UpdateCategoryInput struct {
 }
 
 type UpdateExpenseInput struct {
-	TransactionDt string  `json:"transactionDt"`
-	CategoryID    string  `json:"categoryId"`
-	Description   *string `json:"description,omitempty"`
-	Amount        string  `json:"amount"`
+	TransactionDt time.Time       `json:"transactionDt"`
+	CategoryID    uuid.UUID       `json:"categoryId"`
+	Description   *string         `json:"description,omitempty"`
+	Amount        decimal.Decimal `json:"amount"`
 }
 
 type UpdateUserInput struct {
@@ -73,9 +80,9 @@ type UpdateUserInput struct {
 }
 
 type User struct {
-	ID             string  `json:"id"`
-	FirstName      string  `json:"firstName"`
-	LastName       *string `json:"lastName,omitempty"`
-	Email          string  `json:"email"`
-	TelegramChatID *string `json:"telegramChatId,omitempty"`
+	ID             uuid.UUID `json:"id"`
+	FirstName      string    `json:"firstName"`
+	LastName       *string   `json:"lastName,omitempty"`
+	Email          string    `json:"email"`
+	TelegramChatID *string   `json:"telegramChatId,omitempty"`
 }

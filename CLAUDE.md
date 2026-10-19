@@ -108,6 +108,8 @@ internal/delivery/http/
   middleware/<name>/           HTTP-wide middleware: requestid, accesslog, metricscollector (records into platform/metrics)
   graphql/setup.go             RegisterHandler: gqlgen handler + limits on the ServerLayer's mux at /graphql
   graphql/resolver/            gqlgen resolvers (*.resolver.go regenerated; resolver.go is hand-maintained DI)
+  graphql/scalar/              gqlgen function-based scalars (gqlgen.yml models): Date <-> time.Time,
+                               Decimal <-> decimal.Decimal, UUID <-> uuid.UUID
   graphql/error/error.go       ErrorPresenter: domain error -> GraphQL error code (import as errGql)
   graphql/error/recovery.go    RecoverFunc: logs resolver panics via slog; ErrorPresenter skips logging them again
   graphql/middleware/<name>/   /graphql-only middleware (after metricscollector, which is outermost): limitbody, withcors, withauth (session JWT -> principal), withtimeout
@@ -233,5 +235,8 @@ that migrates down, inserts old-shape rows, and checks them after `up` and `down
 - Metrics: one registry (`platform/metrics`), passed in, never the Prometheus global. Labels must be bounded
   (route names, codes, method names), never client-supplied values or IDs. `/metrics` lives only on the metrics
   server, never on the public HTTP port.
+- GraphQL dates, amounts and IDs use the `Date` / `Decimal` / `UUID` scalars, never `String` or `ID`. A scalar's
+  `Unmarshal*` returns `errGql.NewInvalidInputError(...)` so bad input is `BAD_USER_INPUT`, not `INTERNAL`. Resolvers
+  get `time.Time` / `decimal.Decimal` / `uuid.UUID` and don't parse them.
 - Packages named after a builtin or a common identifier (`error`) are always imported with an alias:
   `errDom` (domain), `errGrpc` (gRPC mapper), `errGql` (GraphQL mapper).

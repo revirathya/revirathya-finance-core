@@ -49,7 +49,7 @@ func (r *mutationResolver) UnbindTelegram(ctx context.Context) (*model.User, err
 	}
 
 	response := &model.User{
-		ID:             user.ID.String(),
+		ID:             user.ID,
 		FirstName:      user.FirstName,
 		LastName:       user.LastName,
 		Email:          user.Email,

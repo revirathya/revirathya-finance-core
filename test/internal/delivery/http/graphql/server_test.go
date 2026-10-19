@@ -394,3 +394,75 @@ func TestServerMetrics(t *testing.T) {
 		}
 	})
 }
+
+func TestScalars(t *testing.T) {
+	h, tokens := newServer(t, false)
+	token, _, err := tokens.Issue(uuid.New())
+	if err != nil {
+		t.Fatalf("issue token: %v", err)
+	}
+	// request sends query with variables as the signed-in user.
+	request := func(t *testing.T, query string, variables map[string]any) gqlResponse {
+		t.Helper()
+		body, _ := json.Marshal(map[string]any{"query": query, "variables": variables})
+		req := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+		_, resp := do(t, h, req)
+		return resp
+	}
+
+	for name, tt := range map[string]struct {
+		query     string
+		variables map[string]any
+		code      string
+		message   string
+	}{
+		"bad Date literal": {
+			query: `{ expenses(transactionDt: "2026-13-01") { nodes { id } } }`,
+			code:  "BAD_USER_INPUT", message: `invalid 'Date' "2026-13-01"`,
+		},
+		"bad Date variable": {
+			query:     `query($dt: Date) { expenses(transactionDt: $dt) { nodes { id } } }`,
+			variables: map[string]any{"dt": "17-10-2026"},
+			code:      "BAD_USER_INPUT", message: `invalid 'Date' "17-10-2026"`,
+		},
+		"Decimal sent as a JSON number": {
+			query: `mutation($in: CreateExpenseInput!) { createExpense(input: $in) { id } }`,
+			variables: map[string]any{"in": map[string]any{
+				"transactionDt": "2026-10-17", "categoryId": uuid.NewString(), "amount": 12.5,
+			}},
+			code: "BAD_USER_INPUT", message: "'Decimal' must be a string",
+		},
+		"bad UUID literal": {
+			query: `{ expense(id: "not-a-uuid") { id } }`,
+			code:  "BAD_USER_INPUT", message: `"not-a-uuid"`,
+		},
+		"bad UUID variable": {
+			query:     `mutation($id: UUID!) { deleteExpense(id: $id) }`,
+			variables: map[string]any{"id": "123"},
+			code:      "BAD_USER_INPUT", message: `"123"`,
+		},
+		"ID variable for a UUID argument": {
+			query:     `query($id: ID!) { expense(id: $id) { id } }`,
+			variables: map[string]any{"id": uuid.NewString()},
+			code:      "GRAPHQL_VALIDATION_FAILED",
+		},
+		"String variable for a Date argument": {
+			query:     `query($dt: String) { expenses(transactionDt: $dt) { nodes { id } } }`,
+			variables: map[string]any{"dt": "2026-10-17"},
+			code:      "GRAPHQL_VALIDATION_FAILED",
+		},
+	} {
+		t.Run(name+" is "+tt.code, func(t *testing.T) {
+			resp := request(t, tt.query, tt.variables)
+
+			if resp.code() != tt.code {
+				t.Fatalf("code %q (%+v), want %s", resp.code(), resp.Errors, tt.code)
+			}
+			if tt.message != "" && !strings.Contains(resp.Errors[0].Message, tt.message) {
+				t.Fatalf("message %q, want it to contain %q", resp.Errors[0].Message, tt.message)
+			}
+		})
+	}
+}

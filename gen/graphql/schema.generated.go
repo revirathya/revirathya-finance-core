@@ -8,10 +8,14 @@ import (
 	"math"
 	"strconv"
 	"sync/atomic"
+	"time"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
+	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql/scalar"
+	"github.com/shopspring/decimal"
 	"github.com/vektah/gqlparser/v2/ast"
 )
 
@@ -20,11 +24,11 @@ import (
 type MutationResolver interface {
 	Ok(ctx context.Context) (*bool, error)
 	CreateCategory(ctx context.Context, input model.CreateCategoryInput) (*model.Category, error)
-	UpdateCategory(ctx context.Context, id string, patch model.UpdateCategoryInput) (*model.Category, error)
-	DeleteCategory(ctx context.Context, id string) (string, error)
+	UpdateCategory(ctx context.Context, id uuid.UUID, patch model.UpdateCategoryInput) (*model.Category, error)
+	DeleteCategory(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	CreateExpense(ctx context.Context, input model.CreateExpenseInput) (*model.Expense, error)
-	UpdateExpense(ctx context.Context, id string, patch model.UpdateExpenseInput) (*model.Expense, error)
-	DeleteExpense(ctx context.Context, id string) (string, error)
+	UpdateExpense(ctx context.Context, id uuid.UUID, patch model.UpdateExpenseInput) (*model.Expense, error)
+	DeleteExpense(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	CreateTelegramBindCode(ctx context.Context) (*model.TelegramBindCode, error)
 	UnbindTelegram(ctx context.Context) (*model.User, error)
 	LoginWithGoogle(ctx context.Context, idToken string) (*model.AuthPayload, error)
@@ -32,10 +36,10 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	Ok(ctx context.Context) (*bool, error)
-	Category(ctx context.Context, id string) (*model.Category, error)
+	Category(ctx context.Context, id uuid.UUID) (*model.Category, error)
 	Categories(ctx context.Context) ([]*model.Category, error)
-	Expense(ctx context.Context, id string) (*model.Expense, error)
-	Expenses(ctx context.Context, transactionDt *string, first *int, after *string) (*model.ExpenseConnection, error)
+	Expense(ctx context.Context, id uuid.UUID) (*model.Expense, error)
+	Expenses(ctx context.Context, transactionDt *time.Time, first *int, after *string) (*model.ExpenseConnection, error)
 	Me(ctx context.Context) (*model.User, error)
 }
 
@@ -75,8 +79,8 @@ func (ec *executionContext) field_Mutation_deleteCategory_args(ctx context.Conte
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNID2string(ctx, v)
+		func(ctx context.Context, v any) (uuid.UUID, error) {
+			return ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -89,8 +93,8 @@ func (ec *executionContext) field_Mutation_deleteExpense_args(ctx context.Contex
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNID2string(ctx, v)
+		func(ctx context.Context, v any) (uuid.UUID, error) {
+			return ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -117,8 +121,8 @@ func (ec *executionContext) field_Mutation_updateCategory_args(ctx context.Conte
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNID2string(ctx, v)
+		func(ctx context.Context, v any) (uuid.UUID, error) {
+			return ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -139,8 +143,8 @@ func (ec *executionContext) field_Mutation_updateExpense_args(ctx context.Contex
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNID2string(ctx, v)
+		func(ctx context.Context, v any) (uuid.UUID, error) {
+			return ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -189,8 +193,8 @@ func (ec *executionContext) field_Query_category_args(ctx context.Context, rawAr
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNID2string(ctx, v)
+		func(ctx context.Context, v any) (uuid.UUID, error) {
+			return ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -203,8 +207,8 @@ func (ec *executionContext) field_Query_expense_args(ctx context.Context, rawArg
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNID2string(ctx, v)
+		func(ctx context.Context, v any) (uuid.UUID, error) {
+			return ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -217,8 +221,8 @@ func (ec *executionContext) field_Query_expenses_args(ctx context.Context, rawAr
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "transactionDt",
-		func(ctx context.Context, v any) (*string, error) {
-			return ec.unmarshalOString2ᚖstring(ctx, v)
+		func(ctx context.Context, v any) (*time.Time, error) {
+			return ec.unmarshalODate2ᚖtimeᚐTime(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -324,7 +328,7 @@ func (ec *executionContext) _Mutation_updateCategory(ctx context.Context, field 
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().UpdateCategory(ctx, fc.Args["id"].(string), fc.Args["patch"].(model.UpdateCategoryInput))
+			return ec.Resolvers.Mutation().UpdateCategory(ctx, fc.Args["id"].(uuid.UUID), fc.Args["patch"].(model.UpdateCategoryInput))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *model.Category) graphql.Marshaler {
@@ -368,11 +372,11 @@ func (ec *executionContext) _Mutation_deleteCategory(ctx context.Context, field 
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().DeleteCategory(ctx, fc.Args["id"].(string))
+			return ec.Resolvers.Mutation().DeleteCategory(ctx, fc.Args["id"].(uuid.UUID))
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNID2string(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v uuid.UUID) graphql.Marshaler {
+			return ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, selections, v)
 		},
 		true,
 		true,
@@ -385,7 +389,7 @@ func (ec *executionContext) fieldContext_Mutation_deleteCategory(ctx context.Con
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
+			return nil, errors.New("field of type UUID does not have child fields")
 		},
 	}
 	defer func() {
@@ -456,7 +460,7 @@ func (ec *executionContext) _Mutation_updateExpense(ctx context.Context, field g
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().UpdateExpense(ctx, fc.Args["id"].(string), fc.Args["patch"].(model.UpdateExpenseInput))
+			return ec.Resolvers.Mutation().UpdateExpense(ctx, fc.Args["id"].(uuid.UUID), fc.Args["patch"].(model.UpdateExpenseInput))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *model.Expense) graphql.Marshaler {
@@ -500,11 +504,11 @@ func (ec *executionContext) _Mutation_deleteExpense(ctx context.Context, field g
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().DeleteExpense(ctx, fc.Args["id"].(string))
+			return ec.Resolvers.Mutation().DeleteExpense(ctx, fc.Args["id"].(uuid.UUID))
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNID2string(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v uuid.UUID) graphql.Marshaler {
+			return ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, selections, v)
 		},
 		true,
 		true,
@@ -517,7 +521,7 @@ func (ec *executionContext) fieldContext_Mutation_deleteExpense(ctx context.Cont
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
+			return nil, errors.New("field of type UUID does not have child fields")
 		},
 	}
 	defer func() {
@@ -765,7 +769,7 @@ func (ec *executionContext) _Query_category(ctx context.Context, field graphql.C
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().Category(ctx, fc.Args["id"].(string))
+			return ec.Resolvers.Query().Category(ctx, fc.Args["id"].(uuid.UUID))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *model.Category) graphql.Marshaler {
@@ -841,7 +845,7 @@ func (ec *executionContext) _Query_expense(ctx context.Context, field graphql.Co
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().Expense(ctx, fc.Args["id"].(string))
+			return ec.Resolvers.Query().Expense(ctx, fc.Args["id"].(uuid.UUID))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *model.Expense) graphql.Marshaler {
@@ -885,7 +889,7 @@ func (ec *executionContext) _Query_expenses(ctx context.Context, field graphql.C
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().Expenses(ctx, fc.Args["transactionDt"].(*string), fc.Args["first"].(*int), fc.Args["after"].(*string))
+			return ec.Resolvers.Query().Expenses(ctx, fc.Args["transactionDt"].(*time.Time), fc.Args["first"].(*int), fc.Args["after"].(*string))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *model.ExpenseConnection) graphql.Marshaler {
@@ -1391,6 +1395,38 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 
 // region    ***************************** type.gotpl *****************************
 
+func (ec *executionContext) unmarshalNDate2timeᚐTime(ctx context.Context, v any) (time.Time, error) {
+	res, err := scalar.UnmarshalDate(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNDate2timeᚐTime(ctx context.Context, sel ast.SelectionSet, v time.Time) graphql.Marshaler {
+	_ = sel
+	res := scalar.MarshalDate(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNDecimal2githubᚗcomᚋshopspringᚋdecimalᚐDecimal(ctx context.Context, v any) (decimal.Decimal, error) {
+	res, err := scalar.UnmarshalDecimal(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNDecimal2githubᚗcomᚋshopspringᚋdecimalᚐDecimal(ctx context.Context, sel ast.SelectionSet, v decimal.Decimal) graphql.Marshaler {
+	_ = sel
+	res := scalar.MarshalDecimal(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
 func (ec *executionContext) marshalNPageInfo2ᚖgithubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐPageInfo(ctx context.Context, sel ast.SelectionSet, v *model.PageInfo) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -1399,6 +1435,40 @@ func (ec *executionContext) marshalNPageInfo2ᚖgithubᚗcomᚋrevirathyaᚋrevi
 		return graphql.Null
 	}
 	return ec._PageInfo(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx context.Context, v any) (uuid.UUID, error) {
+	res, err := scalar.UnmarshalUUID(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx context.Context, sel ast.SelectionSet, v uuid.UUID) graphql.Marshaler {
+	_ = sel
+	res := scalar.MarshalUUID(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalODate2ᚖtimeᚐTime(ctx context.Context, v any) (*time.Time, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := scalar.UnmarshalDate(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalODate2ᚖtimeᚐTime(ctx context.Context, sel ast.SelectionSet, v *time.Time) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	_ = sel
+	_ = ctx
+	res := scalar.MarshalDate(*v)
+	return res
 }
 
 // endregion ***************************** type.gotpl *****************************

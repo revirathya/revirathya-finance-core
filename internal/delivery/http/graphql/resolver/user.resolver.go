@@ -32,7 +32,7 @@ func (r *mutationResolver) LoginWithGoogle(ctx context.Context, idToken string) 
 		Token:     token,
 		ExpiresAt: expiresAt.Format(time.RFC3339),
 		User: &model.User{
-			ID:             user.ID.String(),
+			ID:             user.ID,
 			FirstName:      user.FirstName,
 			LastName:       user.LastName,
 			Email:          user.Email,
@@ -65,7 +65,7 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUse
 	}
 
 	response := &model.User{
-		ID:             user.ID.String(),
+		ID:             user.ID,
 		FirstName:      user.FirstName,
 		LastName:       user.LastName,
 		Email:          user.Email,
@@ -87,7 +87,7 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	}
 
 	response := &model.User{
-		ID:             user.ID.String(),
+		ID:             user.ID,
 		FirstName:      user.FirstName,
 		LastName:       user.LastName,
 		Email:          user.Email,

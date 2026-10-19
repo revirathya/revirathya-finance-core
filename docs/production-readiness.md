@@ -223,7 +223,8 @@ Last reviewed: 2026-10-19
   max 50; GraphQL `ExpenseConnection` (`nodes`, `pageInfo`), gRPC page tokens per
   [AIP-158](https://google.aip.dev/158). Categories stay unpaged (short per-user list); page them the same way if
   that changes.
-- [ ] GraphQL custom scalars `Date` and `Decimal` instead of `String` for `transactionDt` and `amount`.
+- [x] GraphQL custom scalars `Date` and `Decimal` instead of `String` for `transactionDt` and `amount`, and `UUID`
+  instead of `ID` for identifiers (`internal/delivery/http/graphql/scalar`, function-based, mapped in `gqlgen.yml`).
 - [ ] Proto `google.type.Date`, plus `google.type.Money` or a units/nanos pattern for amounts.
 - [ ] Reuse `Category` messages instead of duplicating fields in `GetCategoryByIDResponse`.
 - [ ] Idempotency key on create mutations, so Telegram retries don't create duplicate expenses.

@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 
 	"github.com/99designs/gqlgen/graphql"
+	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -36,15 +37,15 @@ func (ec *executionContext) _Category_id(ctx context.Context, field graphql.Coll
 			return obj.ID, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNID2string(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v uuid.UUID) graphql.Marshaler {
+			return ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
 func (ec *executionContext) fieldContext_Category_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Category", field, false, false, errors.New("field of type ID does not have child fields"))
+	return graphql.NewScalarFieldContext("Category", field, false, false, errors.New("field of type UUID does not have child fields"))
 }
 
 func (ec *executionContext) _Category_categoryName(ctx context.Context, field graphql.CollectedField, obj *model.Category) (ret graphql.Marshaler) {
