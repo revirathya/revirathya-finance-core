@@ -20,6 +20,7 @@ Core services to managing financial data. Exposes gRPC and GraphQL as APIs backe
 | `migrate` (golang-migrate, with Postgres driver) | `migrate-*` | Yes, for local mode |
 | `sqlc` | `sqlc-generate` | When editing SQL queries |
 | `buf` + `protoc-gen-go` + `protoc-gen-go-grpc` | `proto-generate`, `proto-lint`, `check` | When editing `.proto` files, and for `make check` |
+| `golangci-lint` v2 | `lint`, `check` | For `make lint` / `make check` (CI runs it on every PR) |
 | `grpcurl` | `grpc-list`, `grpc-describe` | Optional |
 
 `gqlgen` needs no install: it's declared as a Go tool in `go.mod` and runs through `go run`.
@@ -55,17 +56,23 @@ ones CI uses and the committed generated code.
    go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1
    ```
 
-5. Optional: install `grpcurl`:
+5. Install `golangci-lint` (the project recommends the binary over `go install`):
+
+   ```sh
+   curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.15.0
+   ```
+
+6. Optional: install `grpcurl`:
 
    ```sh
    go install github.com/fullstorydev/grpcurl/cmd/grpcurl@v1.9.1
    ```
 
-6. Check everything is found:
+7. Check everything is found:
 
    ```sh
    buf --version && protoc-gen-go --version && protoc-gen-go-grpc --version \
-     && sqlc version && migrate -version && grpcurl --version
+     && sqlc version && migrate -version && golangci-lint version && grpcurl --version
    ```
 
 Docker and Make come from your OS: Docker Desktop (macOS/Windows) or Docker Engine with the Compose plugin
@@ -342,7 +349,8 @@ make build             # build the binary to bin/financecore
 make proto-generate    # buf: gRPC stubs        -> gen/go
 make sqlc-generate     # sqlc: query code       -> gen/sqlc  (queries in sqlc/queries)
 make gql-generate      # gqlgen: GraphQL code   -> gen/graphql
-make check             # vet + test + proto-lint
+make lint              # golangci-lint (config: .golangci.yaml)
+make check             # vet + lint + test + proto-lint
 ```
 
 All generated code lives in `gen/` and is committed; CI fails if it's out of date.

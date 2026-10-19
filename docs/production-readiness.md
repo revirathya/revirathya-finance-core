@@ -173,7 +173,9 @@ Last reviewed: 2026-10-19
 ### Quality gates
 - [ ] **CI pipeline** ([`.github/workflows/ci.yaml`](../.github/workflows/ci.yaml)) running on every PR:
   - [x] `go mod tidy -diff` and `go vet`
-  - [ ] `golangci-lint`
+  - [x] `golangci-lint` v2 (`.golangci.yaml`: `standard` + `bodyclose`, `errorlint`, `gosec`, `misspell`; gofmt and
+    goimports; `make lint`, part of `make check`; CI via `golangci/golangci-lint-action@v8`, pinned to `v2.15.0`).
+    - Optional later: `revive` (naming, e.g. `uuidId` -> `uuidID`) and `noctx`.
   - [x] `go test -race ./...`
   - [x] `buf lint`
   - [ ] `buf breaking --against main`. Optional: per CLAUDE.md, breaking gRPC changes are allowed because

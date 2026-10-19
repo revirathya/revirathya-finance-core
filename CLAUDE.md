@@ -34,7 +34,8 @@ make build                 # build binary to bin/financecore
 make test                  # unit tests: go test ./test/...
 make test-integration      # all tests incl. integration (-tags=integration ./test/...) against a throwaway Postgres (needs Docker)
 make vet                   # go vet ./...
-make check                 # vet + test + proto-lint
+make lint                  # golangci-lint run ./... (config: .golangci.yaml; lints integration tests too)
+make check                 # vet + lint + test + proto-lint
 
 # Single test
 go test ./test/internal/usecase/category/... -run TestCreateCategory -v
@@ -200,6 +201,8 @@ the `//go:build integration` tag; each integration package has
   domain entity, form/patch with `Validate()`, repo interface -> postgres repo impl in
   `internal/repository/postgres/<entity>/` -> usecase -> (grpc handler and/or graphql resolver) -> wire up in
   `internal/repository/bootstrap.go`, `internal/usecase/bootstrap.go` and `internal/delivery/{grpc,graphql}/server.go`.
+- Code must pass `make lint` (CI runs golangci-lint). Silence a finding only with a targeted
+  `//nolint:<linter> // <reason>` on that line, never by disabling the linter.
 - Logging: use `log/slog`'s `*Context` methods (`slog.InfoContext`, `slog.ErrorContext`, ...) wherever a request
   context exists, so the request ID is attached. Never log secrets, tokens, `Authorization` headers, full DSNs, the
   config struct, or raw request bodies. `cmd/main.go` returns errors from `run()` instead of panicking.

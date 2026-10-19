@@ -32,3 +32,26 @@ func TestUserIDFrom(t *testing.T) {
 		}
 	})
 }
+
+func TestTelegramUserIDFrom(t *testing.T) {
+	t.Run("returns the ID set by WithTelegramUserID", func(t *testing.T) {
+		got, err := auth.TelegramUserIDFrom(auth.WithTelegramUserID(context.Background(), "123456789"))
+		if err != nil || got != "123456789" {
+			t.Fatalf("got %q, %v; want 123456789", got, err)
+		}
+	})
+
+	t.Run("missing ID is unauthenticated", func(t *testing.T) {
+		if _, err := auth.TelegramUserIDFrom(context.Background()); !errors.Is(err, errDom.ErrUnauthenticated) {
+			t.Fatalf("got %v, want errDom.ErrUnauthenticated", err)
+		}
+	})
+
+	t.Run("a plain string key from another package is not mistaken for the ID", func(t *testing.T) {
+		//nolint:staticcheck // SA1029: deliberately the colliding key this test guards against
+		ctx := context.WithValue(context.Background(), "telegramID", "999")
+		if _, err := auth.TelegramUserIDFrom(ctx); !errors.Is(err, errDom.ErrUnauthenticated) {
+			t.Fatalf("got %v, want errDom.ErrUnauthenticated", err)
+		}
+	})
+}
