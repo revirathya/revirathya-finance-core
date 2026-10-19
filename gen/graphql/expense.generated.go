@@ -8,9 +8,12 @@ import (
 	"math"
 	"strconv"
 	"sync/atomic"
+	"time"
 
 	"github.com/99designs/gqlgen/graphql"
+	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
+	"github.com/shopspring/decimal"
 	"github.com/vektah/gqlparser/v2/ast"
 )
 
@@ -36,15 +39,15 @@ func (ec *executionContext) _Expense_id(ctx context.Context, field graphql.Colle
 			return obj.ID, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNID2string(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v uuid.UUID) graphql.Marshaler {
+			return ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
 func (ec *executionContext) fieldContext_Expense_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Expense", field, false, false, errors.New("field of type ID does not have child fields"))
+	return graphql.NewScalarFieldContext("Expense", field, false, false, errors.New("field of type UUID does not have child fields"))
 }
 
 func (ec *executionContext) _Expense_userId(ctx context.Context, field graphql.CollectedField, obj *model.Expense) (ret graphql.Marshaler) {
@@ -59,15 +62,15 @@ func (ec *executionContext) _Expense_userId(ctx context.Context, field graphql.C
 			return obj.UserID, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNID2string(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v uuid.UUID) graphql.Marshaler {
+			return ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
 func (ec *executionContext) fieldContext_Expense_userId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Expense", field, false, false, errors.New("field of type ID does not have child fields"))
+	return graphql.NewScalarFieldContext("Expense", field, false, false, errors.New("field of type UUID does not have child fields"))
 }
 
 func (ec *executionContext) _Expense_transactionDt(ctx context.Context, field graphql.CollectedField, obj *model.Expense) (ret graphql.Marshaler) {
@@ -82,15 +85,15 @@ func (ec *executionContext) _Expense_transactionDt(ctx context.Context, field gr
 			return obj.TransactionDt, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNDate2timeᚐTime(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
 func (ec *executionContext) fieldContext_Expense_transactionDt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Expense", field, false, false, errors.New("field of type String does not have child fields"))
+	return graphql.NewScalarFieldContext("Expense", field, false, false, errors.New("field of type Date does not have child fields"))
 }
 
 func (ec *executionContext) _Expense_categoryId(ctx context.Context, field graphql.CollectedField, obj *model.Expense) (ret graphql.Marshaler) {
@@ -105,15 +108,15 @@ func (ec *executionContext) _Expense_categoryId(ctx context.Context, field graph
 			return obj.CategoryID, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNID2string(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v uuid.UUID) graphql.Marshaler {
+			return ec.marshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
 func (ec *executionContext) fieldContext_Expense_categoryId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Expense", field, false, false, errors.New("field of type ID does not have child fields"))
+	return graphql.NewScalarFieldContext("Expense", field, false, false, errors.New("field of type UUID does not have child fields"))
 }
 
 func (ec *executionContext) _Expense_categoryName(ctx context.Context, field graphql.CollectedField, obj *model.Expense) (ret graphql.Marshaler) {
@@ -174,15 +177,15 @@ func (ec *executionContext) _Expense_amount(ctx context.Context, field graphql.C
 			return obj.Amount, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v decimal.Decimal) graphql.Marshaler {
+			return ec.marshalNDecimal2githubᚗcomᚋshopspringᚋdecimalᚐDecimal(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
 func (ec *executionContext) fieldContext_Expense_amount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Expense", field, false, false, errors.New("field of type String does not have child fields"))
+	return graphql.NewScalarFieldContext("Expense", field, false, false, errors.New("field of type Decimal does not have child fields"))
 }
 
 func (ec *executionContext) _ExpenseConnection_nodes(ctx context.Context, field graphql.CollectedField, obj *model.ExpenseConnection) (ret graphql.Marshaler) {
@@ -273,14 +276,14 @@ func (ec *executionContext) unmarshalInputCreateExpenseInput(ctx context.Context
 		switch k {
 		case "transactionDt":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("transactionDt"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalNDate2timeᚐTime(ctx, v)
 			if err != nil {
 				return it, err
 			}
 			it.TransactionDt = data
 		case "categoryId":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("categoryId"))
-			data, err := ec.unmarshalNID2string(ctx, v)
+			data, err := ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -294,7 +297,7 @@ func (ec *executionContext) unmarshalInputCreateExpenseInput(ctx context.Context
 			it.Description = data
 		case "amount":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("amount"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalNDecimal2githubᚗcomᚋshopspringᚋdecimalᚐDecimal(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -324,14 +327,14 @@ func (ec *executionContext) unmarshalInputUpdateExpenseInput(ctx context.Context
 		switch k {
 		case "transactionDt":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("transactionDt"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalNDate2timeᚐTime(ctx, v)
 			if err != nil {
 				return it, err
 			}
 			it.TransactionDt = data
 		case "categoryId":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("categoryId"))
-			data, err := ec.unmarshalNID2string(ctx, v)
+			data, err := ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -345,7 +348,7 @@ func (ec *executionContext) unmarshalInputUpdateExpenseInput(ctx context.Context
 			it.Description = data
 		case "amount":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("amount"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalNDecimal2githubᚗcomᚋshopspringᚋdecimalᚐDecimal(ctx, v)
 			if err != nil {
 				return it, err
 			}

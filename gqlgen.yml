@@ -13,6 +13,14 @@ model:
   package: model
   filename: gen/graphql/model/models_gen.go
 
+models:
+  Date:
+    model: "github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql/scalar.Date"
+  Decimal:
+    model: "github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql/scalar.Decimal"
+  UUID:
+    model: "github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql/scalar.UUID"
+
 resolver:
   package: resolver
   layout: follow-schema

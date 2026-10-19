@@ -200,7 +200,12 @@ Last reviewed: 2026-10-19
       can't call the API. Register `"/graphql"`; gqlgen still rejects non-`POST` requests.
     - [x] `ErrorPresenter` changes the message to "internal error" before logging the wrapped resolver error,
       so the log loses the real cause. Log `gqlErr.Err` (the original error) before masking.
-  - [ ] gRPC handler and GraphQL resolver tests.
+  - [x] gRPC handler and GraphQL resolver tests: end-to-end integration tests through the production servers
+    (`dlvGrpc.Setup`, `dlvHttp.Setup` + `RegisterHandler`) on the real usecases, repositories and Postgres, with
+    only Google faked (`testutil.NewUsecases`, `testutil.FakeGoogleVerifier`).
+  - [x] Fix the bug these tests found: `createExpense` / `updateExpense` (GraphQL) returned `categoryId` as the zero
+    UUID and `categoryName` as `""`. The repository now reads the expense back with `GetExpenseByID` after the write
+    (the `RETURNING *` row has no `category_name`), and the resolvers map both fields.
 
 ### Documentation
 - [ ] **README / runbook.**
@@ -223,7 +228,8 @@ Last reviewed: 2026-10-19
   max 50; GraphQL `ExpenseConnection` (`nodes`, `pageInfo`), gRPC page tokens per
   [AIP-158](https://google.aip.dev/158). Categories stay unpaged (short per-user list); page them the same way if
   that changes.
-- [ ] GraphQL custom scalars `Date` and `Decimal` instead of `String` for `transactionDt` and `amount`.
+- [x] GraphQL custom scalars `Date` and `Decimal` instead of `String` for `transactionDt` and `amount`, and `UUID`
+  instead of `ID` for identifiers (`internal/delivery/http/graphql/scalar`, function-based, mapped in `gqlgen.yml`).
 - [ ] Proto `google.type.Date`, plus `google.type.Money` or a units/nanos pattern for amounts.
 - [ ] Reuse `Category` messages instead of duplicating fields in `GetCategoryByIDResponse`.
 - [ ] Idempotency key on create mutations, so Telegram retries don't create duplicate expenses.

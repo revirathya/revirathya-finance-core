@@ -253,6 +253,18 @@ automatic persisted queries are disabled.
 |Request duration|10 seconds|HTTP `503` with `request timeout`|
 |Malformed request (e.g. invalid JSON)|—|`BAD_REQUEST` / "invalid request"|
 
+### Custom scalars
+
+|Scalar|Format|Used for|
+|:--|:--|:--|
+|`Date`|String, `YYYY-MM-DD` (e.g. `"2026-10-17"`)|`transactionDt`, and the `expenses(transactionDt:)` filter|
+|`Decimal`|String, e.g. `"12500.50"`; never a JSON number, so no precision is lost|`amount`|
+|`UUID`|String, e.g. `"9b2f6c1e-4a7d-4c3e-8f1a-2d5e6b7c8a90"`|Every `id`, `userId`, `categoryId`, the `id` arguments, and what `delete*` returns|
+
+All three travel as JSON strings. Variables must be declared with the scalar type (`$dt: Date`, not `$dt: String`;
+`$id: UUID!`, not `$id: ID!`), or the query fails with `GRAPHQL_VALIDATION_FAILED`. A value in the wrong format, or a JSON number for a `Decimal`, returns
+`BAD_USER_INPUT` with a message naming the scalar.
+
 Introspection is off unless `GQL_ENABLE_INTROSPECTION=true`. With it off, tools can't download the schema from
 the server (e.g. Postman's "fetch schema", GraphQL codegen); point them at the committed schema in
 `graphql/schema/*.graphql` instead, or enable it in development.
@@ -412,7 +424,8 @@ make test-integration  # all tests, including integration tests against a real P
 ```
 
 Tests live in `test/`, mirroring the `internal/` package they cover (e.g. `test/internal/usecase/category` tests
-`internal/usecase/category`); shared helpers are in `testutil/`. CI also runs the unit tests with `-race`
+`internal/usecase/category`); shared helpers are in `testutil/`. gRPC handlers and GraphQL resolvers are
+tested end-to-end against the real servers, usecases and Postgres, with only Google sign-in faked. CI also runs the unit tests with `-race`
 (`go test -race ./test/...`). Integration tests carry the `integration` build tag; each package's `TestMain` calls `testutil.RunWithPostgres`, which starts a throwaway Postgres container,
 applies `migrations/` and provides `testutil.TestPool`. They never touch your dev database.
 

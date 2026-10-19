@@ -7,8 +7,10 @@ import (
 	"context"
 	"fmt"
 	"sync/atomic"
+	"time"
 
 	"github.com/99designs/gqlgen/graphql"
+	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
@@ -60,13 +62,13 @@ type ComplexityRoot struct {
 		CreateCategory         func(childComplexity int, input model.CreateCategoryInput) int
 		CreateExpense          func(childComplexity int, input model.CreateExpenseInput) int
 		CreateTelegramBindCode func(childComplexity int) int
-		DeleteCategory         func(childComplexity int, id string) int
-		DeleteExpense          func(childComplexity int, id string) int
+		DeleteCategory         func(childComplexity int, id uuid.UUID) int
+		DeleteExpense          func(childComplexity int, id uuid.UUID) int
 		LoginWithGoogle        func(childComplexity int, idToken string) int
 		Ok                     func(childComplexity int) int
 		UnbindTelegram         func(childComplexity int) int
-		UpdateCategory         func(childComplexity int, id string, patch model.UpdateCategoryInput) int
-		UpdateExpense          func(childComplexity int, id string, patch model.UpdateExpenseInput) int
+		UpdateCategory         func(childComplexity int, id uuid.UUID, patch model.UpdateCategoryInput) int
+		UpdateExpense          func(childComplexity int, id uuid.UUID, patch model.UpdateExpenseInput) int
 		UpdateUser             func(childComplexity int, input model.UpdateUserInput) int
 	}
 
@@ -77,9 +79,9 @@ type ComplexityRoot struct {
 
 	Query struct {
 		Categories func(childComplexity int) int
-		Category   func(childComplexity int, id string) int
-		Expense    func(childComplexity int, id string) int
-		Expenses   func(childComplexity int, transactionDt *string, first *int, after *string) int
+		Category   func(childComplexity int, id uuid.UUID) int
+		Expense    func(childComplexity int, id uuid.UUID) int
+		Expenses   func(childComplexity int, transactionDt *time.Time, first *int, after *string) int
 		Me         func(childComplexity int) int
 		Ok         func(childComplexity int) int
 	}
@@ -238,7 +240,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Mutation.DeleteCategory(childComplexity, args["id"].(string)), true
+		return e.ComplexityRoot.Mutation.DeleteCategory(childComplexity, args["id"].(uuid.UUID)), true
 	case "Mutation.deleteExpense":
 		if e.ComplexityRoot.Mutation.DeleteExpense == nil {
 			break
@@ -249,7 +251,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Mutation.DeleteExpense(childComplexity, args["id"].(string)), true
+		return e.ComplexityRoot.Mutation.DeleteExpense(childComplexity, args["id"].(uuid.UUID)), true
 	case "Mutation.loginWithGoogle":
 		if e.ComplexityRoot.Mutation.LoginWithGoogle == nil {
 			break
@@ -283,7 +285,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Mutation.UpdateCategory(childComplexity, args["id"].(string), args["patch"].(model.UpdateCategoryInput)), true
+		return e.ComplexityRoot.Mutation.UpdateCategory(childComplexity, args["id"].(uuid.UUID), args["patch"].(model.UpdateCategoryInput)), true
 	case "Mutation.updateExpense":
 		if e.ComplexityRoot.Mutation.UpdateExpense == nil {
 			break
@@ -294,7 +296,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Mutation.UpdateExpense(childComplexity, args["id"].(string), args["patch"].(model.UpdateExpenseInput)), true
+		return e.ComplexityRoot.Mutation.UpdateExpense(childComplexity, args["id"].(uuid.UUID), args["patch"].(model.UpdateExpenseInput)), true
 	case "Mutation.updateUser":
 		if e.ComplexityRoot.Mutation.UpdateUser == nil {
 			break
@@ -336,7 +338,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.Category(childComplexity, args["id"].(string)), true
+		return e.ComplexityRoot.Query.Category(childComplexity, args["id"].(uuid.UUID)), true
 	case "Query.expense":
 		if e.ComplexityRoot.Query.Expense == nil {
 			break
@@ -347,7 +349,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.Expense(childComplexity, args["id"].(string)), true
+		return e.ComplexityRoot.Query.Expense(childComplexity, args["id"].(uuid.UUID)), true
 	case "Query.expenses":
 		if e.ComplexityRoot.Query.Expenses == nil {
 			break
@@ -358,7 +360,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.Expenses(childComplexity, args["transactionDt"].(*string), args["first"].(*int), args["after"].(*string)), true
+		return e.ComplexityRoot.Query.Expenses(childComplexity, args["transactionDt"].(*time.Time), args["first"].(*int), args["after"].(*string)), true
 
 	case "Query.me":
 		if e.ComplexityRoot.Query.Me == nil {
@@ -506,7 +508,7 @@ func newExecutionContext(
 
 var sources = []*ast.Source{
 	{Name: "../../graphql/schema/category.graphql", Input: `type Category {
-    id: ID!
+    id: UUID!
     categoryName: String!
 }
 
@@ -519,23 +521,23 @@ input UpdateCategoryInput {
 }
 
 extend type Query {
-    category(id: ID!): Category
+    category(id: UUID!): Category
     categories: [Category!]!
 }
 
 extend type Mutation {
     createCategory(input: CreateCategoryInput!): Category
-    updateCategory(id: ID!, patch: UpdateCategoryInput!): Category
-    deleteCategory(id: ID!): ID!
+    updateCategory(id: UUID!, patch: UpdateCategoryInput!): Category
+    deleteCategory(id: UUID!): UUID!
 }`, BuiltIn: false},
 	{Name: "../../graphql/schema/expense.graphql", Input: `type Expense {
-    id: ID!
-    userId: ID!
-    transactionDt: String!
-    categoryId: ID!
+    id: UUID!
+    userId: UUID!
+    transactionDt: Date!
+    categoryId: UUID!
     categoryName: String!
     description: String!
-    amount: String!
+    amount: Decimal!
 }
 
 type ExpenseConnection {
@@ -544,38 +546,50 @@ type ExpenseConnection {
 }
 
 input CreateExpenseInput {
-    transactionDt: String!
-    categoryId: ID!
+    transactionDt: Date!
+    categoryId: UUID!
     description: String
-    amount: String!
+    amount: Decimal!
 }
 
 input UpdateExpenseInput {
-    transactionDt: String!
-    categoryId: ID!
+    transactionDt: Date!
+    categoryId: UUID!
     description: String
-    amount: String!
+    amount: Decimal!
 }
 
 extend type Query {
-    expense(id: ID!): Expense
+    expense(id: UUID!): Expense
 
     "Newest first. ` + "`" + `first` + "`" + `: page size, default 20, max 50."
-    expenses(transactionDt: String, first: Int, after: String): ExpenseConnection!
+    expenses(transactionDt: Date, first: Int, after: String): ExpenseConnection!
 }
 
 extend type Mutation {
     createExpense(input: CreateExpenseInput!): Expense
-    updateExpense(id: ID!, patch: UpdateExpenseInput!): Expense
-    deleteExpense(id: ID!): ID!
+    updateExpense(id: UUID!, patch: UpdateExpenseInput!): Expense
+    deleteExpense(id: UUID!): UUID!
 }`, BuiltIn: false},
-	{Name: "../../graphql/schema/schema.graphql", Input: `type PageInfo { 
+	{Name: "../../graphql/schema/schema.graphql", Input: `# Scalar
+"Calendar date, ` + "`" + `YYYY-MM-DD` + "`" + `, e.g. ` + "`" + `\"2026-10-17\"` + "`" + `."
+scalar Date
+
+"Decimal number as a string, e.g. ` + "`" + `\"12500.50\"` + "`" + `. Never a JSON number, so no precision is lost."
+scalar Decimal
+
+"UUID string, e.g. \"9b2f6c1e-4a7d-4c3e-8f1a-2d5e6b7c8a90\"."
+scalar UUID
+
+# Shared - Pagination
+type PageInfo { 
     hasNextPage: Boolean!
     
     "Pass as ` + "`" + `after` + "`" + ` to get the next page; null on the last page."
     endCursor: String
 }
 
+# Base
 type Query {
     ok: Boolean
 }
@@ -593,7 +607,7 @@ extend type Mutation {
     unbindTelegram: User!
 }`, BuiltIn: false},
 	{Name: "../../graphql/schema/user.graphql", Input: `type User {
-    id: ID!
+    id: UUID!
     firstName: String!
     lastName: String
     email: String!

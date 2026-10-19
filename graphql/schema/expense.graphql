@@ -1,11 +1,11 @@
 type Expense {
-    id: ID!
-    userId: ID!
-    transactionDt: String!
-    categoryId: ID!
+    id: UUID!
+    userId: UUID!
+    transactionDt: Date!
+    categoryId: UUID!
     categoryName: String!
     description: String!
-    amount: String!
+    amount: Decimal!
 }
 
 type ExpenseConnection {
@@ -14,28 +14,28 @@ type ExpenseConnection {
 }
 
 input CreateExpenseInput {
-    transactionDt: String!
-    categoryId: ID!
+    transactionDt: Date!
+    categoryId: UUID!
     description: String
-    amount: String!
+    amount: Decimal!
 }
 
 input UpdateExpenseInput {
-    transactionDt: String!
-    categoryId: ID!
+    transactionDt: Date!
+    categoryId: UUID!
     description: String
-    amount: String!
+    amount: Decimal!
 }
 
 extend type Query {
-    expense(id: ID!): Expense
+    expense(id: UUID!): Expense
 
     "Newest first. `first`: page size, default 20, max 50."
-    expenses(transactionDt: String, first: Int, after: String): ExpenseConnection!
+    expenses(transactionDt: Date, first: Int, after: String): ExpenseConnection!
 }
 
 extend type Mutation {
     createExpense(input: CreateExpenseInput!): Expense
-    updateExpense(id: ID!, patch: UpdateExpenseInput!): Expense
-    deleteExpense(id: ID!): ID!
+    updateExpense(id: UUID!, patch: UpdateExpenseInput!): Expense
+    deleteExpense(id: UUID!): UUID!
 }

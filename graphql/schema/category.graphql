@@ -1,5 +1,5 @@
 type Category {
-    id: ID!
+    id: UUID!
     categoryName: String!
 }
 
@@ -12,12 +12,12 @@ input UpdateCategoryInput {
 }
 
 extend type Query {
-    category(id: ID!): Category
+    category(id: UUID!): Category
     categories: [Category!]!
 }
 
 extend type Mutation {
     createCategory(input: CreateCategoryInput!): Category
-    updateCategory(id: ID!, patch: UpdateCategoryInput!): Category
-    deleteCategory(id: ID!): ID!
+    updateCategory(id: UUID!, patch: UpdateCategoryInput!): Category
+    deleteCategory(id: UUID!): UUID!
 }

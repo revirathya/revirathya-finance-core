@@ -42,7 +42,14 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
   `CreateExpenseInput.userId` and `updateExpense`'s `userId` are gone, and `user(id:)` is replaced by `me`.
 - **Breaking (GraphQL):** mutation inputs are required (`CreateExpenseInput!`, `UpdateExpenseInput!`,
   `UpdateUserInput!`), `UpdateCategoryInput.categoryName` is required, and `deleteExpense` / `deleteCategory`
-  return `ID!`.
+  return `UUID!`.
+- **Breaking (GraphQL):** `transactionDt` is the `Date` scalar and `amount` the `Decimal` scalar (were `String`). The
+  JSON is unchanged (strings), but variables must be declared `$dt: Date` / `$amount: Decimal`. An invalid value, or
+  an amount sent as a JSON number, returns `BAD_USER_INPUT`.
+- **Breaking (GraphQL):** identifiers are the `UUID` scalar instead of `ID` (`id`, `userId`, `categoryId`, the `id`
+  arguments and the `delete*` results). The JSON is unchanged, but variables must be declared `$id: UUID!`, and a
+  value that isn't a UUID string (including an integer) returns `BAD_USER_INPUT`. Clients that require `id: ID!`
+  (e.g. Relay's `Node`) must map the scalar.
 - **Breaking (config):** `GQL_PORT` is renamed `HTTP_PORT`, and `GQL_HOST_PORT` is renamed `HTTP_HOST_PORT`; the old
   names are ignored, so a `.env` that still uses them gets the defaults (`8080`, `8180`).
 - **Breaking (Docker):** compose publishes the app's ports on `127.0.0.1` only; other machines can no longer reach
@@ -102,6 +109,9 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
 - `make docker-run` (use `make docker-up`).
 
 ### Fixed
+- GraphQL `createExpense` / `updateExpense` returned an empty `categoryId` (zero UUID) and `categoryName`.
+- GraphQL `updateUser`: a whitespace-only `lastName` now clears the last name (`null`) instead of storing `""`, and a
+  blank `firstName` reports `first_name: is required` like every other validation error.
 - GraphQL `deleteExpense` deleted nothing (it called the category usecase).
 - `GetUserByID` returned `NOT_FOUND` for users without a Telegram binding.
 - User repository returned an empty user instead of database errors.

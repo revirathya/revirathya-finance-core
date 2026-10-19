@@ -7,12 +7,10 @@ package resolver
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
-	errGql "github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql/error"
 )
 
 // CreateCategory is the resolver for the createCategory field.
@@ -28,74 +26,59 @@ func (r *mutationResolver) CreateCategory(ctx context.Context, input model.Creat
 	}
 
 	response := &model.Category{
-		ID:           result.ID.String(),
+		ID:           result.ID,
 		CategoryName: result.CategoryName,
 	}
 	return response, nil
 }
 
 // UpdateCategory is the resolver for the updateCategory field.
-func (r *mutationResolver) UpdateCategory(ctx context.Context, id string, patch model.UpdateCategoryInput) (*model.Category, error) {
-	uuidID, err := uuid.Parse(id)
-	if err != nil {
-		return nil, errGql.NewInvalidInputError(fmt.Errorf("invalid id UUID format: %w", err))
-	}
-
+func (r *mutationResolver) UpdateCategory(ctx context.Context, id uuid.UUID, patch model.UpdateCategoryInput) (*model.Category, error) {
 	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := r.usecase.Category.UpdateCategory(ctx, uuidID, userID, patch.CategoryName)
+	result, err := r.usecase.Category.UpdateCategory(ctx, id, userID, patch.CategoryName)
 	if err != nil {
 		return nil, err
 	}
 
 	response := &model.Category{
-		ID:           result.ID.String(),
+		ID:           result.ID,
 		CategoryName: result.CategoryName,
 	}
 	return response, nil
 }
 
 // DeleteCategory is the resolver for the deleteCategory field.
-func (r *mutationResolver) DeleteCategory(ctx context.Context, id string) (string, error) {
-	uuidID, err := uuid.Parse(id)
-	if err != nil {
-		return "", errGql.NewInvalidInputError(fmt.Errorf("invalid id UUID format: %w", err))
-	}
-
+func (r *mutationResolver) DeleteCategory(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
 	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
-		return "", err
+		return uuid.Nil, err
 	}
 
-	if err = r.usecase.Category.DeleteCategory(ctx, uuidID, userID); err != nil {
-		return "", err
+	if err = r.usecase.Category.DeleteCategory(ctx, id, userID); err != nil {
+		return uuid.Nil, err
 	}
 
 	return id, nil
 }
 
 // Category is the resolver for the category field.
-func (r *queryResolver) Category(ctx context.Context, id string) (*model.Category, error) {
-	uuidID, err := uuid.Parse(id)
-	if err != nil {
-		return nil, errGql.NewInvalidInputError(fmt.Errorf("invalid id UUID format: %w", err))
-	}
-
+func (r *queryResolver) Category(ctx context.Context, id uuid.UUID) (*model.Category, error) {
 	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := r.usecase.Category.GetCategoryByID(ctx, uuidID, userID)
+	result, err := r.usecase.Category.GetCategoryByID(ctx, id, userID)
 	if err != nil {
 		return nil, err
 	}
 
 	response := &model.Category{
-		ID:           result.ID.String(),
+		ID:           result.ID,
 		CategoryName: result.CategoryName,
 	}
 	return response, nil
@@ -116,7 +99,7 @@ func (r *queryResolver) Categories(ctx context.Context) ([]*model.Category, erro
 	responses := make([]*model.Category, 0, len(results))
 	for _, c := range results {
 		responses = append(responses, &model.Category{
-			ID:           c.ID.String(),
+			ID:           c.ID,
 			CategoryName: c.CategoryName,
 		})
 	}
