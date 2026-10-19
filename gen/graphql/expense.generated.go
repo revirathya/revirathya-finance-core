@@ -151,11 +151,11 @@ func (ec *executionContext) _Expense_description(ctx context.Context, field grap
 			return obj.Description, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
-			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
 		},
 		true,
-		false,
+		true,
 	)
 }
 func (ec *executionContext) fieldContext_Expense_description(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -338,7 +338,7 @@ func (ec *executionContext) _Expense(ctx context.Context, sel ast.SelectionSet, 
 			}
 		case "description":
 			out.Values[i] = ec._Expense_description(ctx, field, obj)
-			if out.Values[i] == graphql.RequiredNull {
+			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		case "amount":

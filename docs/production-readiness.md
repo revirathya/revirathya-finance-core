@@ -284,7 +284,7 @@ files into client repos by hand.
 
 ## 5. Later (after the production-readiness checklist)
 
-- [ ] **Make `description` non-nullable, with `""` to clear it.** Today `expenses.description` is nullable, and
+- [x] **Make `description` non-nullable, with `""` to clear it.** Done in `000005_expense_description_not_null`. Today `expenses.description` is nullable, and
   omitting it in `UpdateExpense` keeps the current value (`COALESCE`), so there's no way to clear it. Change it to
   `TEXT NOT NULL DEFAULT ''`: clients clear it by sending `""`, and omitting it still keeps the current value.
   - Migration: backfill existing `NULL`s to `''`, then `SET DEFAULT ''` and `SET NOT NULL`; the down migration

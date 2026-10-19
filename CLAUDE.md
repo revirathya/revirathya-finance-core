@@ -170,6 +170,8 @@ Single schema `app` (not `public`). Migrations live in `migrations/` as sequenti
 `users.google_sub` and unique emails, `000003_add_telegram_bind` adds `telegram_bind_codes`, and
 `000004_categories_per_user` makes categories per user, with a composite foreign key
 `expenses (category_id, user_id) -> categories (id, user_id)` so an expense can only use its owner's categories.
+`000005_expense_description_not_null` makes `expenses.description` `NOT NULL DEFAULT ''`: `nil` input means
+"not sent" (create stores `''`, update keeps the value via `COALESCE`), `""` clears it.
 There is no seed data.
 
 `sqlc.yaml` lists each migration's `.up.sql` explicitly as its schema source — add every new migration there,
@@ -182,7 +184,8 @@ All tests live under `test/`, mirroring the package they cover (`test/internal/u
 `internal/usecase/category`), as external `_test` packages, so they only use exported API. Integration tests carry
 the `//go:build integration` tag; each integration package has
 `func TestMain(m *testing.M) { os.Exit(testutil.RunWithPostgres(m)) }`, which starts a Postgres container, applies
-`migrations/` and sets `testutil.TestPool`. CI runs unit tests with `-race`.
+`migrations/` and sets `testutil.TestPool` / `testutil.TestDSN`. Data migrations get a test in `test/migrations/`
+that migrates down, inserts old-shape rows, and checks them after `up` and `down` (`testutil.MigrationsDir()`). CI runs unit tests with `-race`.
 
 ## Conventions to follow when extending
 

@@ -46,6 +46,7 @@ type ExpenseServiceClient interface {
 	ListExpenses(ctx context.Context, in *ListExpensesRequest, opts ...grpc.CallOption) (*ListExpensesResponse, error)
 	// Updates an expense and returns it. All fields except description are
 	// required; if description is omitted, the existing value is kept.
+	// send an empty string to clear it.
 	// The expense's owner (user_id) cannot be changed.
 	UpdateExpense(ctx context.Context, in *UpdateExpenseRequest, opts ...grpc.CallOption) (*UpdateExpenseResponse, error)
 	// Deletes an expense by its ID.
@@ -130,6 +131,7 @@ type ExpenseServiceServer interface {
 	ListExpenses(context.Context, *ListExpensesRequest) (*ListExpensesResponse, error)
 	// Updates an expense and returns it. All fields except description are
 	// required; if description is omitted, the existing value is kept.
+	// send an empty string to clear it.
 	// The expense's owner (user_id) cannot be changed.
 	UpdateExpense(context.Context, *UpdateExpenseRequest) (*UpdateExpenseResponse, error)
 	// Deletes an expense by its ID.

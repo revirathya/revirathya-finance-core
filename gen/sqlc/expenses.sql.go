@@ -23,7 +23,7 @@ VALUES (
   $1,
   $2,
   $3,
-  $4,
+  COALESCE($4::TEXT, ''),
   $5
 )
 RETURNING id, user_id, category_id, transaction_dt, description, amount, created_at, updated_at
@@ -108,7 +108,7 @@ type GetExpenseByIDRow struct {
 	CategoryID    pgtype.UUID    `json:"category_id"`
 	CategoryName  string         `json:"category_name"`
 	TransactionDt pgtype.Date    `json:"transaction_dt"`
-	Description   *string        `json:"description"`
+	Description   string         `json:"description"`
 	Amount        pgtype.Numeric `json:"amount"`
 }
 
@@ -157,7 +157,7 @@ type ListExpensesRow struct {
 	CategoryID    pgtype.UUID    `json:"category_id"`
 	CategoryName  string         `json:"category_name"`
 	TransactionDt pgtype.Date    `json:"transaction_dt"`
-	Description   *string        `json:"description"`
+	Description   string         `json:"description"`
 	Amount        pgtype.Numeric `json:"amount"`
 }
 

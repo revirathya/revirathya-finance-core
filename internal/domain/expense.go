@@ -16,7 +16,7 @@ type Expense struct {
 	CategoryID    uuid.UUID
 	CategoryName  string
 	TransactionDt time.Time
-	Description   *string
+	Description   string
 	Amount        decimal.Decimal
 }
 

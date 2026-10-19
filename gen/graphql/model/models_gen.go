@@ -25,13 +25,13 @@ type CreateExpenseInput struct {
 }
 
 type Expense struct {
-	ID            string  `json:"id"`
-	UserID        string  `json:"userId"`
-	TransactionDt string  `json:"transactionDt"`
-	CategoryID    string  `json:"categoryId"`
-	CategoryName  string  `json:"categoryName"`
-	Description   *string `json:"description,omitempty"`
-	Amount        string  `json:"amount"`
+	ID            string `json:"id"`
+	UserID        string `json:"userId"`
+	TransactionDt string `json:"transactionDt"`
+	CategoryID    string `json:"categoryId"`
+	CategoryName  string `json:"categoryName"`
+	Description   string `json:"description"`
+	Amount        string `json:"amount"`
 }
 
 type Mutation struct {

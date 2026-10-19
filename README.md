@@ -283,7 +283,7 @@ Both APIs validate input the same way, after trimming surrounding whitespace fro
 |Last name|Optional, at most 100 characters|
 |Expense amount|Greater than 0, at most 2 decimal places, below 1,000,000,000,000|
 |Expense date|From 2000-01-01 to tomorrow (Asia/Jakarta)|
-|Expense description|Optional, at most 500 characters|
+|Expense description|Optional, at most 500 characters. Never `null` in responses (`""` when there is none). On update, omit it to keep the current one, or send `""` to clear it|
 |Telegram context fields|Optional, at most 100 characters each|
 
 Invalid input returns `INVALID_ARGUMENT` (gRPC) or `BAD_USER_INPUT` (GraphQL) with a message naming the field,
