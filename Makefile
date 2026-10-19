@@ -5,7 +5,7 @@ COMPOSE := docker compose --project-directory . -f infra/docker/docker-compose.y
 GRPC_ADDR ?= localhost:50051
 GRPC_PROTOS := -proto financecore/v1/categories.proto -proto financecore/v1/expenses.proto -proto financecore/v1/user_telegram_contexts.proto
 
-.PHONY: run build test test-integration vet check tidy \
+.PHONY: run build test test-integration vet check tidy lint \
 	docker-build docker-up docker-down docker-logs \
 	migrate-up migrate-down migrate-force migrate-create migrate-version \
 	sqlc-generate proto-generate proto-lint \
@@ -27,10 +27,14 @@ test-integration:
 vet:
 	go vet ./...
 
-check: vet test proto-lint
+lint:
+	golangci-lint run ./...
+
+check: vet lint test proto-lint
 
 tidy:
 	go mod tidy
+
 
 ## --- local infra (Postgres via docker-compose) ---
 # make docker-up          -> all services (db, migration, core)

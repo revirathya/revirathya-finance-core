@@ -18,6 +18,9 @@ jobs:
           go-version-file: go.mod
       - run: go mod tidy -diff
       - run: go vet ./...
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.15.0
       - run: go test -race ./test/...
       - run: go test -race -tags=integration ./test/...
       # - run: go run golang.org/x/vuln/cmd/govulncheck@v1.4.0 ./... # Paused until production target ready

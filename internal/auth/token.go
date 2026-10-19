@@ -9,7 +9,7 @@ import (
 	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 )
 
-const tokenIssuer = "revirathya-finance-core"
+const tokenIssuer = "revirathya-finance-core" // nolint:gosec // G101: issuer name, not a credential
 
 type TokenManager struct {
 	secret []byte

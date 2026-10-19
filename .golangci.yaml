@@ -1,0 +1,31 @@
+version: "2"
+
+run:
+  build-tags:
+    - integration # lint integration tests too
+
+linters:
+  default: standard # errcheck, govet, ineffassign, staticcheck, unused
+  enable:
+    - bodyclose # HTTP response bodies are closed
+    - errorlint # errors.Is / errors.As / %w instead of == and %v
+    - gosec # security checks
+    - misspell
+  exclusions:
+    generated: strict
+    paths:
+      - gen/
+    rules:
+      # Test may use math/rand, fixed secrets, etc.
+      - path: ^(test|testutil)/
+        linters:
+          - gosec
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: strict
+    paths:
+      - gen/

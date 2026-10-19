@@ -73,7 +73,9 @@ func (r *telegramBindCodeRepositoryImpl) BindCode(ctx context.Context, codeHash 
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	// Query inside transaction context
 	q := r.query.WithTx(tx)
