@@ -16,11 +16,12 @@ import (
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/config"
-	dlvGql "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql"
 	dlvGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
+	dlvHttp "github.com/revirathya/revirathya-finance-core/internal/delivery/http"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/google"
 	logApp "github.com/revirathya/revirathya-finance-core/internal/platform/logging"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/metrics"
 	"github.com/revirathya/revirathya-finance-core/internal/repository"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase"
 )
@@ -73,28 +74,38 @@ func run() error {
 	gVeri := google.NewGoogleVerifier(cfg.GoogleClientID)
 	tokenManager := auth.NewTokenManager(cfg.JwtSecret, cfg.JwtTtl)
 
+	// Setup metrics server
+	metricColl := metrics.NewMetrics(pool)
+
 	// Setup repo and usecase
 	repo := repository.BootstrapRepository(pool)
 	uc := usecase.BootstrapUsecase(gVeri, repo)
 
 	// Setup server - gRPC
-	grpcSrvLayer, err := dlvGrpc.Setup(cfg.GrpcPort, cfg.GrpcEnableReflection, cfg.GrpcApiKey, uc)
+	grpcSrvLayer, err := dlvGrpc.Setup(
+		cfg.GrpcPort,
+		cfg.GrpcEnableReflection,
+		cfg.GrpcApiKey,
+		metricColl,
+		uc,
+	)
 	if err != nil {
 		return fmt.Errorf("setup grpc server: %w", err)
 	}
 
-	// Setup server - GraphQL
-	gqlSrvLayer := dlvGql.Setup(
+	// Setup server - HTTP
+	httpSrvLayer := dlvHttp.Setup(
 		cfg.GqlPort,
 		cfg.AllowedOrigins,
 		pool.Ping,
 		cfg.GqlEnableIntrospection,
 		tokenManager,
+		metricColl,
 		uc,
 	)
 
 	// Setup server - integration
-	g := api.RunServers(ctx, grpcSrvLayer, gqlSrvLayer)
+	g := api.RunServers(ctx, grpcSrvLayer, httpSrvLayer)
 	slog.Info(
 		"server started",
 		"grpc_addr", cfg.GrpcPort,

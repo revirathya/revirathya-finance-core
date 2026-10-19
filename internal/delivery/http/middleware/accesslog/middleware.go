@@ -6,7 +6,7 @@ import (
 	"time"
 
 	// Internal - GraphQL
-	"github.com/revirathya/revirathya-finance-core/internal/delivery/graphql/middleware"
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/middleware"
 )
 
 type statusRecorder struct {

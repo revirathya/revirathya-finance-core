@@ -9,15 +9,15 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	// Internal
-	dlvGql "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql"
 	dlvGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
+	dlvHttp "github.com/revirathya/revirathya-finance-core/internal/delivery/http"
 )
 
 const (
 	shutdownTimeout = 10 * time.Second
 )
 
-func RunServers(ctx context.Context, grpcSrvLayer *dlvGrpc.ServerLayer, gqlServerLayer *dlvGql.ServerLayer) *errgroup.Group {
+func RunServers(ctx context.Context, grpcSrvLayer *dlvGrpc.ServerLayer, httpSrvLayer *dlvHttp.ServerLayer) *errgroup.Group {
 	// Init errgroup
 	g, gctx := errgroup.WithContext(ctx)
 
@@ -28,7 +28,7 @@ func RunServers(ctx context.Context, grpcSrvLayer *dlvGrpc.ServerLayer, gqlServe
 
 	// Serve GraphQL
 	g.Go(func() error {
-		if err := gqlServerLayer.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := httpSrvLayer.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}
 		return nil
@@ -53,7 +53,7 @@ func RunServers(ctx context.Context, grpcSrvLayer *dlvGrpc.ServerLayer, gqlServe
 			grpcSrvLayer.Server.Stop()
 		}
 
-		return gqlServerLayer.Server.Shutdown(shutdownCtx)
+		return httpSrvLayer.Server.Shutdown(shutdownCtx)
 	})
 
 	return g

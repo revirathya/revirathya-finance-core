@@ -16,6 +16,7 @@ import (
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
 
 	// Internal
+	"github.com/revirathya/revirathya-finance-core/internal/platform/metrics"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/ratelimit"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase"
 
@@ -65,6 +66,7 @@ func Setup(
 	port string,
 	enableReflection bool,
 	apiKey string,
+	metricsColl *metrics.Metrics,
 	usecase usecase.Usecase,
 ) (*ServerLayer, error) {
 	// Set limiter
@@ -100,6 +102,7 @@ func Setup(
 		grpc.ChainUnaryInterceptor(
 			requestid.UnaryServerInterceptor(),
 			accesslog.UnaryServerInterceptor(),
+			metricsColl.Grpc.UnaryServerInterceptor(),
 			recovery.UnaryServerInterceptor(),
 			timeout.UnaryServerInterceptor(rpcTimeout),
 			apikeyauth.UnaryServerInterceptor(apiKey),
@@ -109,6 +112,9 @@ func Setup(
 			),
 		),
 	)
+
+	// Startup metrics collector
+	metricsColl.Grpc.InitializeMetrics(srv)
 
 	// Register service server
 	financecorev1.RegisterCategoryServiceServer(srv, ctgHan)

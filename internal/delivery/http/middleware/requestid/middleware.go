@@ -7,7 +7,7 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/platform/logging"
 
 	// Internal - GraphQL
-	"github.com/revirathya/revirathya-finance-core/internal/delivery/graphql/middleware"
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/middleware"
 )
 
 func Middleware() middleware.Middleware {
