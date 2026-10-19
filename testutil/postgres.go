@@ -33,6 +33,9 @@ import (
 
 var TestPool *pgxpool.Pool
 
+// TestDSN is the connection string of the test database, e.g. for running migrations in a test.
+var TestDSN string
+
 func RunWithPostgres(m *testing.M) int {
 	ctx := context.Background()
 
@@ -54,7 +57,9 @@ func RunWithPostgres(m *testing.M) int {
 		log.Fatalf("connection string: %v", err)
 	}
 
-	mig, err := migrate.New("file://"+migrationsDir(), dsn)
+	TestDSN = dsn
+
+	mig, err := migrate.New("file://"+MigrationsDir(), dsn)
 	if err != nil {
 		log.Fatalf("migrate: %v", err)
 	}
@@ -73,7 +78,8 @@ func RunWithPostgres(m *testing.M) int {
 	return m.Run()
 }
 
-func migrationsDir() string {
+// MigrationsDir is the absolute path of migrations/.
+func MigrationsDir() string {
 	_, thisFile, _, _ := runtime.Caller(0) // .../testutil/postgres.go
 	return filepath.Join(filepath.Dir(thisFile), "..", "migrations")
 }

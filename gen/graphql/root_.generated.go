@@ -498,7 +498,7 @@ extend type Mutation {
     transactionDt: String!
     categoryId: ID!
     categoryName: String!
-    description: String
+    description: String!
     amount: String!
 }
 

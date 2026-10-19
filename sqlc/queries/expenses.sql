@@ -10,7 +10,7 @@ VALUES (
   sqlc.arg('user_id'),
   sqlc.arg('category_id'),
   sqlc.arg('transaction_dt'),
-  sqlc.arg('description'),
+  COALESCE(sqlc.narg('description')::TEXT, ''),
   sqlc.arg('amount')
 )
 RETURNING *;

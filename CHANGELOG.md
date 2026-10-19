@@ -40,6 +40,13 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
 - **Breaking (GraphQL):** mutation inputs are required (`CreateExpenseInput!`, `UpdateExpenseInput!`,
   `UpdateUserInput!`), `UpdateCategoryInput.categoryName` is required, and `deleteExpense` / `deleteCategory`
   return `ID!`.
+- **Breaking (GraphQL):** `Expense.description` is `String!`: it is never `null`, and an expense without one returns
+  `""`. Inputs are unchanged; `updateExpense` keeps the description when it's omitted and clears it with `""`.
+- **Breaking (gRPC):** `description` in expense responses is a plain `string` (was `optional`), so generated clients
+  get `string` instead of `*string`; field numbers are unchanged. Requests keep `optional string description`
+  (omit = keep on update, `""` = clear).
+- **Breaking (database):** `expenses.description` is `NOT NULL DEFAULT ''` (migration
+  `000005_expense_description_not_null`); existing `NULL`s become `''`.
 - **Breaking (gRPC):** `user_id` removed from all request messages; the user comes from the Telegram binding.
   `UpdateExpenseRequest` fields renumbered.
 - **Breaking:** categories belong to a user; names are unique per user, and an expense can only use its

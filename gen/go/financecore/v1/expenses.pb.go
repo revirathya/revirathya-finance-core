@@ -35,7 +35,7 @@ type ExpenseResponse struct {
 	// Transaction date (YYYY-MM-DD).
 	TransactionDt string `protobuf:"bytes,5,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
 	// Free-text note about the expense.
-	Description *string `protobuf:"bytes,6,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Description string `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
 	// Amount as a decimal string, e.g. "12500.50".
 	Amount        string `protobuf:"bytes,7,opt,name=amount,proto3" json:"amount,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -108,8 +108,8 @@ func (x *ExpenseResponse) GetTransactionDt() string {
 }
 
 func (x *ExpenseResponse) GetDescription() string {
-	if x != nil && x.Description != nil {
-		return *x.Description
+	if x != nil {
+		return x.Description
 	}
 	return ""
 }
@@ -204,7 +204,7 @@ type CreateExpenseResponse struct {
 	// Transaction date (YYYY-MM-DD).
 	TransactionDt string `protobuf:"bytes,4,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
 	// Free-text note about the expense.
-	Description *string `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Description string `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
 	// Amount as a decimal string, e.g. "12500.50".
 	Amount        string `protobuf:"bytes,6,opt,name=amount,proto3" json:"amount,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -270,8 +270,8 @@ func (x *CreateExpenseResponse) GetTransactionDt() string {
 }
 
 func (x *CreateExpenseResponse) GetDescription() string {
-	if x != nil && x.Description != nil {
-		return *x.Description
+	if x != nil {
+		return x.Description
 	}
 	return ""
 }
@@ -431,7 +431,7 @@ type GetExpenseByIDResponse struct {
 	// Transaction date (YYYY-MM-DD).
 	TransactionDt string `protobuf:"bytes,5,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
 	// Free-text note about the expense.
-	Description *string `protobuf:"bytes,6,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Description string `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
 	// Amount as a decimal string, e.g. "12500.50".
 	Amount        string `protobuf:"bytes,7,opt,name=amount,proto3" json:"amount,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -504,8 +504,8 @@ func (x *GetExpenseByIDResponse) GetTransactionDt() string {
 }
 
 func (x *GetExpenseByIDResponse) GetDescription() string {
-	if x != nil && x.Description != nil {
-		return *x.Description
+	if x != nil {
+		return x.Description
 	}
 	return ""
 }
@@ -609,7 +609,7 @@ type UpdateExpenseResponse struct {
 	// Transaction date (YYYY-MM-DD).
 	TransactionDt string `protobuf:"bytes,4,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
 	// Free-text note about the expense.
-	Description *string `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Description string `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
 	// Amount as a decimal string, e.g. "12500.50".
 	Amount        string `protobuf:"bytes,6,opt,name=amount,proto3" json:"amount,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -675,8 +675,8 @@ func (x *UpdateExpenseResponse) GetTransactionDt() string {
 }
 
 func (x *UpdateExpenseResponse) GetDescription() string {
-	if x != nil && x.Description != nil {
-		return *x.Description
+	if x != nil {
+		return x.Description
 	}
 	return ""
 }
@@ -773,50 +773,47 @@ var File_financecore_v1_expenses_proto protoreflect.FileDescriptor
 
 const file_financecore_v1_expenses_proto_rawDesc = "" +
 	"\n" +
-	"\x1dfinancecore/v1/expenses.proto\x12\x0efinancecore.v1\"\xf6\x01\n" +
+	"\x1dfinancecore/v1/expenses.proto\x12\x0efinancecore.v1\"\xe1\x01\n" +
 	"\x0fExpenseResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1f\n" +
 	"\vcategory_id\x18\x03 \x01(\tR\n" +
 	"categoryId\x12#\n" +
 	"\rcategory_name\x18\x04 \x01(\tR\fcategoryName\x12%\n" +
-	"\x0etransaction_dt\x18\x05 \x01(\tR\rtransactionDt\x12%\n" +
-	"\vdescription\x18\x06 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x16\n" +
-	"\x06amount\x18\a \x01(\tR\x06amountB\x0e\n" +
-	"\f_description\"\xad\x01\n" +
+	"\x0etransaction_dt\x18\x05 \x01(\tR\rtransactionDt\x12 \n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\x12\x16\n" +
+	"\x06amount\x18\a \x01(\tR\x06amount\"\xad\x01\n" +
 	"\x14CreateExpenseRequest\x12\x1f\n" +
 	"\vcategory_id\x18\x01 \x01(\tR\n" +
 	"categoryId\x12%\n" +
 	"\x0etransaction_dt\x18\x02 \x01(\tR\rtransactionDt\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x16\n" +
 	"\x06amount\x18\x05 \x01(\tR\x06amountB\x0e\n" +
-	"\f_description\"\xd7\x01\n" +
+	"\f_description\"\xc2\x01\n" +
 	"\x15CreateExpenseResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1f\n" +
 	"\vcategory_id\x18\x03 \x01(\tR\n" +
 	"categoryId\x12%\n" +
-	"\x0etransaction_dt\x18\x04 \x01(\tR\rtransactionDt\x12%\n" +
-	"\vdescription\x18\x05 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x16\n" +
-	"\x06amount\x18\x06 \x01(\tR\x06amountB\x0e\n" +
-	"\f_description\"T\n" +
+	"\x0etransaction_dt\x18\x04 \x01(\tR\rtransactionDt\x12 \n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x16\n" +
+	"\x06amount\x18\x06 \x01(\tR\x06amount\"T\n" +
 	"\x13ListExpensesRequest\x12*\n" +
 	"\x0etransaction_dt\x18\x02 \x01(\tH\x00R\rtransactionDt\x88\x01\x01B\x11\n" +
 	"\x0f_transaction_dt\"S\n" +
 	"\x14ListExpensesResponse\x12;\n" +
 	"\bexpenses\x18\x01 \x03(\v2\x1f.financecore.v1.ExpenseResponseR\bexpenses\"'\n" +
 	"\x15GetExpenseByIDRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xfd\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xe8\x01\n" +
 	"\x16GetExpenseByIDResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1f\n" +
 	"\vcategory_id\x18\x03 \x01(\tR\n" +
 	"categoryId\x12#\n" +
 	"\rcategory_name\x18\x04 \x01(\tR\fcategoryName\x12%\n" +
-	"\x0etransaction_dt\x18\x05 \x01(\tR\rtransactionDt\x12%\n" +
-	"\vdescription\x18\x06 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x16\n" +
-	"\x06amount\x18\a \x01(\tR\x06amountB\x0e\n" +
-	"\f_description\"\xbd\x01\n" +
+	"\x0etransaction_dt\x18\x05 \x01(\tR\rtransactionDt\x12 \n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\x12\x16\n" +
+	"\x06amount\x18\a \x01(\tR\x06amount\"\xbd\x01\n" +
 	"\x14UpdateExpenseRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vcategory_id\x18\x02 \x01(\tR\n" +
@@ -824,16 +821,15 @@ const file_financecore_v1_expenses_proto_rawDesc = "" +
 	"\x0etransaction_dt\x18\x03 \x01(\tR\rtransactionDt\x12%\n" +
 	"\vdescription\x18\x04 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x16\n" +
 	"\x06amount\x18\x05 \x01(\tR\x06amountB\x0e\n" +
-	"\f_description\"\xd7\x01\n" +
+	"\f_description\"\xc2\x01\n" +
 	"\x15UpdateExpenseResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1f\n" +
 	"\vcategory_id\x18\x03 \x01(\tR\n" +
 	"categoryId\x12%\n" +
-	"\x0etransaction_dt\x18\x04 \x01(\tR\rtransactionDt\x12%\n" +
-	"\vdescription\x18\x05 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x16\n" +
-	"\x06amount\x18\x06 \x01(\tR\x06amountB\x0e\n" +
-	"\f_description\"&\n" +
+	"\x0etransaction_dt\x18\x04 \x01(\tR\rtransactionDt\x12 \n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x16\n" +
+	"\x06amount\x18\x06 \x01(\tR\x06amount\"&\n" +
 	"\x14DeleteExpenseRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x17\n" +
 	"\x15DeleteExpenseResponse2\xe6\x03\n" +
@@ -894,13 +890,9 @@ func file_financecore_v1_expenses_proto_init() {
 	if File_financecore_v1_expenses_proto != nil {
 		return
 	}
-	file_financecore_v1_expenses_proto_msgTypes[0].OneofWrappers = []any{}
 	file_financecore_v1_expenses_proto_msgTypes[1].OneofWrappers = []any{}
-	file_financecore_v1_expenses_proto_msgTypes[2].OneofWrappers = []any{}
 	file_financecore_v1_expenses_proto_msgTypes[3].OneofWrappers = []any{}
-	file_financecore_v1_expenses_proto_msgTypes[6].OneofWrappers = []any{}
 	file_financecore_v1_expenses_proto_msgTypes[7].OneofWrappers = []any{}
-	file_financecore_v1_expenses_proto_msgTypes[8].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

@@ -55,15 +55,15 @@ func TestExpenseRepository(t *testing.T) {
 		if got.TransactionDt.Format("2006-01-02") != "2026-01-15" {
 			t.Fatalf("date %v, want 2026-01-15", got.TransactionDt)
 		}
-		if got.Description == nil || *got.Description != "Lunch" {
-			t.Fatalf("description %v, want %q", got.Description, "Lunch")
+		if got.Description != "Lunch" {
+			t.Fatalf("description %q, want %q", got.Description, "Lunch")
 		}
 		if !got.Amount.Equal(decimal.RequireFromString("12500.50")) {
 			t.Fatalf("amount %s, want 12500.50", got.Amount)
 		}
 	})
 
-	t.Run("description is optional", func(t *testing.T) {
+	t.Run("create without a description stores an empty one", func(t *testing.T) {
 		alice := testutil.NewUser(t)
 		expense := testutil.NewExpense(t, alice.ID, testutil.NewCategory(t, alice.ID, "Food").ID, "2026-01-15", "1")
 
@@ -71,8 +71,47 @@ func TestExpenseRepository(t *testing.T) {
 		if err != nil {
 			t.Fatalf("get: %v", err)
 		}
-		if got.Description != nil {
-			t.Fatalf("description %q, want nil", *got.Description)
+		if got.Description != "" {
+			t.Fatalf("description %q, want empty", got.Description)
+		}
+	})
+
+	t.Run("update keeps the description when omitted and clears it with an empty string", func(t *testing.T) {
+		alice := testutil.NewUser(t)
+		food := testutil.NewCategory(t, alice.ID, "Food")
+		created, err := repo.CreateExpense(ctx, domain.ExpenseForm{
+			UserID: alice.ID, CategoryID: food.ID, TransactionDt: testutil.Day(t, "2026-01-15"),
+			Description: testutil.Ptr("Lunch"), Amount: decimal.RequireFromString("10"),
+		})
+		if err != nil {
+			t.Fatalf("create: %v", err)
+		}
+		patch := domain.ExpensePatch{CategoryID: food.ID, TransactionDt: testutil.Day(t, "2026-01-15"), Amount: decimal.RequireFromString("20")}
+
+		kept, err := repo.UpdateExpense(ctx, created.ID, alice.ID, patch)
+		if err != nil {
+			t.Fatalf("update without description: %v", err)
+		}
+		if kept.Description != "Lunch" {
+			t.Fatalf("description %q after omitting it, want unchanged %q", kept.Description, "Lunch")
+		}
+
+		patch.Description = testutil.Ptr("")
+		cleared, err := repo.UpdateExpense(ctx, created.ID, alice.ID, patch)
+		if err != nil {
+			t.Fatalf("update with empty description: %v", err)
+		}
+		if cleared.Description != "" {
+			t.Fatalf("description %q after sending \"\", want empty", cleared.Description)
+		}
+	})
+
+	t.Run("description column rejects NULL", func(t *testing.T) {
+		alice := testutil.NewUser(t)
+		expense := testutil.NewExpense(t, alice.ID, testutil.NewCategory(t, alice.ID, "Food").ID, "2026-01-15", "1")
+
+		if _, err := testutil.TestPool.Exec(ctx, "UPDATE app.expenses SET description = NULL WHERE id = $1", expense.ID); err == nil {
+			t.Fatal("NULL description was stored, want a not-null violation")
 		}
 	})
 

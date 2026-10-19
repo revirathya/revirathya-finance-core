@@ -6,6 +6,7 @@ sql:
       - "migrations/000002_add_user_auth.up.sql"
       - "migrations/000003_add_telegram_bind.up.sql"
       - "migrations/000004_categories_per_user.up.sql"
+      - "migrations/000005_expense_description_not_null.up.sql"
     queries: "sqlc/queries"
     gen:
       go:

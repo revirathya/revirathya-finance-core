@@ -21,7 +21,7 @@ type AppExpense struct {
 	UserID        pgtype.UUID        `json:"user_id"`
 	CategoryID    pgtype.UUID        `json:"category_id"`
 	TransactionDt pgtype.Date        `json:"transaction_dt"`
-	Description   *string            `json:"description"`
+	Description   string             `json:"description"`
 	Amount        pgtype.Numeric     `json:"amount"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`

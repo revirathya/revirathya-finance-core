@@ -65,7 +65,7 @@ func TestCreateExpense(t *testing.T) {
 	dt := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
 	amount := decimal.NewFromFloat(42.50)
 	description := "Lunch"
-	want := &domain.Expense{ID: uuid.New(), Description: &description}
+	want := &domain.Expense{ID: uuid.New(), Description: description}
 
 	t.Run("creates and returns expense", func(t *testing.T) {
 		repo := &fakeExpenseRepo{createResp: want}
@@ -106,7 +106,7 @@ func TestGetExpenseByID(t *testing.T) {
 	id := uuid.New()
 	userID := uuid.New()
 	description := "Coffee"
-	want := &domain.Expense{ID: id, Description: &description}
+	want := &domain.Expense{ID: id, Description: description}
 
 	t.Run("returns expense", func(t *testing.T) {
 		repo := &fakeExpenseRepo{getResp: want}

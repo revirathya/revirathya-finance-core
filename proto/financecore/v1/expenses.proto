@@ -23,6 +23,7 @@ service ExpenseService {
 
     // Updates an expense and returns it. All fields except description are
     // required; if description is omitted, the existing value is kept.
+    // send an empty string to clear it.
     // The expense's owner (user_id) cannot be changed.
     rpc UpdateExpense (UpdateExpenseRequest) returns (UpdateExpenseResponse);
 
@@ -48,7 +49,7 @@ message ExpenseResponse {
     string transaction_dt = 5;
 
     // Free-text note about the expense.
-    optional string description = 6;
+    string description = 6;
 
     // Amount as a decimal string, e.g. "12500.50".
     string amount = 7;
@@ -82,7 +83,7 @@ message CreateExpenseResponse {
     string transaction_dt = 4;
 
     // Free-text note about the expense.
-    optional string description = 5;
+    string description = 5;
 
     // Amount as a decimal string, e.g. "12500.50".
     string amount = 6;
@@ -120,7 +121,7 @@ message GetExpenseByIDResponse {
     string transaction_dt = 5;
 
     // Free-text note about the expense.
-    optional string description = 6;
+    string description = 6;
 
     // Amount as a decimal string, e.g. "12500.50".
     string amount = 7;
@@ -157,7 +158,7 @@ message UpdateExpenseResponse {
     string transaction_dt = 4;
 
     // Free-text note about the expense.
-    optional string description = 5;
+    string description = 5;
 
     // Amount as a decimal string, e.g. "12500.50".
     string amount = 6;
