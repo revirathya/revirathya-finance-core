@@ -203,9 +203,9 @@ Last reviewed: 2026-10-19
   - [x] gRPC handler and GraphQL resolver tests: end-to-end integration tests through the production servers
     (`dlvGrpc.Setup`, `dlvHttp.Setup` + `RegisterHandler`) on the real usecases, repositories and Postgres, with
     only Google faked (`testutil.NewUsecases`, `testutil.FakeGoogleVerifier`).
-  - [ ] Fix the bug these tests found: `createExpense` / `updateExpense` (GraphQL) return `categoryId` as the zero
-    UUID and `categoryName` as `""`. The resolvers don't map `CategoryID` / `CategoryName`, and the repository's
-    `INSERT/UPDATE ... RETURNING *` has no `category_name` (only the read queries join `categories`).
+  - [x] Fix the bug these tests found: `createExpense` / `updateExpense` (GraphQL) returned `categoryId` as the zero
+    UUID and `categoryName` as `""`. The repository now reads the expense back with `GetExpenseByID` after the write
+    (the `RETURNING *` row has no `category_name`), and the resolvers map both fields.
 
 ### Documentation
 - [ ] **README / runbook.**

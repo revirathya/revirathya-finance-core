@@ -109,6 +109,9 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
 - `make docker-run` (use `make docker-up`).
 
 ### Fixed
+- GraphQL `createExpense` / `updateExpense` returned an empty `categoryId` (zero UUID) and `categoryName`.
+- GraphQL `updateUser`: a whitespace-only `lastName` now clears the last name (`null`) instead of storing `""`, and a
+  blank `firstName` reports `first_name: is required` like every other validation error.
 - GraphQL `deleteExpense` deleted nothing (it called the category usecase).
 - `GetUserByID` returned `NOT_FOUND` for users without a Telegram binding.
 - User repository returned an empty user instead of database errors.
