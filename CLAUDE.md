@@ -31,8 +31,8 @@ make docker-logs           # follow logs; svc=<service> for one service
 make docker-build          # build core image tagged $(VERSION); svc=migration for the migration image ($(MIGRATION_VERSION))
 make run                   # run the app locally (go run ./cmd, reads .env)
 make build                 # build binary to bin/financecore
-make test                  # unit tests: go test ./test/...
-make test-integration      # all tests incl. integration (-tags=integration ./test/...) against a throwaway Postgres (needs Docker)
+make test                  # unit tests only (no Docker, no -race): go test ./test/...
+make test-integration      # everything: unit + integration (-race -tags=integration ./test/...), a superset of make test (needs Docker)
 make vet                   # go vet ./...
 make lint                  # golangci-lint run ./... (config: .golangci.yaml; lints integration tests too)
 make check                 # vet + lint + test + proto-lint
@@ -197,8 +197,8 @@ the `//go:build integration` tag; each integration package has
 `migrations/` and sets `testutil.TestPool` / `testutil.TestDSN`. Data migrations get a test in `test/migrations/`
 that migrates down, inserts old-shape rows, and checks them after `up` and `down` (`testutil.MigrationsDir()`). Handlers and resolvers are tested end-to-end
 (`test/internal/delivery/grpc/handler`, `test/internal/delivery/http/graphql/resolver`): the production servers on
-`testutil.NewUsecases(verifier)` (real repositories on `TestPool`) with `testutil.FakeGoogleVerifier`. CI runs unit
-tests with `-race`.
+`testutil.NewUsecases(verifier)` (real repositories on `TestPool`) with `testutil.FakeGoogleVerifier`. CI runs all tests,
+including integration, with `-race` (the same command as `make test-integration`).
 
 ## Conventions to follow when extending
 
