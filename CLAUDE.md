@@ -32,7 +32,7 @@ make docker-build          # build core image tagged $(VERSION); svc=migration f
 make run                   # run the app locally (go run ./cmd, reads .env)
 make build                 # build binary to bin/financecore
 make test                  # unit tests: go test ./test/...
-make test-integration      # repository tests against a throwaway Postgres (testcontainers, needs Docker)
+make test-integration      # all tests incl. integration (-tags=integration ./test/...) against a throwaway Postgres (needs Docker)
 make vet                   # go vet ./...
 make check                 # vet + test + proto-lint
 
@@ -96,6 +96,7 @@ internal/delivery/grpc/
   interceptor/requestid        x-request-id metadata; must stay first in the chain
   interceptor/accesslog        one log line per call (method, code, duration); right after requestid
   interceptor/recovery         panic recovery; after accesslog (so panics are logged), before auth
+  interceptor/timeout          default 10s deadline for calls without a client deadline; right after recovery
   interceptor/apikeyauth       bot API key (authorization: Bearer)
   interceptor/telegramuser     x-telegram-user-id -> principal (unbound users: BindTelegramAccount only)
 internal/delivery/graphql/
@@ -107,7 +108,7 @@ internal/delivery/graphql/
   middleware/helper.go         ChainMiddleware (first listed = outermost, like grpc.ChainUnaryInterceptor)
   middleware/<name>/           requestid, accesslog, limitbody, withcors, withauth (session JWT -> principal), withtimeout
 internal/auth                  principal + Telegram ID in context, session JWT (TokenManager), bind-code helpers
-internal/platform/database     pgxpool setup + pgx<->domain type conversion helpers (UUID/Date/Numeric/Timestamp)
+internal/platform/database     pgxpool setup (limits + statement_timeout, set in code) + pgx<->domain type conversion helpers (UUID/Date/Numeric/Timestamp)
 internal/platform/google       Google ID-token verifier (implements domain.GoogleVerifier)
 internal/platform/ratelimit    in-memory fixed-window limiter (per process)
 internal/platform/logging      slog setup (LOG_FORMAT json/text, LOG_LEVEL), request ID in context, EnsureRequestID
@@ -129,7 +130,9 @@ pgx wire types happens only inside `internal/repository/postgres/<entity>/reposi
 inside an `errgroup`, so either server failing — or SIGINT/SIGTERM — brings both down together via graceful
 shutdown. On the HTTP side the whole mux is wrapped in `requestid` -> `accesslog`; `/graphql` additionally goes
 through `limitbody` -> `withcors` -> `withauth` -> `withtimeout`; `/healthz` and `/readyz` sit outside CORS and auth.
-The gRPC chain is `requestid` -> `accesslog` -> `recovery` -> `apikeyauth` -> `telegramuser`.
+The gRPC chain is `requestid` -> `accesslog` -> `recovery` -> `timeout` -> `apikeyauth` -> `telegramuser`; server
+options in `grpc/server.go` cap messages at 1 MB and set keepalive. `ToStatus` maps `context.DeadlineExceeded` /
+`context.Canceled` to `DeadlineExceeded` / `Canceled` without logging them.
 
 Authentication: GraphQL requests carry a session JWT (`Authorization: Bearer`), turned into a principal by the
 `withauth` middleware; tokens come from `loginWithGoogle`. gRPC calls carry the bot's API key plus

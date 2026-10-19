@@ -23,6 +23,7 @@ import (
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
 
 	// Repository
 	rCategory "github.com/revirathya/revirathya-finance-core/internal/repository/postgres/category"
@@ -61,7 +62,8 @@ func RunWithPostgres(m *testing.M) int {
 		log.Fatalf("migrate up: %v", err)
 	}
 
-	TestPool, err = pgxpool.New(ctx, dsn)
+	// The production pool, so tests run with its settings (statement_timeout, ...).
+	TestPool, err = database.NewDBPool(ctx, dsn)
 	if err != nil {
 		log.Fatalf("pool: %v", err)
 	}

@@ -60,7 +60,7 @@ func Load() (*Config, error) {
 	// Parse JwtTtl
 	jwtTtl, err := time.ParseDuration(getEnv("JWT_TTL", "24h"))
 	if err != nil {
-		return nil, fmt.Errorf("JWT_TTL has invalid duration: %v", err)
+		return nil, fmt.Errorf("JWT_TTL has invalid duration: %w", err)
 	}
 	cfg.JwtTtl = jwtTtl
 

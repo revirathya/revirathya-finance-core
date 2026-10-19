@@ -14,6 +14,8 @@ type Principal struct {
 
 type principalKey struct{}
 
+type telegramIDKey struct{}
+
 // WithPrincipal returns a copy of ctx carrying p.
 func WithPrincipal(ctx context.Context, p Principal) context.Context {
 	return context.WithValue(ctx, principalKey{}, p)
@@ -21,7 +23,7 @@ func WithPrincipal(ctx context.Context, p Principal) context.Context {
 
 // WithTelegramUserID returns a copy of ctx carrying telegramID.
 func WithTelegramUserID(ctx context.Context, id string) context.Context {
-	return context.WithValue(ctx, "telegramID", id)
+	return context.WithValue(ctx, telegramIDKey{}, id)
 }
 
 // UserIDFrom returns authenticated user's ID, or errDom.ErrUnauthenticated (if missing principal)
@@ -34,7 +36,7 @@ func UserIDFrom(ctx context.Context) (uuid.UUID, error) {
 }
 
 func TelegramUserIDFrom(ctx context.Context) (string, error) {
-	telegramID, ok := ctx.Value("telegramID").(string)
+	telegramID, ok := ctx.Value(telegramIDKey{}).(string)
 	if !ok {
 		return "", errDom.ErrUnauthenticated
 	}

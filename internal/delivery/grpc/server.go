@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
 	// Generated
@@ -27,6 +28,19 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/recovery"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/requestid"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/telegramuser"
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/timeout"
+)
+
+// Const
+const (
+	maxRecvMsgSize              = 1 << 20 // 1 MB
+	maxConcurrentStreams        = 100
+	connectionTimeout           = 10 * time.Second
+	rpcTimeout                  = 10 * time.Second
+	keepaliveMaxConnectionIdle  = 5 * time.Minute  // close connections idle this long
+	keepaliveTime               = 2 * time.Hour    // ping an idle client after this
+	keepaliveTimeout            = 20 * time.Second // drop it if the ping isn't answered
+	keepaliveEnforcementMinTime = 30 * time.Second // clients may ping at most this often
 )
 
 // Private
@@ -62,11 +76,32 @@ func Setup(
 	utelHan := handler.NewUserTelegramContextHandler(usecase.TelegramBindCode, usecase.UserTelegramContext, bindLimiter)
 
 	// Initiate server
+	grpcKeepaliveParams := grpc.KeepaliveParams(
+		keepalive.ServerParameters{
+			MaxConnectionIdle: keepaliveMaxConnectionIdle,
+			Time:              keepaliveTime,
+			Timeout:           keepaliveTimeout,
+		},
+	)
+
+	grpcKeepaliveEnforcementPolicy := grpc.KeepaliveEnforcementPolicy(
+		keepalive.EnforcementPolicy{
+			MinTime:             keepaliveEnforcementMinTime,
+			PermitWithoutStream: true, // allow pings between calls
+		},
+	)
+
 	srv := grpc.NewServer(
+		grpc.MaxRecvMsgSize(maxRecvMsgSize),
+		grpc.MaxConcurrentStreams(maxConcurrentStreams),
+		grpc.ConnectionTimeout(connectionTimeout),
+		grpcKeepaliveParams,
+		grpcKeepaliveEnforcementPolicy,
 		grpc.ChainUnaryInterceptor(
 			requestid.UnaryServerInterceptor(),
 			accesslog.UnaryServerInterceptor(),
 			recovery.UnaryServerInterceptor(),
+			timeout.UnaryServerInterceptor(rpcTimeout),
 			apikeyauth.UnaryServerInterceptor(apiKey),
 			telegramuser.UnaryServerInterceptor(
 				userLookup(usecase),

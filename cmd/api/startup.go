@@ -34,7 +34,7 @@ func RunServers(ctx context.Context, grpcSrvLayer *dlvGrpc.ServerLayer, gqlServe
 		return nil
 	})
 
-	// Gracefull shutdown
+	// Graceful shutdown
 	g.Go(func() error {
 		<-gctx.Done()
 

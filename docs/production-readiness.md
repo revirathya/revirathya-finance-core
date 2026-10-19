@@ -129,11 +129,20 @@ Last reviewed: 2026-10-19
   - [x] Docker `healthcheck` for `core`, via the binary's own `healthcheck` subcommand (the image is distroless).
   - Optional later: report `/readyz` as not ready as soon as shutdown starts; tie gRPC health to the database
     if a gRPC load balancer or probe starts depending on it.
-- [ ] **Timeouts and limits.**
+- [x] **Timeouts and limits.**
   - [x] HTTP server timeouts (see bug list).
   - [x] Per-request context deadline for GraphQL (`http.TimeoutHandler`).
-  - [ ] gRPC `MaxRecvMsgSize` and keepalive settings.
-  - [ ] pgxpool settings: `MaxConns`, `MaxConnLifetime`, etc.
+  - [x] gRPC: `MaxRecvMsgSize` 1 MB, `MaxConcurrentStreams` 100, 10s connection timeout, keepalive params and
+    enforcement policy (client pings at most every 30s).
+  - [x] gRPC default deadline: `interceptor/timeout` gives calls without a client deadline 10s; `ToStatus` maps
+    `DeadlineExceeded` / `Canceled` instead of reporting them as `INTERNAL`.
+  - [x] pgxpool settings in code: `MaxConns` 10, `MinConns` 1, `MaxConnLifetime` 1h, `MaxConnIdleTime` 30m,
+    5s connect timeout, `statement_timeout` 10s, `application_name`.
+  - [x] `make test-integration` and CI run `-tags=integration ./test/...`, so integration tests outside
+    `test/internal/repository/` (e.g. `test/internal/platform/database`) run too.
+  - Optional: `DB_MAX_CONNS` (and maybe `statement_timeout`) as config once the deploy target is known.
+  - Optional: GraphQL `ErrorPresenter` still logs resolver errors from a request timeout as `graphql request
+    failed`; map `context.DeadlineExceeded` there too to cut that noise.
 - [x] **Panic recovery.** gRPC: an interceptor after `requestid` and `accesslog` and before the auth interceptors,
   so it covers auth too; logs the panic with a stack trace and returns `Internal`. GraphQL: `RecoverFunc`.
 - [ ] **Config validation.**
@@ -172,7 +181,7 @@ Last reviewed: 2026-10-19
   - [ ] `govulncheck` (deferred, see section 5)
   - [x] Generated-code drift check (regenerate, then fail on any modified or untracked file)
   - [x] Migration test: `up`, `down --all`, `up` against a Postgres service container
-  - [x] Integration tests: `go test -race -tags=integration ./test/internal/repository/...`.
+  - [x] Integration tests: `go test -race -tags=integration ./test/...`.
 - [ ] **Tests.** All tests live in `test/`, mirroring `internal/`.
   - [x] Repository integration tests against real Postgres (testcontainers-go): `test/internal/repository/postgres`,
     one container per package via `testutil.RunWithPostgres`; run with `make test-integration`.

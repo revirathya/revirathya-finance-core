@@ -121,7 +121,7 @@ func TestUnaryServerInterceptorBehaviour(t *testing.T) {
 		}
 
 		want := status.Error(codes.NotFound, "get expense 1: not found")
-		if _, err := call(context.Background(), testMethod, want); err != want {
+		if _, err := call(context.Background(), testMethod, want); !errors.Is(err, want) {
 			t.Fatalf("error %v, want the handler's error unchanged", err)
 		}
 	})

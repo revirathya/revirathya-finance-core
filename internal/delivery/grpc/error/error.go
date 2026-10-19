@@ -30,6 +30,10 @@ func ToStatus(ctx context.Context, op string, err error) error {
 		return status.Error(codes.InvalidArgument, vErr.Error())
 	case errors.Is(err, errDom.ErrInvalidInput):
 		return status.Error(codes.InvalidArgument, "invalid argument")
+	case errors.Is(err, context.DeadlineExceeded):
+		return status.Error(codes.DeadlineExceeded, "request timeout")
+	case errors.Is(err, context.Canceled):
+		return status.Error(codes.Canceled, "request canceled")
 	default:
 		slog.ErrorContext(ctx, "grpc request failed", "op", op, "err", err)
 		return status.Error(codes.Internal, "internal error")
