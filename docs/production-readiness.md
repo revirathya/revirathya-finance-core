@@ -48,7 +48,7 @@ Last reviewed: 2026-10-19
 - [x] **`ErrorPresenter` hid GraphQL validation and parse errors.** Its `default` branch turns every unknown
   error into `internal error` / `INTERNAL`, including errors gqlgen produces itself before any resolver runs:
   unknown fields, missing required arguments, syntax errors. Clients can't see what's wrong with their query.
-  - Fix: in [`internal/delivery/graphql/error/error.go`](../internal/delivery/graphql/error/error.go), return the default
+  - Fix: in [`internal/delivery/http/graphql/error/error.go`](../internal/delivery/http/graphql/error/error.go), return the default
     presenter's error unchanged when its `code` extension is `errcode.ValidationFailed` or `errcode.ParseFailed`
     (`github.com/99designs/gqlgen/graphql/errcode`). These only describe the query, never server internals.
   - Done: validation and parse errors pass through unchanged. Verified: unknown fields, syntax errors and missing
@@ -190,7 +190,7 @@ Last reviewed: 2026-10-19
   - [x] Usecase tests for every usecase, including `user`, `auth` and `telegrambindcode`.
   - [x] Unit tests for the gRPC plumbing (all interceptors, `ToStatus`), config, logging, session tokens and the
     rate limiter.
-  - [x] Restore the tests removed in the restructuring (`a38fd29`), now in `test/internal/delivery/graphql/`: the
+  - [x] Restore the tests removed in the restructuring (`a38fd29`), now in `test/internal/delivery/http/`: the
     production handler from `graphql.Setup`, `ChainMiddleware`, every HTTP middleware, health handlers, and
     `ErrorPresenter` / `RecoverFunc` (with errors wrapped the way gqlgen wraps them).
   - [x] Fix the three bugs these tests found:
@@ -213,8 +213,9 @@ Last reviewed: 2026-10-19
 ## 3. Nice-to-have
 
 ### Observability
-- [ ] Prometheus metrics at `/metrics`, using the `go-grpc-middleware` prometheus provider plus gqlgen
-  tracing.
+- [x] Prometheus metrics at `/metrics` on a separate `METRICS_PORT` listener: gRPC via the `go-grpc-middleware`
+  prometheus provider, `/graphql` requests and latency, GraphQL errors by code, pgxpool stats, Go runtime and process.
+  Optional later: dashboards and alerts (error rate, latency, `db_pool_acquire_wait_total` growth).
 - [ ] OpenTelemetry tracing from gRPC and GraphQL through to pgx (`otelpgx`).
 
 ### API design

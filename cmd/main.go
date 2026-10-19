@@ -16,35 +16,39 @@ import (
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/config"
-	dlvGql "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql"
 	dlvGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
+	dlvHttp "github.com/revirathya/revirathya-finance-core/internal/delivery/http"
+	httpGql "github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql"
+	dlvMetrics "github.com/revirathya/revirathya-finance-core/internal/delivery/metrics"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/google"
 	logApp "github.com/revirathya/revirathya-finance-core/internal/platform/logging"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/metrics"
 	"github.com/revirathya/revirathya-finance-core/internal/repository"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase"
 )
 
 func main() {
+	// Get Config
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("load config", "err", err)
+		os.Exit(1)
+	}
+
 	// Early Healtcheck
 	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
-		os.Exit(sub.RunHealthcheck())
+		os.Exit(sub.RunHealthcheck(cfg.HttpPort))
 	}
 
 	// Run
-	if err := run(); err != nil {
+	if err := run(cfg); err != nil {
 		slog.Error("server stopped", "err", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	// Get config
-	cfg, err := config.Load()
-	if err != nil {
-		return fmt.Errorf("load config: %w", err)
-	}
-
+func run(cfg *config.Config) error {
 	// Setup logger
 	logger, err := logApp.NewLogger(os.Stdout, cfg.LogFormat, cfg.LogLevel)
 	if err != nil {
@@ -73,35 +77,52 @@ func run() error {
 	gVeri := google.NewGoogleVerifier(cfg.GoogleClientID)
 	tokenManager := auth.NewTokenManager(cfg.JwtSecret, cfg.JwtTtl)
 
+	// Setup metrics collector
+	metricsColl := metrics.NewMetrics(pool)
+
 	// Setup repo and usecase
 	repo := repository.BootstrapRepository(pool)
 	uc := usecase.BootstrapUsecase(gVeri, repo)
 
 	// Setup server - gRPC
-	grpcSrvLayer, err := dlvGrpc.Setup(cfg.GrpcPort, cfg.GrpcEnableReflection, cfg.GrpcApiKey, uc)
+	grpcSrvLayer, err := dlvGrpc.Setup(
+		cfg.GrpcPort,
+		cfg.GrpcEnableReflection,
+		cfg.GrpcApiKey,
+		metricsColl,
+		uc,
+	)
 	if err != nil {
 		return fmt.Errorf("setup grpc server: %w", err)
 	}
 
-	// Setup server - GraphQL
-	gqlSrvLayer := dlvGql.Setup(
-		cfg.GqlPort,
+	// Setup server - HTTP
+	httpSrvLayer := dlvHttp.Setup(cfg.HttpPort, pool.Ping)
+
+	// Configure GraphQL
+	httpGql.RegisterHandler(
+		httpSrvLayer,
 		cfg.AllowedOrigins,
-		pool.Ping,
 		cfg.GqlEnableIntrospection,
 		tokenManager,
+		metricsColl,
 		uc,
 	)
 
+	// Setup metrics server
+	metricsSrvLayer := dlvMetrics.Setup(cfg.MetricsPort, metricsColl)
+
 	// Setup server - integration
-	g := api.RunServers(ctx, grpcSrvLayer, gqlSrvLayer)
+	g := api.RunServers(ctx, grpcSrvLayer, httpSrvLayer, metricsSrvLayer)
 	slog.Info(
 		"server started",
 		"grpc_addr", cfg.GrpcPort,
-		"gql_port", cfg.GqlPort,
+		"http_port", cfg.HttpPort,
+		"metrics_port", cfg.MetricsPort,
 	)
 	if err := g.Wait(); err != nil {
 		return fmt.Errorf("serve: %w", err)
 	}
+
 	return nil
 }

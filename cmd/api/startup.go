@@ -9,15 +9,21 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	// Internal
-	dlvGql "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql"
 	dlvGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
+	dlvHttp "github.com/revirathya/revirathya-finance-core/internal/delivery/http"
+	dlvMetrics "github.com/revirathya/revirathya-finance-core/internal/delivery/metrics"
 )
 
 const (
 	shutdownTimeout = 10 * time.Second
 )
 
-func RunServers(ctx context.Context, grpcSrvLayer *dlvGrpc.ServerLayer, gqlServerLayer *dlvGql.ServerLayer) *errgroup.Group {
+func RunServers(
+	ctx context.Context,
+	grpcSrvLayer *dlvGrpc.ServerLayer,
+	httpSrvLayer *dlvHttp.ServerLayer,
+	metricsSrvLayer *dlvMetrics.ServerLayer,
+) *errgroup.Group {
 	// Init errgroup
 	g, gctx := errgroup.WithContext(ctx)
 
@@ -26,9 +32,17 @@ func RunServers(ctx context.Context, grpcSrvLayer *dlvGrpc.ServerLayer, gqlServe
 		return grpcSrvLayer.Server.Serve(grpcSrvLayer.Listener)
 	})
 
-	// Serve GraphQL
+	// Serve HTTP (GraphQL)
 	g.Go(func() error {
-		if err := gqlServerLayer.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := httpSrvLayer.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
+		return nil
+	})
+
+	// Serve Metrics
+	g.Go(func() error {
+		if err := metricsSrvLayer.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}
 		return nil
@@ -53,7 +67,9 @@ func RunServers(ctx context.Context, grpcSrvLayer *dlvGrpc.ServerLayer, gqlServe
 			grpcSrvLayer.Server.Stop()
 		}
 
-		return gqlServerLayer.Server.Shutdown(shutdownCtx)
+		httpErr := httpSrvLayer.Server.Shutdown(shutdownCtx)
+		metricsErr := metricsSrvLayer.Server.Shutdown(shutdownCtx)
+		return errors.Join(httpErr, metricsErr)
 	})
 
 	return g

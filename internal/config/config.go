@@ -14,8 +14,9 @@ type Config struct {
 	DatabaseURI            string
 	GrpcApiKey             string
 	GrpcPort               string
+	HttpPort               string
+	MetricsPort            string
 	GrpcEnableReflection   bool
-	GqlPort                string
 	GqlEnableIntrospection bool
 	AllowedOrigins         []string
 	GoogleClientID         string
@@ -49,8 +50,9 @@ func Load() (*Config, error) {
 	cfg.DatabaseURI = getEnv("DATABASE_URI", "")
 	cfg.GrpcApiKey = getEnv("GRPC_API_KEY", "")
 	cfg.GrpcPort = ":" + getEnv("GRPC_PORT", "50051")
+	cfg.HttpPort = ":" + getEnv("HTTP_PORT", "8080")
+	cfg.MetricsPort = ":" + getEnv("METRICS_PORT", "9090")
 	cfg.GrpcEnableReflection = getEnv("GRPC_ENABLE_REFLECTION", "false") == "true"
-	cfg.GqlPort = ":" + getEnv("GQL_PORT", "8080")
 	cfg.GqlEnableIntrospection = getEnv("GQL_ENABLE_INTROSPECTION", "false") == "true"
 	cfg.AllowedOrigins = getEnvArray("ALLOWED_ORIGINS", "http://localhost,http://127.0.0.1")
 	cfg.GoogleClientID = getEnv("GOOGLE_CLIENT_ID", "")

@@ -38,16 +38,18 @@ services:
       GRPC_API_KEY: "${GRPC_API_KEY:?GRPC_API_KEY is required}"
       GRPC_PORT: "50051"
       GRPC_ENABLE_REFLECTION: ${GRPC_ENABLE_REFLECTION:-false}
-      GQL_PORT: "8080"
+      HTTP_PORT: "8080"
       GQL_ENABLE_INTROSPECTION: ${GQL_ENABLE_INTROSPECTION:-false}
+      METRICS_PORT: "9090"
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_TTL: ${JWT_TTL:-}
       LOG_FORMAT: ${LOG_FORMAT:-json}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
-      - "${GQL_HOST_PORT:-8180}:8080"
       - "${GRPC_HOST_PORT:-51051}:50051"
+      - "${HTTP_HOST_PORT:-8180}:8080"
+      - "127.0.0.1:${METRICS_HOST_PORT:-9900}:9090"
     healthcheck:
       test: ["CMD", "/app/financecore", "healthcheck"]
       interval: 10s

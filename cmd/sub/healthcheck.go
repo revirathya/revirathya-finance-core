@@ -1,15 +1,16 @@
 package sub
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 )
 
-func RunHealthcheck() int {
+func RunHealthcheck(port string) int {
 	client := &http.Client{
 		Timeout: 2 * time.Second,
 	}
-	resp, err := client.Get("http://localhost:8080/readyz")
+	resp, err := client.Get(fmt.Sprintf("http://localhost%s/readyz", port))
 	if err != nil {
 		return 1
 	}

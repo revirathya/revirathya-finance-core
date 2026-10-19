@@ -102,7 +102,8 @@ make docker-build svc=migration   # Build the migration image (revirathya-financ
 make docker-up                    # Start db -> migration -> core
 ```
 
-In Docker mode the app is reachable on the host ports (gRPC `:51051`, GraphQL `:8180/graphql` by default).
+In Docker mode the app is reachable on the host ports (gRPC `:51051`, GraphQL `:8180/graphql`, metrics
+`:9900/metrics` by default). The app's ports are published on `127.0.0.1` only, so other machines can't reach them.
 
 The Docker files live in `infra/docker/` (`Dockerfile`, `migration.Dockerfile`, `docker-compose.yaml`). The Makefile
 runs compose with `--project-directory .`, so it reads the root `.env` and keeps the project name
@@ -158,7 +159,8 @@ Copy `.env.example` to `.env`. Only the required variables must be set; prefer t
 |`DB_USER`|`revirathya`|Postgres user|
 |`DB_NAME`|`finance`|Postgres database name|
 |`GRPC_PORT`|`50051`|gRPC listen port (plain number, no `:`), local mode only|
-|`GQL_PORT`|`8080`|GraphQL listen port (plain number, no `:`), local mode only|
+|`HTTP_PORT`|`8080`|HTTP listen port for GraphQL (`/graphql`) and health checks (plain number, no `:`), local mode only. Replaces `GQL_PORT`.|
+|`METRICS_PORT`|`9090`|Listen port for Prometheus metrics (`/metrics`), local mode only. Keep it internal.|
 |`ALLOWED_ORIGINS`|`http://localhost,http://127.0.0.1`|Comma-separated CORS origins for GraphQL. Must be full origins including scheme and port, e.g. `http://localhost:3000`|
 |`JWT_TTL`|`24h`|Session token lifetime, as a Go duration (e.g. `30m`, `12h`)|
 |`GRPC_ENABLE_REFLECTION`|`false`|Register gRPC server reflection, so `grpcurl` and Postman can discover services without proto files. Keep it off in production.|
@@ -169,13 +171,15 @@ Copy `.env.example` to `.env`. Only the required variables must be set; prefer t
 ### Optional: host ports for Docker mode
 
 These control which ports on your machine map to the containers. The ports inside the containers are fixed
-(Postgres `5432`, gRPC `50051`, GraphQL `8080`), so `GRPC_PORT` / `GQL_PORT` have no effect in Docker mode.
+(Postgres `5432`, gRPC `50051`, HTTP `8080`, metrics `9090`), so `GRPC_PORT` / `HTTP_PORT` / `METRICS_PORT` have no
+effect in Docker mode.
 
 |Var|Default|Description|
 |:--|:--|:--|
 |`DB_HOST_PORT`|`5532`|Host port for Postgres|
 |`GRPC_HOST_PORT`|`51051`|Host port for gRPC|
-|`GQL_HOST_PORT`|`8180`|Host port for GraphQL|
+|`HTTP_HOST_PORT`|`8180`|Host port for HTTP (GraphQL, health checks). Replaces `GQL_HOST_PORT`.|
+|`METRICS_HOST_PORT`|`9900`|Host port for metrics|
 
 ## Migrations
 
@@ -273,6 +277,28 @@ in `DATABASE_URI`: at most 10 connections (1 kept open), each replaced after 1 h
 connect timeout. Every session runs with `statement_timeout = 10s`, so Postgres cancels any statement running
 longer, and `application_name = financecore` (visible in `pg_stat_activity`).
 
+## Metrics
+
+Prometheus metrics are served at `GET /metrics` on their own port (`METRICS_PORT`, default `9090`), not on the
+public HTTP port, so they can stay internal. Only `/metrics` is served there.
+
+|Metric|Type|Labels|What it measures|
+|:--|:--|:--|:--|
+|`grpc_server_started_total`, `grpc_server_handled_total`|counter|`grpc_service`, `grpc_method`, `grpc_type` (+ `grpc_code` on handled)|gRPC calls; every method is exported at zero from startup|
+|`grpc_server_handling_seconds`|histogram|`grpc_service`, `grpc_method`, `grpc_type`|gRPC latency|
+|`http_requests_total`|counter|`handler` (`graphql`), `code`|`/graphql` requests by HTTP status, including middleware rejections (413, 503)|
+|`http_request_duration_seconds`|histogram|`handler`|`/graphql` latency|
+|`graphql_errors_total`|counter|`code`|GraphQL errors by `extensions.code` (`BAD_USER_INPUT`, `INTERNAL`, ...)|
+|`db_pool_connections_max` / `_total` / `_acquired` / `_idle`|gauge|—|Connection pool size and use|
+|`db_pool_acquires_total`, `db_pool_acquire_wait_total`, `db_pool_acquire_wait_seconds_total`|counter|—|Connection acquires; a growing wait count means requests queue for a connection|
+|`go_*`, `process_*`|various|—|Go runtime and process (memory, goroutines, CPU, open files)|
+
+Labels are bounded on purpose (no GraphQL operation names, no user IDs).
+
+```sh
+curl -s localhost:9090/metrics | grep -E '^(grpc_server_handled_total|http_requests_total|db_pool_connections)'
+```
+
 ## Pagination
 
 Expense lists are paged, newest first (`transaction_dt`, then `id`, descending). Pages are cursor-based: pass the
@@ -337,7 +363,8 @@ replaced with a new UUID. Browsers can send and read `X-Request-ID` through CORS
 
 None of them require authentication. In Docker mode, `core` reports its health through `/readyz`
 (`docker compose ps` shows `healthy`). The runtime image has no shell or `curl`, so the check runs the binary
-itself: `financecore healthcheck` exits `0` when `/readyz` returns `200`, and `1` otherwise.
+itself: `financecore healthcheck` exits `0` when `/readyz` on `HTTP_PORT` returns `200`, and `1` otherwise. It loads the
+same config as the server, so it needs the same environment.
 
 ```sh
 curl -i localhost:8080/readyz

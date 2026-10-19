@@ -49,7 +49,7 @@ make migrate-version
 # Codegen — run after editing source-of-truth files
 make proto-generate   # buf generate: proto/**/*.proto -> gen/go/**
 make sqlc-generate    # sqlc generate: sqlc/queries/*.sql -> gen/sqlc
-make gql-generate     # gqlgen generate: graphql/schema/*.graphql -> gen/graphql + resolver stubs in internal/delivery/graphql/resolver
+make gql-generate     # gqlgen generate: graphql/schema/*.graphql -> gen/graphql + resolver stubs in internal/delivery/http/graphql/resolver
 
 # gRPC dev tools (read local proto files; server reflection is only registered with GRPC_ENABLE_REFLECTION=true)
 make grpc-list
@@ -67,7 +67,7 @@ passed through make variables (`args="..."`), not as `make docker-down -v`.
 
 Two run modes: local mode (`make docker-up svc=db` + `make run`, app reads `DATABASE_URI` pointing at
 `localhost:$DB_HOST_PORT`) and Docker mode (`make docker-up`, compose builds an in-network DSN to `db:5432` and
-pins container ports `50051`/`8080`; host ports come from `*_HOST_PORT`).
+pins container ports `50051`/`8080`/`9090`; host ports come from `*_HOST_PORT` and are bound to `127.0.0.1`).
 
 ## Architecture
 
@@ -80,8 +80,8 @@ sqlc/queries/*.sql             hand-written SQL, source of truth for sqlc
 gen/go, gen/graphql, gen/sqlc  generated code (buf / gqlgen / sqlc), committed — do not hand-edit
 migrations/                    golang-migrate pairs
 cmd/main.go                    package main: config, logger, DB pool, wiring, run(); `healthcheck` subcommand
-cmd/api/startup.go             RunServers: runs both servers in an errgroup, graceful shutdown
-cmd/sub/healthcheck.go         RunHealthcheck: `financecore healthcheck` (calls /readyz; used by Docker)
+cmd/api/startup.go             RunServers: runs the gRPC, HTTP and metrics servers in an errgroup, graceful shutdown
+cmd/sub/healthcheck.go         RunHealthcheck(port): `financecore healthcheck` (calls /readyz on HTTP_PORT; used by Docker)
 internal/domain                entities, forms/patches with Validate(), repository interfaces (no framework deps)
 internal/domain/error          domain errors + ValidationError; always import as errDom
 internal/domain/validation     per-field validation helpers (ValidateString/Date/Decimal) used by Validate()
@@ -100,18 +100,23 @@ internal/delivery/grpc/
   interceptor/timeout          default 10s deadline for calls without a client deadline; right after recovery
   interceptor/apikeyauth       bot API key (authorization: Bearer)
   interceptor/telegramuser     x-telegram-user-id -> principal (unbound users: BindTelegramAccount only)
-internal/delivery/graphql/
-  server.go                    Setup: gqlgen server, limits, routes (/graphql, /healthz, /readyz) -> ServerLayer
-  resolver/                    gqlgen resolvers (*.resolver.go regenerated; resolver.go is hand-maintained DI)
-  error/error.go               ErrorPresenter: domain error -> GraphQL error code (import as errGql)
-  error/recovery.go            RecoverFunc: logs resolver panics via slog; ErrorPresenter skips logging them again
+internal/delivery/http/
+  server.go                    Setup: the HTTP server + mux (requestid -> accesslog), /healthz, /readyz -> ServerLayer
   health/                      /healthz and /readyz handlers
   middleware/helper.go         ChainMiddleware (first listed = outermost, like grpc.ChainUnaryInterceptor)
-  middleware/<name>/           requestid, accesslog, limitbody, withcors, withauth (session JWT -> principal), withtimeout
+  middleware/recorder.go       StatusRecorder: shared status capture (first status wins) for accesslog and metrics
+  middleware/<name>/           HTTP-wide middleware: requestid, accesslog, metricscollector (records into platform/metrics)
+  graphql/setup.go             RegisterHandler: gqlgen handler + limits on the ServerLayer's mux at /graphql
+  graphql/resolver/            gqlgen resolvers (*.resolver.go regenerated; resolver.go is hand-maintained DI)
+  graphql/error/error.go       ErrorPresenter: domain error -> GraphQL error code (import as errGql)
+  graphql/error/recovery.go    RecoverFunc: logs resolver panics via slog; ErrorPresenter skips logging them again
+  graphql/middleware/<name>/   /graphql-only middleware (after metricscollector, which is outermost): limitbody, withcors, withauth (session JWT -> principal), withtimeout
+internal/delivery/metrics/     Setup: separate metrics server (METRICS_PORT) serving only GET /metrics
 internal/auth                  principal + Telegram ID in context, session JWT (TokenManager), bind-code helpers
 internal/platform/database     pgxpool setup (limits + statement_timeout, set in code) + pgx<->domain type conversion helpers (UUID/Date/Numeric/Timestamp)
 internal/platform/google       Google ID-token verifier (implements domain.GoogleVerifier)
 internal/platform/ratelimit    in-memory fixed-window limiter (per process)
+internal/platform/metrics      Prometheus registry + collectors (gRPC, HTTP, GraphQL errors, pool); ObserveHTTP, GraphQLError
 internal/platform/logging      slog setup (LOG_FORMAT json/text, LOG_LEVEL), request ID in context, EnsureRequestID
 internal/config                env-based config loading (.env via godotenv, falls back to OS env)
 infra/docker/                  Dockerfile, migration.Dockerfile, docker-compose.yaml
@@ -127,11 +132,13 @@ pgx wire types happens only inside `internal/repository/postgres/<entity>/reposi
 `ToNullablePgxDate`, `ToPgxNumeric`/`FromPgxNumeric`).
 
 `cmd/main.go` builds `repository.BootstrapRepository(pool)` -> `usecase.BootstrapUsecase(...)` ->
-`dlvGrpc.Setup(...)` / `dlvGql.Setup(...)`, then `api.RunServers` runs the gRPC server and the GraphQL HTTP server
+`dlvGrpc.Setup(...)` / `dlvHttp.Setup(...)` + `dlvGql.RegisterHandler(...)`, then `api.RunServers` runs the gRPC
+server and the HTTP server
 inside an `errgroup`, so either server failing — or SIGINT/SIGTERM — brings both down together via graceful
 shutdown. On the HTTP side the whole mux is wrapped in `requestid` -> `accesslog`; `/graphql` additionally goes
 through `limitbody` -> `withcors` -> `withauth` -> `withtimeout`; `/healthz` and `/readyz` sit outside CORS and auth.
-The gRPC chain is `requestid` -> `accesslog` -> `recovery` -> `timeout` -> `apikeyauth` -> `telegramuser`; server
+The gRPC chain is `requestid` -> `accesslog` -> metrics -> `recovery` -> `timeout` -> `apikeyauth` -> `telegramuser`
+(`InitializeMetrics` runs after the services are registered); server
 options in `grpc/server.go` cap messages at 1 MB and set keepalive. `ToStatus` maps `context.DeadlineExceeded` /
 `context.Canceled` to `DeadlineExceeded` / `Canceled` without logging them.
 
@@ -204,7 +211,8 @@ that migrates down, inserts old-shape rows, and checks them after `up` and `down
 - Adding a new entity/feature touches, in order: migration (+ `sqlc.yaml`) -> sqlc query -> `make sqlc-generate` ->
   domain entity, form/patch with `Validate()`, repo interface -> postgres repo impl in
   `internal/repository/postgres/<entity>/` -> usecase -> (grpc handler and/or graphql resolver) -> wire up in
-  `internal/repository/bootstrap.go`, `internal/usecase/bootstrap.go` and `internal/delivery/{grpc,graphql}/server.go`.
+  `internal/repository/bootstrap.go`, `internal/usecase/bootstrap.go`, `internal/delivery/grpc/server.go` and
+  `internal/delivery/http/graphql/setup.go`.
 - Code must pass `make lint` (CI runs golangci-lint). Silence a finding only with a targeted
   `//nolint:<linter> // <reason>` on that line, never by disabling the linter.
 - Logging: use `log/slog`'s `*Context` methods (`slog.InfoContext`, `slog.ErrorContext`, ...) wherever a request
@@ -214,7 +222,7 @@ that migrates down, inserts old-shape rows, and checks them after `up` and `down
   packages.
 - Usecase tests use hand-written fakes implementing the domain repository interface (see
   `test/internal/usecase/category/usecase_test.go`) rather than mocking frameworks.
-- GraphQL resolver files under `internal/delivery/graphql/resolver/` are regenerated by `gqlgen generate` except
+- GraphQL resolver files under `internal/delivery/http/graphql/resolver/` are regenerated by `gqlgen generate` except
   `resolver.go`, which is the manually maintained dependency-injection root (`NewResolver(tokens, usecase)`).
   New usecases are added to `usecase.Usecase` and reached through it.
 - List endpoints use keyset (cursor) pagination, as `ListExpenses` does: a total order with a unique tiebreaker
@@ -222,5 +230,8 @@ that migrates down, inserts old-shape rows, and checks them after `up` and `down
   `LIMIT page size + 1` to detect a next page, and an opaque base64url cursor (`domain.ExpenseCursor`). Page size:
   `domain.DefaultPageSize` / `domain.MaxPageSize`. GraphQL returns `nodes` + `pageInfo`; gRPC follows AIP-158
   (`page_size`, `page_token`, `next_page_token`).
+- Metrics: one registry (`platform/metrics`), passed in, never the Prometheus global. Labels must be bounded
+  (route names, codes, method names), never client-supplied values or IDs. `/metrics` lives only on the metrics
+  server, never on the public HTTP port.
 - Packages named after a builtin or a common identifier (`error`) are always imported with an alias:
   `errDom` (domain), `errGrpc` (gRPC mapper), `errGql` (GraphQL mapper).
