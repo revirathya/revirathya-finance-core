@@ -54,15 +54,7 @@ func (r *expenseRepositoryImpl) CreateExpense(ctx context.Context, form domain.E
 		return nil, err
 	}
 
-	result := &domain.Expense{
-		ID:            database.FromPgxUUID(row.ID),
-		UserID:        database.FromPgxUUID(row.UserID),
-		CategoryID:    database.FromPgxUUID(row.CategoryID),
-		TransactionDt: database.FromPgxDate(row.TransactionDt),
-		Description:   row.Description,
-		Amount:        database.FromPgxNumeric(row.Amount),
-	}
-	return result, nil
+	return r.GetExpenseByID(ctx, database.FromPgxUUID(row.ID), form.UserID)
 }
 
 func (r *expenseRepositoryImpl) GetExpenseByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Expense, error) {
@@ -139,7 +131,7 @@ func (r *expenseRepositoryImpl) UpdateExpense(ctx context.Context, id uuid.UUID,
 		UserID:        database.ToPgxUUID(userID),
 	}
 
-	row, err := r.query.UpdateExpense(ctx, args)
+	_, err := r.query.UpdateExpense(ctx, args)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Not found to-be-updated expense
@@ -158,15 +150,7 @@ func (r *expenseRepositoryImpl) UpdateExpense(ctx context.Context, id uuid.UUID,
 		return nil, err
 	}
 
-	result := &domain.Expense{
-		ID:            database.FromPgxUUID(row.ID),
-		UserID:        database.FromPgxUUID(row.UserID),
-		CategoryID:    database.FromPgxUUID(row.CategoryID),
-		TransactionDt: database.FromPgxDate(row.TransactionDt),
-		Description:   row.Description,
-		Amount:        database.FromPgxNumeric(row.Amount),
-	}
-	return result, nil
+	return r.GetExpenseByID(ctx, id, userID)
 }
 
 func (r *expenseRepositoryImpl) DeleteExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {

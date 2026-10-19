@@ -76,7 +76,12 @@ func (p *UserPatch) Validate() error {
 		if err != nil {
 			return err
 		}
-		p.LastName = &lastName
+
+		if lastName == "" {
+			p.LastName = nil
+		} else {
+			p.LastName = &lastName
+		}
 	}
 
 	return nil

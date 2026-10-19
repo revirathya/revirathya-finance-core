@@ -7,13 +7,10 @@ package resolver
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
-	errGql "github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql/error"
 )
 
 // LoginWithGoogle is the resolver for the loginWithGoogle field.
@@ -49,17 +46,7 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUse
 		return nil, err
 	}
 
-	firstName := strings.TrimSpace(input.FirstName)
-	if firstName == "" {
-		return nil, errGql.NewInvalidInputError(fmt.Errorf("first_name is required"))
-	}
-
-	lastName := input.LastName
-	if (lastName != nil) && (*lastName == "") {
-		lastName = nil
-	}
-
-	user, err := r.usecase.User.UpdateUser(ctx, userID, firstName, lastName)
+	user, err := r.usecase.User.UpdateUser(ctx, userID, input.FirstName, input.LastName)
 	if err != nil {
 		return nil, err
 	}

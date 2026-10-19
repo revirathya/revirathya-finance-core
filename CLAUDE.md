@@ -195,7 +195,10 @@ All tests live under `test/`, mirroring the package they cover (`test/internal/u
 the `//go:build integration` tag; each integration package has
 `func TestMain(m *testing.M) { os.Exit(testutil.RunWithPostgres(m)) }`, which starts a Postgres container, applies
 `migrations/` and sets `testutil.TestPool` / `testutil.TestDSN`. Data migrations get a test in `test/migrations/`
-that migrates down, inserts old-shape rows, and checks them after `up` and `down` (`testutil.MigrationsDir()`). CI runs unit tests with `-race`.
+that migrates down, inserts old-shape rows, and checks them after `up` and `down` (`testutil.MigrationsDir()`). Handlers and resolvers are tested end-to-end
+(`test/internal/delivery/grpc/handler`, `test/internal/delivery/http/graphql/resolver`): the production servers on
+`testutil.NewUsecases(verifier)` (real repositories on `TestPool`) with `testutil.FakeGoogleVerifier`. CI runs unit
+tests with `-race`.
 
 ## Conventions to follow when extending
 

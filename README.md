@@ -424,7 +424,8 @@ make test-integration  # all tests, including integration tests against a real P
 ```
 
 Tests live in `test/`, mirroring the `internal/` package they cover (e.g. `test/internal/usecase/category` tests
-`internal/usecase/category`); shared helpers are in `testutil/`. CI also runs the unit tests with `-race`
+`internal/usecase/category`); shared helpers are in `testutil/`. gRPC handlers and GraphQL resolvers are
+tested end-to-end against the real servers, usecases and Postgres, with only Google sign-in faked. CI also runs the unit tests with `-race`
 (`go test -race ./test/...`). Integration tests carry the `integration` build tag; each package's `TestMain` calls `testutil.RunWithPostgres`, which starts a throwaway Postgres container,
 applies `migrations/` and provides `testutil.TestPool`. They never touch your dev database.
 

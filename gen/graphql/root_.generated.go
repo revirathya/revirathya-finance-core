@@ -578,7 +578,7 @@ scalar Date
 "Decimal number as a string, e.g. ` + "`" + `\"12500.50\"` + "`" + `. Never a JSON number, so no precision is lost."
 scalar Decimal
 
-"UUID"
+"UUID string, e.g. \"9b2f6c1e-4a7d-4c3e-8f1a-2d5e6b7c8a90\"."
 scalar UUID
 
 # Shared - Pagination

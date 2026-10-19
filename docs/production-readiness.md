@@ -200,7 +200,12 @@ Last reviewed: 2026-10-19
       can't call the API. Register `"/graphql"`; gqlgen still rejects non-`POST` requests.
     - [x] `ErrorPresenter` changes the message to "internal error" before logging the wrapped resolver error,
       so the log loses the real cause. Log `gqlErr.Err` (the original error) before masking.
-  - [ ] gRPC handler and GraphQL resolver tests.
+  - [x] gRPC handler and GraphQL resolver tests: end-to-end integration tests through the production servers
+    (`dlvGrpc.Setup`, `dlvHttp.Setup` + `RegisterHandler`) on the real usecases, repositories and Postgres, with
+    only Google faked (`testutil.NewUsecases`, `testutil.FakeGoogleVerifier`).
+  - [ ] Fix the bug these tests found: `createExpense` / `updateExpense` (GraphQL) return `categoryId` as the zero
+    UUID and `categoryName` as `""`. The resolvers don't map `CategoryID` / `CategoryName`, and the repository's
+    `INSERT/UPDATE ... RETURNING *` has no `category_name` (only the read queries join `categories`).
 
 ### Documentation
 - [ ] **README / runbook.**

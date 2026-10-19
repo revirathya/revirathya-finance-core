@@ -38,6 +38,8 @@ func (r *mutationResolver) CreateExpense(ctx context.Context, input model.Create
 	response := &model.Expense{
 		ID:            expense.ID,
 		UserID:        expense.UserID,
+		CategoryID:    expense.CategoryID,
+		CategoryName:  expense.CategoryName,
 		TransactionDt: expense.TransactionDt,
 		Description:   expense.Description,
 		Amount:        expense.Amount,
@@ -70,6 +72,8 @@ func (r *mutationResolver) UpdateExpense(ctx context.Context, id uuid.UUID, patc
 	response := &model.Expense{
 		ID:            expense.ID,
 		UserID:        expense.UserID,
+		CategoryID:    expense.CategoryID,
+		CategoryName:  expense.CategoryName,
 		TransactionDt: expense.TransactionDt,
 		Description:   expense.Description,
 		Amount:        expense.Amount,
