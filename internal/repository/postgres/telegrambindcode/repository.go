@@ -37,7 +37,9 @@ func (r *telegramBindCodeRepositoryImpl) CreateBindCode(ctx context.Context, use
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	// Query inside transaction context
 	q := r.query.WithTx(tx)

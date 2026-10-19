@@ -246,6 +246,26 @@ Introspection is off unless `GQL_ENABLE_INTROSPECTION=true`. With it off, tools 
 the server (e.g. Postman's "fetch schema", GraphQL codegen); point them at the committed schema in
 `graphql/schema/*.graphql` instead, or enable it in development.
 
+## gRPC server
+
+|Limit|Value|When exceeded|
+|:--|:--|:--|
+|Request message|1 MB|`RESOURCE_EXHAUSTED`|
+|Call duration|10 seconds, when the client sets no deadline (a client deadline is kept as is)|`DEADLINE_EXCEEDED` / "request timeout"|
+|Concurrent calls per connection|100|Further calls wait|
+|Connection handshake|10 seconds|Connection closed|
+|Idle connection|5 minutes without calls|Connection closed (clients reconnect automatically)|
+|Client keepalive pings|At most one every 30 seconds|Connection closed with `GOAWAY` (`too_many_pings`)|
+
+If the Telegram bot enables client keepalive, its ping interval must be at least 30 seconds.
+
+## Database connections
+
+The connection pool is configured in code (`internal/platform/database/db.go`), and overrides `pool_*` parameters
+in `DATABASE_URI`: at most 10 connections (1 kept open), each replaced after 1 hour or 30 minutes idle, 5-second
+connect timeout. Every session runs with `statement_timeout = 10s`, so Postgres cancels any statement running
+longer, and `application_name = financecore` (visible in `pg_stat_activity`).
+
 ## Input validation
 
 Both APIs validate input the same way, after trimming surrounding whitespace from text:
@@ -331,7 +351,7 @@ All generated code lives in `gen/` and is committed; CI fails if it's out of dat
 
 ```sh
 make test              # unit tests (go test ./test/...)
-make test-integration  # repository tests against a real Postgres (needs Docker)
+make test-integration  # all tests, including integration tests against a real Postgres (needs Docker)
 ```
 
 Tests live in `test/`, mirroring the `internal/` package they cover (e.g. `test/internal/usecase/category` tests

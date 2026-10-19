@@ -115,7 +115,7 @@ func TestUnaryServerInterceptorPassesThrough(t *testing.T) {
 
 		_, err := call(func(ctx context.Context, req any) (any, error) { return nil, want })
 
-		if err != want {
+		if !errors.Is(err, want) {
 			t.Fatalf("error: got %v, want %v", err, want)
 		}
 	})

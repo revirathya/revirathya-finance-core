@@ -66,6 +66,11 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
   with at most 2 decimal places and below 10^12, and expense dates must be between 2000-01-01 and tomorrow.
   Invalid input returns `INVALID_ARGUMENT` / `BAD_USER_INPUT` with a message naming the field (e.g.
   `amount: must be greater than 0`), and also when only the database catches it.
+- gRPC limits: requests over 1 MB return `RESOURCE_EXHAUSTED`; calls without a client deadline time out after
+  10 seconds (`DEADLINE_EXCEEDED`); clients may send keepalive pings at most every 30 seconds; idle connections
+  close after 5 minutes. Timeouts and cancellations return `DEADLINE_EXCEEDED` / `CANCELED` instead of `INTERNAL`.
+- Database: at most 10 connections per process, and Postgres cancels any statement running over 10 seconds.
+  Pool settings in `DATABASE_URI` (`pool_max_conns`, ...) are now ignored.
 - `ListExpenses` returns newest `transaction_dt` first; `UpdateExpense` can no longer change an expense's owner.
 - `GRPC_PORT` / `GQL_PORT` are plain numbers (`50051`, not `:50051`). New required config: `GRPC_API_KEY`,
   `GOOGLE_CLIENT_ID`, `JWT_SECRET`, `MIGRATION_VERSION`.

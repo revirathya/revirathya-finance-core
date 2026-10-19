@@ -34,6 +34,9 @@ func TestToStatus(t *testing.T) {
 		{"invalid input", errDom.ErrInvalidInput, codes.InvalidArgument, "invalid argument"},
 		{"validation error keeps its field message", &errDom.ValidationError{Field: "amount", Reason: "must be greater than 0"}, codes.InvalidArgument, "amount: must be greater than 0"},
 		{"wrapped validation error keeps its field message", fmt.Errorf("create expense: %w", &errDom.ValidationError{Field: "amount", Reason: "must be greater than 0"}), codes.InvalidArgument, "amount: must be greater than 0"},
+		{"deadline exceeded", context.DeadlineExceeded, codes.DeadlineExceeded, "request timeout"},
+		{"wrapped deadline exceeded", fmt.Errorf("list expenses: %w", context.DeadlineExceeded), codes.DeadlineExceeded, "request timeout"},
+		{"canceled", fmt.Errorf("list expenses: %w", context.Canceled), codes.Canceled, "request canceled"},
 		{"unknown error is hidden", errors.New(`pq: relation "app.expenses" does not exist`), codes.Internal, "internal error"},
 	}
 
@@ -86,10 +89,12 @@ func TestToStatusLogging(t *testing.T) {
 		}
 	})
 
-	t.Run("known domain errors are not logged", func(t *testing.T) {
+	t.Run("known domain errors and cancellations are not logged", func(t *testing.T) {
 		for _, err := range []error{
 			errDom.ErrNotFound, errDom.ErrUnauthenticated, errDom.ErrForbidden,
 			errDom.ErrConflict, errDom.ErrInvalidInput,
+			// Timeouts are already visible in the access log line (code DeadlineExceeded).
+			context.DeadlineExceeded, context.Canceled,
 		} {
 			logs := useLogger(t)
 
