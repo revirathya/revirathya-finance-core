@@ -7,7 +7,7 @@ exec:
   dir: gen/graphql
 
 autobind:
-  - "github.com/revirathya/revirathya-finance-core/internal/delivery/graphql/error"
+  - "github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql/error"
 
 model:
   package: model
@@ -16,5 +16,5 @@ model:
 resolver:
   package: resolver
   layout: follow-schema
-  dir: internal/delivery/graphql/resolver
+  dir: internal/delivery/http/graphql/resolver
   filename_template: "{name}.resolver.go"

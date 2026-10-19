@@ -10,26 +10,18 @@ import (
 	// Prometheus
 	grpcProm "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
-	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	// Internal
-	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/middleware"
+	// Internal - HTTP
 )
 
 type Metrics struct {
-	Registry *prom.Registry
+	Registry *prometheus.Registry
 	Grpc     *grpcProm.ServerMetrics
 
 	httpRequests  *prometheus.CounterVec
 	httpDuration  *prometheus.HistogramVec
 	graphqlErrors *prometheus.CounterVec
-}
-
-type statusRecorder struct {
-	http.ResponseWriter
-	status int
 }
 
 // Private
@@ -55,10 +47,10 @@ func registerPoolMetrics(reg *prometheus.Registry, pool *pgxpool.Pool) {
 	}
 
 	reg.MustRegister(
-		gauge("db_pool_connection_max", "Max pool size.", func(s *pgxpool.Stat) float64 { return float64(s.MaxConns()) }),
-		gauge("db_pool_connection_total", "Open connections.", func(s *pgxpool.Stat) float64 { return float64(s.TotalConns()) }),
-		gauge("db_pool_connection_acquired", "Connection in use.", func(s *pgxpool.Stat) float64 { return float64(s.AcquiredConns()) }),
-		gauge("db_pool_connection_idle", "Idle connections.", func(s *pgxpool.Stat) float64 { return float64(s.IdleConns()) }),
+		gauge("db_pool_connections_max", "Max pool size.", func(s *pgxpool.Stat) float64 { return float64(s.MaxConns()) }),
+		gauge("db_pool_connections_total", "Open connections.", func(s *pgxpool.Stat) float64 { return float64(s.TotalConns()) }),
+		gauge("db_pool_connections_acquired", "Connection in use.", func(s *pgxpool.Stat) float64 { return float64(s.AcquiredConns()) }),
+		gauge("db_pool_connections_idle", "Idle connections.", func(s *pgxpool.Stat) float64 { return float64(s.IdleConns()) }),
 		counter("db_pool_acquires_total", "Connection acquires.", func(s *pgxpool.Stat) float64 { return float64(s.AcquireCount()) }),
 		counter("db_pool_acquire_wait_total", "Acquires that had to wait for a connection.", func(s *pgxpool.Stat) float64 { return float64(s.EmptyAcquireCount()) }),
 		counter("db_pool_acquire_wait_seconds_total", "Total time spent acquiring connections.", func(s *pgxpool.Stat) float64 { return s.AcquireDuration().Seconds() }),
@@ -83,7 +75,7 @@ func NewMetrics(pool *pgxpool.Pool) *Metrics {
 	httpRequestsColl := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "http_requests_total",
-			Help: "HTTP requestsby handler and status code.",
+			Help: "HTTP requests by handler and status code.",
 		},
 		[]string{"handler", "code"},
 	)
@@ -124,7 +116,6 @@ func NewMetrics(pool *pgxpool.Pool) *Metrics {
 	return m
 }
 
-// Handler serves /metrics
 func (m *Metrics) Handler() http.Handler {
 	return promhttp.HandlerFor(m.Registry, promhttp.HandlerOpts{})
 }
@@ -134,18 +125,8 @@ func (m *Metrics) GraphQLError(code string) {
 	m.graphqlErrors.WithLabelValues(code).Inc()
 }
 
-// HttpMiddleware records count and latency for one route; handler is a fixed name like "graphql"
-func (m *Metrics) Middleware(handler string) middleware.Middleware {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
-				start := time.Now()
-				rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
-				next.ServeHTTP(rec, r)
-
-				m.httpRequests.WithLabelValues(handler, strconv.Itoa(rec.status)).Inc()
-				m.httpDuration.WithLabelValues(handler).Observe(time.Since(start).Seconds())
-			},
-		)
-	}
+// platform/metrics: no net/http middleware here any more
+func (m *Metrics) ObserveHTTP(handler string, code int, d time.Duration) {
+	m.httpRequests.WithLabelValues(handler, strconv.Itoa(code)).Inc()
+	m.httpDuration.WithLabelValues(handler).Observe(d.Seconds())
 }

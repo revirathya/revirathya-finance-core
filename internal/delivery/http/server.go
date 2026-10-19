@@ -6,9 +6,6 @@ import (
 	"time"
 
 	// Internal
-	"github.com/revirathya/revirathya-finance-core/internal/auth"
-	"github.com/revirathya/revirathya-finance-core/internal/platform/metrics"
-	"github.com/revirathya/revirathya-finance-core/internal/usecase"
 
 	// Internal - HTTP
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/health"
@@ -34,12 +31,7 @@ type ServerLayer struct {
 
 func Setup(
 	port string,
-	allowedOrigins []string,
 	ping func(ctx context.Context) error,
-	enableInstropection bool,
-	tokens *auth.TokenManager,
-	metricsColl *metrics.Metrics,
-	usecase usecase.Usecase,
 ) *ServerLayer {
 	// Configure server
 	mux := http.NewServeMux()
@@ -47,8 +39,6 @@ func Setup(
 	// Set Handler
 	mux.HandleFunc("GET /healthz", health.Healthz())
 	mux.HandleFunc("GET /readyz", health.Readyz(ping))
-
-	mux.Handle("GET /metrics", metricsColl.Handler())
 
 	// Set Server
 	httpServer := &http.Server{

@@ -7,15 +7,15 @@ import (
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
 
-	// Internal - GraphQL
-	"github.com/revirathya/revirathya-finance-core/internal/delivery/graphql/middleware"
+	// Internal - Http
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/middleware"
 )
 
-func Middleware(tokens *auth.TokenManager) middleware.Middleware {
+func Middleware(tokenManager *auth.TokenManager) middleware.Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if raw, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); ok {
-				if userId, err := tokens.Parse(raw); err == nil {
+				if userId, err := tokenManager.Parse(raw); err == nil {
 					r = r.WithContext(auth.WithPrincipal(r.Context(), auth.Principal{UserID: userId}))
 				}
 			}

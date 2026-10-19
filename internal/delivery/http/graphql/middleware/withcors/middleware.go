@@ -3,8 +3,8 @@ package withcors
 import (
 	"net/http"
 
-	// Internal - GraphQL
-	"github.com/revirathya/revirathya-finance-core/internal/delivery/graphql/middleware"
+	// Internal - Http
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/middleware"
 )
 
 func Middleware(allowedOrigins []string) middleware.Middleware {

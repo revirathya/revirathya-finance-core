@@ -9,6 +9,9 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
 ## [Unreleased]
 
 ### Added
+- Prometheus metrics at `GET /metrics` on a separate port (`METRICS_PORT`, default `9090`; Docker host port
+  `METRICS_HOST_PORT`, default `9900`): gRPC calls and latency, `/graphql` requests and latency, GraphQL errors by
+  code, connection pool stats, Go runtime and process metrics.
 - **Authentication and per-user data.** Every request is tied to an authenticated user, and all categories,
   expenses and Telegram contexts are scoped to that user.
 - GraphQL sign-in with Google: `loginWithGoogle(idToken:)` verifies a Google ID token and returns a session
@@ -40,6 +43,10 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
 - **Breaking (GraphQL):** mutation inputs are required (`CreateExpenseInput!`, `UpdateExpenseInput!`,
   `UpdateUserInput!`), `UpdateCategoryInput.categoryName` is required, and `deleteExpense` / `deleteCategory`
   return `ID!`.
+- **Breaking (config):** `GQL_PORT` is renamed `HTTP_PORT`, and `GQL_HOST_PORT` is renamed `HTTP_HOST_PORT`; the old
+  names are ignored, so a `.env` that still uses them gets the defaults (`8080`, `8180`).
+- **Breaking (Docker):** compose publishes the app's ports on `127.0.0.1` only; other machines can no longer reach
+  them through the host.
 - **Breaking (GraphQL):** `expenses` is paged and returns `ExpenseConnection!` (`nodes`, `pageInfo { hasNextPage
   endCursor }`) instead of `[Expense!]!`; new arguments `first` (default 20, max 50) and `after`.
 - **Breaking (gRPC):** `ListExpenses` is paged: new `page_size` (default 20, max 50) and `page_token`, and

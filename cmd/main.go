@@ -18,6 +18,8 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/config"
 	dlvGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
 	dlvHttp "github.com/revirathya/revirathya-finance-core/internal/delivery/http"
+	httpGql "github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql"
+	dlvMetrics "github.com/revirathya/revirathya-finance-core/internal/delivery/metrics"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/google"
 	logApp "github.com/revirathya/revirathya-finance-core/internal/platform/logging"
@@ -27,25 +29,26 @@ import (
 )
 
 func main() {
+	// Get Config
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("load config", "err", err)
+		os.Exit(1)
+	}
+
 	// Early Healtcheck
 	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
-		os.Exit(sub.RunHealthcheck())
+		os.Exit(sub.RunHealthcheck(cfg.HttpPort))
 	}
 
 	// Run
-	if err := run(); err != nil {
+	if err := run(cfg); err != nil {
 		slog.Error("server stopped", "err", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	// Get config
-	cfg, err := config.Load()
-	if err != nil {
-		return fmt.Errorf("load config: %w", err)
-	}
-
+func run(cfg *config.Config) error {
 	// Setup logger
 	logger, err := logApp.NewLogger(os.Stdout, cfg.LogFormat, cfg.LogLevel)
 	if err != nil {
@@ -74,8 +77,8 @@ func run() error {
 	gVeri := google.NewGoogleVerifier(cfg.GoogleClientID)
 	tokenManager := auth.NewTokenManager(cfg.JwtSecret, cfg.JwtTtl)
 
-	// Setup metrics server
-	metricColl := metrics.NewMetrics(pool)
+	// Setup metrics collector
+	metricsColl := metrics.NewMetrics(pool)
 
 	// Setup repo and usecase
 	repo := repository.BootstrapRepository(pool)
@@ -86,7 +89,7 @@ func run() error {
 		cfg.GrpcPort,
 		cfg.GrpcEnableReflection,
 		cfg.GrpcApiKey,
-		metricColl,
+		metricsColl,
 		uc,
 	)
 	if err != nil {
@@ -94,25 +97,32 @@ func run() error {
 	}
 
 	// Setup server - HTTP
-	httpSrvLayer := dlvHttp.Setup(
-		cfg.GqlPort,
+	httpSrvLayer := dlvHttp.Setup(cfg.HttpPort, pool.Ping)
+
+	// Configure GraphQL
+	httpGql.RegisterHandler(
+		httpSrvLayer,
 		cfg.AllowedOrigins,
-		pool.Ping,
 		cfg.GqlEnableIntrospection,
 		tokenManager,
-		metricColl,
+		metricsColl,
 		uc,
 	)
 
+	// Setup metrics server
+	metricsSrvLayer := dlvMetrics.Setup(cfg.MetricsPort, metricsColl)
+
 	// Setup server - integration
-	g := api.RunServers(ctx, grpcSrvLayer, httpSrvLayer)
+	g := api.RunServers(ctx, grpcSrvLayer, httpSrvLayer, metricsSrvLayer)
 	slog.Info(
 		"server started",
 		"grpc_addr", cfg.GrpcPort,
-		"gql_port", cfg.GqlPort,
+		"http_port", cfg.HttpPort,
+		"metrics_port", cfg.MetricsPort,
 	)
 	if err := g.Wait(); err != nil {
 		return fmt.Errorf("serve: %w", err)
 	}
+
 	return nil
 }

@@ -113,13 +113,13 @@ func Setup(
 		),
 	)
 
-	// Startup metrics collector
-	metricsColl.Grpc.InitializeMetrics(srv)
-
 	// Register service server
 	financecorev1.RegisterCategoryServiceServer(srv, ctgHan)
 	financecorev1.RegisterExpenseServiceServer(srv, expHan)
 	financecorev1.RegisterUserTelegramContextServiceServer(srv, utelHan)
+
+	// Set metrics collector
+	metricsColl.Grpc.InitializeMetrics(srv)
 
 	// Setup listener
 	lis, err := net.Listen("tcp", port)
