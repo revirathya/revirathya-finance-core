@@ -51,6 +51,11 @@ type ComplexityRoot struct {
 		UserID        func(childComplexity int) int
 	}
 
+	ExpenseConnection struct {
+		Nodes    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
+	}
+
 	Mutation struct {
 		CreateCategory         func(childComplexity int, input model.CreateCategoryInput) int
 		CreateExpense          func(childComplexity int, input model.CreateExpenseInput) int
@@ -65,11 +70,16 @@ type ComplexityRoot struct {
 		UpdateUser             func(childComplexity int, input model.UpdateUserInput) int
 	}
 
+	PageInfo struct {
+		EndCursor   func(childComplexity int) int
+		HasNextPage func(childComplexity int) int
+	}
+
 	Query struct {
 		Categories func(childComplexity int) int
 		Category   func(childComplexity int, id string) int
 		Expense    func(childComplexity int, id string) int
-		Expenses   func(childComplexity int, transactionDt *string) int
+		Expenses   func(childComplexity int, transactionDt *string, first *int, after *string) int
 		Me         func(childComplexity int) int
 		Ok         func(childComplexity int) int
 	}
@@ -176,6 +186,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Expense.UserID(childComplexity), true
+
+	case "ExpenseConnection.nodes":
+		if e.ComplexityRoot.ExpenseConnection.Nodes == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ExpenseConnection.Nodes(childComplexity), true
+	case "ExpenseConnection.pageInfo":
+		if e.ComplexityRoot.ExpenseConnection.PageInfo == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ExpenseConnection.PageInfo(childComplexity), true
 
 	case "Mutation.createCategory":
 		if e.ComplexityRoot.Mutation.CreateCategory == nil {
@@ -284,6 +307,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Mutation.UpdateUser(childComplexity, args["input"].(model.UpdateUserInput)), true
 
+	case "PageInfo.endCursor":
+		if e.ComplexityRoot.PageInfo.EndCursor == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PageInfo.EndCursor(childComplexity), true
+	case "PageInfo.hasNextPage":
+		if e.ComplexityRoot.PageInfo.HasNextPage == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PageInfo.HasNextPage(childComplexity), true
+
 	case "Query.categories":
 		if e.ComplexityRoot.Query.Categories == nil {
 			break
@@ -322,7 +358,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.Expenses(childComplexity, args["transactionDt"].(*string)), true
+		return e.ComplexityRoot.Query.Expenses(childComplexity, args["transactionDt"].(*string), args["first"].(*int), args["after"].(*string)), true
 
 	case "Query.me":
 		if e.ComplexityRoot.Query.Me == nil {
@@ -502,6 +538,11 @@ extend type Mutation {
     amount: String!
 }
 
+type ExpenseConnection {
+    nodes: [Expense!]!
+    pageInfo: PageInfo!
+}
+
 input CreateExpenseInput {
     transactionDt: String!
     categoryId: ID!
@@ -518,7 +559,9 @@ input UpdateExpenseInput {
 
 extend type Query {
     expense(id: ID!): Expense
-    expenses(transactionDt: String): [Expense!]!
+
+    "Newest first. ` + "`" + `first` + "`" + `: page size, default 20, max 50."
+    expenses(transactionDt: String, first: Int, after: String): ExpenseConnection!
 }
 
 extend type Mutation {
@@ -526,7 +569,14 @@ extend type Mutation {
     updateExpense(id: ID!, patch: UpdateExpenseInput!): Expense
     deleteExpense(id: ID!): ID!
 }`, BuiltIn: false},
-	{Name: "../../graphql/schema/schema.graphql", Input: `type Query {
+	{Name: "../../graphql/schema/schema.graphql", Input: `type PageInfo { 
+    hasNextPage: Boolean!
+    
+    "Pass as ` + "`" + `after` + "`" + ` to get the next page; null on the last page."
+    endCursor: String
+}
+
+type Query {
     ok: Boolean
 }
 
@@ -617,6 +667,26 @@ func (ec *executionContext) childFields_Expense(ctx context.Context, field graph
 		return ec.fieldContext_Expense_amount(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Expense", field.Name)
+}
+
+func (ec *executionContext) childFields_ExpenseConnection(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "nodes":
+		return ec.fieldContext_ExpenseConnection_nodes(ctx, field)
+	case "pageInfo":
+		return ec.fieldContext_ExpenseConnection_pageInfo(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type ExpenseConnection", field.Name)
+}
+
+func (ec *executionContext) childFields_PageInfo(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "hasNextPage":
+		return ec.fieldContext_PageInfo_hasNextPage(ctx, field)
+	case "endCursor":
+		return ec.fieldContext_PageInfo_endCursor(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
 }
 
 func (ec *executionContext) childFields_TelegramBindCode(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {

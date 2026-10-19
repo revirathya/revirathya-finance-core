@@ -9,6 +9,7 @@ import (
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 )
 
 // Usecase: Expense
@@ -41,8 +42,55 @@ func (uc *ExpenseUsecase) GetExpenseByID(ctx context.Context, id uuid.UUID, user
 	return uc.expRepo.GetExpenseByID(ctx, id, userID)
 }
 
-func (uc *ExpenseUsecase) ListExpenses(ctx context.Context, userID uuid.UUID, transactionDt *time.Time) ([]domain.Expense, error) {
-	return uc.expRepo.ListExpenses(ctx, userID, transactionDt)
+func (uc *ExpenseUsecase) ListExpenses(
+	ctx context.Context,
+	userID uuid.UUID,
+	transactionDt *time.Time,
+	pageSize int,
+	pageToken string,
+) (*domain.ExpensePage, error) {
+	// Define page size
+	switch {
+	case pageSize < 0:
+		return nil, &errDom.ValidationError{Field: "page_size", Reason: "must not be negative"}
+	case pageSize == 0:
+		pageSize = domain.DefaultPageSize
+	case pageSize > domain.MaxPageSize:
+		pageSize = domain.MaxPageSize
+	}
+
+	// Decode token if exists
+	query := domain.ExpenseListQuery{
+		TransactionDt: transactionDt,
+		Limit:         pageSize + 1,
+	}
+	if pageToken != "" {
+		// Not the first page
+		cursor, err := domain.DecodeExpenseCursor(pageToken)
+		if err != nil {
+			return nil, err
+		}
+		query.After = &cursor
+	}
+
+	expenses, err := uc.expRepo.ListExpenses(ctx, userID, query)
+	if err != nil {
+		return nil, err
+	}
+
+	page := &domain.ExpensePage{
+		Expenses: expenses,
+	}
+	if len(expenses) > pageSize {
+		page.Expenses = expenses[:pageSize]
+		last := page.Expenses[pageSize-1]
+		page.NextCursor = &domain.ExpenseCursor{
+			TransactionDt: last.TransactionDt,
+			ID:            last.ID,
+		}
+	}
+
+	return page, nil
 }
 
 func (uc *ExpenseUsecase) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, categoryID uuid.UUID, transactionDt time.Time, description *string, amount decimal.Decimal) (*domain.Expense, error) {

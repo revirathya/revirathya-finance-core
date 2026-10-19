@@ -143,12 +143,22 @@ INNER JOIN app.categories AS ctg
 WHERE
   exp.user_id = $1
   AND ($2::DATE IS NULL OR exp.transaction_dt = $2::DATE)
-ORDER BY exp.transaction_dt DESC
+  AND (
+    $3::DATE IS NULL
+    OR (exp.transaction_dt, exp.id) < ($3::DATE, $4::UUID)
+  )
+ORDER BY
+  exp.transaction_dt DESC,
+  exp.id DESC
+LIMIT $5
 `
 
 type ListExpensesParams struct {
 	UserID        pgtype.UUID `json:"user_id"`
 	TransactionDt pgtype.Date `json:"transaction_dt"`
+	AfterDt       pgtype.Date `json:"after_dt"`
+	AfterID       pgtype.UUID `json:"after_id"`
+	RowLimit      int32       `json:"row_limit"`
 }
 
 type ListExpensesRow struct {
@@ -162,7 +172,13 @@ type ListExpensesRow struct {
 }
 
 func (q *Queries) ListExpenses(ctx context.Context, arg ListExpensesParams) ([]ListExpensesRow, error) {
-	rows, err := q.db.Query(ctx, listExpenses, arg.UserID, arg.TransactionDt)
+	rows, err := q.db.Query(ctx, listExpenses,
+		arg.UserID,
+		arg.TransactionDt,
+		arg.AfterDt,
+		arg.AfterID,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}

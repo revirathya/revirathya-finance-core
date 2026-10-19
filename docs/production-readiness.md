@@ -218,8 +218,10 @@ Last reviewed: 2026-10-19
 - [ ] OpenTelemetry tracing from gRPC and GraphQL through to pgx (`otelpgx`).
 
 ### API design
-- [ ] Pagination on `ListCategories` and `expenses` (cursor-based, or page token per
-  [AIP-158](https://google.aip.dev/158)).
+- [x] Pagination on `expenses` / `ListExpenses`: keyset on `(transaction_dt, id)`, opaque cursor, default 20 and
+  max 50; GraphQL `ExpenseConnection` (`nodes`, `pageInfo`), gRPC page tokens per
+  [AIP-158](https://google.aip.dev/158). Categories stay unpaged (short per-user list); page them the same way if
+  that changes.
 - [ ] GraphQL custom scalars `Date` and `Decimal` instead of `String` for `transactionDt` and `amount`.
 - [ ] Proto `google.type.Date`, plus `google.type.Money` or a units/nanos pattern for amounts.
 - [ ] Reuse `Category` messages instead of duplicating fields in `GetCategoryByIDResponse`.
@@ -233,7 +235,7 @@ Last reviewed: 2026-10-19
 - [ ] PR template.
 - [ ] Dependabot or Renovate.
 - [ ] Conventional commits with an automated CHANGELOG and releases.
-- [ ] `make lint`, `make generate` (all three codegens) and a pre-commit hook.
+- [ ] `make generate` (all three codegens) and a pre-commit hook. (`make lint` exists.)
 - [ ] `docs/` with ADRs, such as "why both gRPC and GraphQL" or "money stored as numeric".
 
 ### Docker

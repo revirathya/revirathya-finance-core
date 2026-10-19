@@ -273,6 +273,28 @@ in `DATABASE_URI`: at most 10 connections (1 kept open), each replaced after 1 h
 connect timeout. Every session runs with `statement_timeout = 10s`, so Postgres cancels any statement running
 longer, and `application_name = financecore` (visible in `pg_stat_activity`).
 
+## Pagination
+
+Expense lists are paged, newest first (`transaction_dt`, then `id`, descending). Pages are cursor-based: pass the
+token from one page to get the next. Tokens are opaque; don't build or parse them. Categories are not paged.
+
+|API|Page size|Next page|Last page|
+|:--|:--|:--|:--|
+|GraphQL `expenses(transactionDt, first, after)`|`first`|`after: pageInfo.endCursor`|`hasNextPage: false`, `endCursor: null`|
+|gRPC `ListExpenses`|`page_size`|`page_token: next_page_token`|`next_page_token` empty|
+
+The page size defaults to 20 and is capped at 50; a negative size or an invalid token is invalid input. Stop when
+there is no next token, not when a page is short.
+
+```graphql
+query { expenses(first: 20, after: "MjAyNi0xMC0xN3w5YjJm...") { nodes { id transactionDt amount } pageInfo { hasNextPage endCursor } } }
+```
+
+```sh
+grpcurl -plaintext -H "authorization: Bearer $GRPC_API_KEY" -H "x-telegram-user-id: 123456789" \
+  -d '{"pageSize": 20, "pageToken": "MjAyNi0xMC0xN3w5YjJm..."}' localhost:50051 financecore.v1.ExpenseService/ListExpenses
+```
+
 ## Input validation
 
 Both APIs validate input the same way, after trimming surrounding whitespace from text:

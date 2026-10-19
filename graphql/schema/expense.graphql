@@ -8,6 +8,11 @@ type Expense {
     amount: String!
 }
 
+type ExpenseConnection {
+    nodes: [Expense!]!
+    pageInfo: PageInfo!
+}
+
 input CreateExpenseInput {
     transactionDt: String!
     categoryId: ID!
@@ -24,7 +29,9 @@ input UpdateExpenseInput {
 
 extend type Query {
     expense(id: ID!): Expense
-    expenses(transactionDt: String): [Expense!]!
+
+    "Newest first. `first`: page size, default 20, max 50."
+    expenses(transactionDt: String, first: Int, after: String): ExpenseConnection!
 }
 
 extend type Mutation {

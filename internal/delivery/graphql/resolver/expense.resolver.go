@@ -170,7 +170,7 @@ func (r *queryResolver) Expense(ctx context.Context, id string) (*model.Expense,
 }
 
 // Expenses is the resolver for the expenses field.
-func (r *queryResolver) Expenses(ctx context.Context, transactionDt *string) ([]*model.Expense, error) {
+func (r *queryResolver) Expenses(ctx context.Context, transactionDt *string, first *int, after *string) (*model.ExpenseConnection, error) {
 	// Get user from context
 	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
@@ -188,14 +188,25 @@ func (r *queryResolver) Expenses(ctx context.Context, transactionDt *string) ([]
 	}
 
 	// List expenses
-	expenses, err := r.usecase.Expense.ListExpenses(ctx, userID, tmTransactionDtPtr)
+	pageSize := 0
+	if first != nil {
+		pageSize = *first
+	}
+
+	pageToken := ""
+	if after != nil {
+		pageToken = *after
+	}
+
+	expensePage, err := r.usecase.Expense.ListExpenses(ctx, userID, tmTransactionDtPtr, pageSize, pageToken)
 	if err != nil {
 		return nil, err
 	}
 
-	responses := make([]*model.Expense, 0, len(expenses))
-	for _, expense := range expenses {
-		responses = append(responses, &model.Expense{
+	// Parse results
+	nodes := make([]*model.Expense, 0, len(expensePage.Expenses))
+	for _, expense := range expensePage.Expenses {
+		nodes = append(nodes, &model.Expense{
 			ID:            expense.ID.String(),
 			UserID:        expense.UserID.String(),
 			TransactionDt: expense.TransactionDt.Format("2006-01-02"),
@@ -205,5 +216,16 @@ func (r *queryResolver) Expenses(ctx context.Context, transactionDt *string) ([]
 			Amount:        expense.Amount.String(),
 		})
 	}
-	return responses, nil
+
+	pageInfo := &model.PageInfo{HasNextPage: expensePage.NextCursor != nil}
+	if pageInfo.HasNextPage {
+		endCursor := expensePage.NextCursor.Encode()
+		pageInfo.EndCursor = &endCursor
+	}
+
+	response := &model.ExpenseConnection{
+		Nodes:    nodes,
+		PageInfo: pageInfo,
+	}
+	return response, nil
 }

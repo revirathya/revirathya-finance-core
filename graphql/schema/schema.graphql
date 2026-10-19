@@ -1,3 +1,10 @@
+type PageInfo { 
+    hasNextPage: Boolean!
+    
+    "Pass as `after` to get the next page; null on the last page."
+    endCursor: String
+}
+
 type Query {
     ok: Boolean
 }

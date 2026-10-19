@@ -185,6 +185,70 @@ func (ec *executionContext) fieldContext_Expense_amount(_ context.Context, field
 	return graphql.NewScalarFieldContext("Expense", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _ExpenseConnection_nodes(ctx context.Context, field graphql.CollectedField, obj *model.ExpenseConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ExpenseConnection_nodes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Nodes, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Expense) graphql.Marshaler {
+			return ec.marshalNExpense2ᚕᚖgithubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐExpenseᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ExpenseConnection_nodes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ExpenseConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Expense(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ExpenseConnection_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.ExpenseConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ExpenseConnection_pageInfo(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.PageInfo, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.PageInfo) graphql.Marshaler {
+			return ec.marshalNPageInfo2ᚖgithubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐPageInfo(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ExpenseConnection_pageInfo(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ExpenseConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PageInfo(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 // endregion **************************** field.gotpl *****************************
 
 // region    **************************** input.gotpl *****************************
@@ -367,6 +431,49 @@ func (ec *executionContext) _Expense(ctx context.Context, sel ast.SelectionSet, 
 	return out
 }
 
+var expenseConnectionImplementors = []string{"ExpenseConnection"}
+
+func (ec *executionContext) _ExpenseConnection(ctx context.Context, sel ast.SelectionSet, obj *model.ExpenseConnection) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, expenseConnectionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ExpenseConnection")
+		case "nodes":
+			out.Values[i] = ec._ExpenseConnection_nodes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pageInfo":
+			out.Values[i] = ec._ExpenseConnection_pageInfo(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
 // endregion **************************** object.gotpl ****************************
 
 // region    ***************************** type.gotpl *****************************
@@ -400,6 +507,20 @@ func (ec *executionContext) marshalNExpense2ᚖgithubᚗcomᚋrevirathyaᚋrevir
 		return graphql.Null
 	}
 	return ec._Expense(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNExpenseConnection2githubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐExpenseConnection(ctx context.Context, sel ast.SelectionSet, v model.ExpenseConnection) graphql.Marshaler {
+	return ec._ExpenseConnection(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNExpenseConnection2ᚖgithubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐExpenseConnection(ctx context.Context, sel ast.SelectionSet, v *model.ExpenseConnection) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ExpenseConnection(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNUpdateExpenseInput2githubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐUpdateExpenseInput(ctx context.Context, v any) (model.UpdateExpenseInput, error) {

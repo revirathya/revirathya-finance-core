@@ -48,7 +48,14 @@ INNER JOIN app.categories AS ctg
 WHERE
   exp.user_id = sqlc.arg('user_id')
   AND (sqlc.narg('transaction_dt')::DATE IS NULL OR exp.transaction_dt = sqlc.narg('transaction_dt')::DATE)
-ORDER BY exp.transaction_dt DESC;
+  AND (
+    sqlc.narg('after_dt')::DATE IS NULL
+    OR (exp.transaction_dt, exp.id) < (sqlc.narg('after_dt')::DATE, sqlc.narg('after_id')::UUID)
+  )
+ORDER BY
+  exp.transaction_dt DESC,
+  exp.id DESC
+LIMIT sqlc.arg('row_limit');
 
 -- name: UpdateExpense :one
 UPDATE app.expenses

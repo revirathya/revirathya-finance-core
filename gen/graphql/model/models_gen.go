@@ -34,7 +34,18 @@ type Expense struct {
 	Amount        string `json:"amount"`
 }
 
+type ExpenseConnection struct {
+	Nodes    []*Expense `json:"nodes"`
+	PageInfo *PageInfo  `json:"pageInfo"`
+}
+
 type Mutation struct {
+}
+
+type PageInfo struct {
+	HasNextPage bool `json:"hasNextPage"`
+	// Pass as `after` to get the next page; null on the last page.
+	EndCursor *string `json:"endCursor,omitempty"`
 }
 
 type Query struct {

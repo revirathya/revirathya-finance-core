@@ -286,7 +286,11 @@ func (x *CreateExpenseResponse) GetAmount() string {
 type ListExpensesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// If set, only returns expenses on this date (YYYY-MM-DD).
-	TransactionDt *string `protobuf:"bytes,2,opt,name=transaction_dt,json=transactionDt,proto3,oneof" json:"transaction_dt,omitempty"`
+	TransactionDt *string `protobuf:"bytes,1,opt,name=transaction_dt,json=transactionDt,proto3,oneof" json:"transaction_dt,omitempty"`
+	// Max expenses to return. default 20, max 50
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// next_page_token from previous response; empty for the first page
+	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -328,10 +332,25 @@ func (x *ListExpensesRequest) GetTransactionDt() string {
 	return ""
 }
 
+func (x *ListExpensesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListExpensesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
 type ListExpensesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Expenses ordered by transaction_dt, newest first.
 	Expenses      []*ExpenseResponse `protobuf:"bytes,1,rep,name=expenses,proto3" json:"expenses,omitempty"`
+	NextPageToken string             `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -371,6 +390,13 @@ func (x *ListExpensesResponse) GetExpenses() []*ExpenseResponse {
 		return x.Expenses
 	}
 	return nil
+}
+
+func (x *ListExpensesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
 }
 
 type GetExpenseByIDRequest struct {
@@ -797,12 +823,16 @@ const file_financecore_v1_expenses_proto_rawDesc = "" +
 	"categoryId\x12%\n" +
 	"\x0etransaction_dt\x18\x04 \x01(\tR\rtransactionDt\x12 \n" +
 	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x16\n" +
-	"\x06amount\x18\x06 \x01(\tR\x06amount\"T\n" +
+	"\x06amount\x18\x06 \x01(\tR\x06amount\"\x90\x01\n" +
 	"\x13ListExpensesRequest\x12*\n" +
-	"\x0etransaction_dt\x18\x02 \x01(\tH\x00R\rtransactionDt\x88\x01\x01B\x11\n" +
-	"\x0f_transaction_dt\"S\n" +
+	"\x0etransaction_dt\x18\x01 \x01(\tH\x00R\rtransactionDt\x88\x01\x01\x12\x1b\n" +
+	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x03 \x01(\tR\tpageTokenB\x11\n" +
+	"\x0f_transaction_dt\"{\n" +
 	"\x14ListExpensesResponse\x12;\n" +
-	"\bexpenses\x18\x01 \x03(\v2\x1f.financecore.v1.ExpenseResponseR\bexpenses\"'\n" +
+	"\bexpenses\x18\x01 \x03(\v2\x1f.financecore.v1.ExpenseResponseR\bexpenses\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"'\n" +
 	"\x15GetExpenseByIDRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\xe8\x01\n" +
 	"\x16GetExpenseByIDResponse\x12\x0e\n" +
