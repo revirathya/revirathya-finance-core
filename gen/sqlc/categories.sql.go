@@ -100,8 +100,16 @@ FROM
   app.categories AS c
 WHERE
   c.user_id = $1
+  AND ($2::TEXT IS NULL OR c.category_name > $2::TEXT)
 ORDER BY c.category_name
+LIMIT $3
 `
+
+type ListCategoriesParams struct {
+	UserID    pgtype.UUID `json:"user_id"`
+	AfterName *string     `json:"after_name"`
+	RowLimit  int32       `json:"row_limit"`
+}
 
 type ListCategoriesRow struct {
 	ID           pgtype.UUID `json:"id"`
@@ -109,8 +117,8 @@ type ListCategoriesRow struct {
 	CategoryName string      `json:"category_name"`
 }
 
-func (q *Queries) ListCategories(ctx context.Context, userID pgtype.UUID) ([]ListCategoriesRow, error) {
-	rows, err := q.db.Query(ctx, listCategories, userID)
+func (q *Queries) ListCategories(ctx context.Context, arg ListCategoriesParams) ([]ListCategoriesRow, error) {
+	rows, err := q.db.Query(ctx, listCategories, arg.UserID, arg.AfterName, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}

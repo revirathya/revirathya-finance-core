@@ -2,6 +2,7 @@ package domain_test
 
 import (
 	"encoding/base64"
+	"strings"
 	"testing"
 	"time"
 
@@ -45,6 +46,37 @@ func TestExpenseCursor(t *testing.T) {
 	} {
 		t.Run("rejects "+name, func(t *testing.T) {
 			_, err := domain.DecodeExpenseCursor(token)
+			wantField(t, err, "page_token")
+		})
+	}
+}
+
+func TestCategoryCursor(t *testing.T) {
+	for _, name := range []string{"Food", "Makan & Minum", "Café ☕", "a|b", ""} {
+		t.Run("round-trips "+name, func(t *testing.T) {
+			got, err := domain.DecodeCategoryCursor(domain.CategoryCursor{CategoryName: name}.Encode())
+			if err != nil || got.CategoryName != name {
+				t.Fatalf("got %q, %v; want %q", got.CategoryName, err, name)
+			}
+		})
+	}
+
+	t.Run("token is URL-safe without padding", func(t *testing.T) {
+		token := domain.CategoryCursor{CategoryName: "Food & Drinks???"}.Encode()
+		if strings.ContainsAny(token, "+/=") {
+			t.Fatalf("token %q is not URL-safe base64 without padding", token)
+		}
+	})
+
+	enc := func(b []byte) string { return base64.RawURLEncoding.EncodeToString(b) }
+	for name, token := range map[string]string{
+		"not base64":       "garbage!",
+		"standard padding": base64.StdEncoding.EncodeToString([]byte("Food")),
+		// Not UTF-8: Postgres would reject it as a TEXT parameter (22021), surfacing as an internal error.
+		"invalid UTF-8": enc([]byte{0xff, 0xfe}),
+	} {
+		t.Run("rejects "+name, func(t *testing.T) {
+			_, err := domain.DecodeCategoryCursor(token)
 			wantField(t, err, "page_token")
 		})
 	}

@@ -16,6 +16,7 @@ import (
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	"github.com/revirathya/revirathya-finance-core/internal/domain/constant"
 	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
 )
@@ -91,7 +92,7 @@ func (r *expenseRepositoryImpl) ListExpenses(ctx context.Context, userID uuid.UU
 		afterTransactionDt = &query.After.TransactionDt
 	}
 
-	limit := min(max(query.Limit, 1), domain.MaxPageSize+1)
+	limit := min(max(query.Limit, 1), constant.MaxPageSize+1)
 
 	args := sqlc.ListExpensesParams{
 		UserID:        database.ToPgxUUID(userID),

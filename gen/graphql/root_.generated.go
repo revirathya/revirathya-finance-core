@@ -43,6 +43,11 @@ type ComplexityRoot struct {
 		ID           func(childComplexity int) int
 	}
 
+	CategoryConnection struct {
+		Nodes    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
+	}
+
 	Expense struct {
 		Amount        func(childComplexity int) int
 		CategoryID    func(childComplexity int) int
@@ -78,7 +83,7 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Categories func(childComplexity int) int
+		Categories func(childComplexity int, first *int, after *string) int
 		Category   func(childComplexity int, id uuid.UUID) int
 		Expense    func(childComplexity int, id uuid.UUID) int
 		Expenses   func(childComplexity int, transactionDt *time.Time, first *int, after *string) int
@@ -145,6 +150,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Category.ID(childComplexity), true
+
+	case "CategoryConnection.nodes":
+		if e.ComplexityRoot.CategoryConnection.Nodes == nil {
+			break
+		}
+
+		return e.ComplexityRoot.CategoryConnection.Nodes(childComplexity), true
+	case "CategoryConnection.pageInfo":
+		if e.ComplexityRoot.CategoryConnection.PageInfo == nil {
+			break
+		}
+
+		return e.ComplexityRoot.CategoryConnection.PageInfo(childComplexity), true
 
 	case "Expense.amount":
 		if e.ComplexityRoot.Expense.Amount == nil {
@@ -327,7 +345,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		return e.ComplexityRoot.Query.Categories(childComplexity), true
+		args, err := ec.field_Query_categories_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.Categories(childComplexity, args["first"].(*int), args["after"].(*string)), true
 	case "Query.category":
 		if e.ComplexityRoot.Query.Category == nil {
 			break
@@ -512,6 +535,11 @@ var sources = []*ast.Source{
     categoryName: String!
 }
 
+type CategoryConnection {
+    nodes: [Category!]!
+    pageInfo: PageInfo!
+}
+
 input CreateCategoryInput {
     categoryName: String!
 }
@@ -522,7 +550,9 @@ input UpdateCategoryInput {
 
 extend type Query {
     category(id: UUID!): Category
-    categories: [Category!]!
+
+    "Alphabetical ordered. ` + "`" + `first` + "`" + `: page size, default 20, max 50."
+    categories(first: Int, after: String): CategoryConnection!
 }
 
 extend type Mutation {
@@ -662,6 +692,16 @@ func (ec *executionContext) childFields_Category(ctx context.Context, field grap
 		return ec.fieldContext_Category_categoryName(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Category", field.Name)
+}
+
+func (ec *executionContext) childFields_CategoryConnection(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "nodes":
+		return ec.fieldContext_CategoryConnection_nodes(ctx, field)
+	case "pageInfo":
+		return ec.fieldContext_CategoryConnection_pageInfo(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type CategoryConnection", field.Name)
 }
 
 func (ec *executionContext) childFields_Expense(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {

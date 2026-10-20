@@ -314,16 +314,19 @@ curl -s localhost:9090/metrics | grep -E '^(grpc_server_handled_total|http_reque
 
 ## Pagination
 
-Expense lists are paged, newest first (`transaction_dt`, then `id`, descending). Pages are cursor-based: pass the
-token from one page to get the next. Tokens are opaque; don't build or parse them. Categories are not paged.
+Lists are paged and cursor-based: pass the token from one page to get the next. Tokens are opaque; don't build or
+parse them. Expenses come newest first (`transaction_dt`, then `id`, descending); categories by name.
 
 |API|Page size|Next page|Last page|
 |:--|:--|:--|:--|
 |GraphQL `expenses(transactionDt, first, after)`|`first`|`after: pageInfo.endCursor`|`hasNextPage: false`, `endCursor: null`|
 |gRPC `ListExpenses`|`page_size`|`page_token: next_page_token`|`next_page_token` empty|
+|GraphQL `categories(first, after)`|`first`|`after: pageInfo.endCursor`|`hasNextPage: false`, `endCursor: null`|
+|gRPC `ListCategories`|`page_size`|`page_token: next_page_token`|`next_page_token` empty|
 
 The page size defaults to 20 and is capped at 50; a negative size or an invalid token is invalid input. Stop when
-there is no next token, not when a page is short.
+there is no next token, not when a page is short. To read every category (e.g. for a selection keyboard), loop with
+`page_size: 50` until `next_page_token` is empty.
 
 ```graphql
 query { expenses(first: 20, after: "MjAyNi0xMC0xN3w5YjJm...") { nodes { id transactionDt amount } pageInfo { hasNextPage endCursor } } }

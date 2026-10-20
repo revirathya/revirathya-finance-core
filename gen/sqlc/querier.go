@@ -25,7 +25,7 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error)
 	GetUserTelegramContext(ctx context.Context, userID pgtype.UUID) (GetUserTelegramContextRow, error)
 	GetUserTelegramContextByTelegramID(ctx context.Context, telegramChatID *string) (GetUserTelegramContextByTelegramIDRow, error)
-	ListCategories(ctx context.Context, userID pgtype.UUID) ([]ListCategoriesRow, error)
+	ListCategories(ctx context.Context, arg ListCategoriesParams) ([]ListCategoriesRow, error)
 	ListExpenses(ctx context.Context, arg ListExpensesParams) ([]ListExpensesRow, error)
 	UnbindTelegramBinding(ctx context.Context, userID pgtype.UUID) error
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (AppCategory, error)

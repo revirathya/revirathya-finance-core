@@ -51,6 +51,8 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
   expense }`, `ListExpensesResponse { expenses, next_page_token }`, ...). Dates are `google.type.Date` and amounts
   `google.type.Decimal` (`{"value": "12500.50"}`) instead of strings; an impossible date (e.g. 2026-02-30) or a
   missing amount returns `INVALID_ARGUMENT` with the field name. Generated Go code is in `gen/grpc`.
+- Categories are paged by name: GraphQL `categories(first, after)` returns `CategoryConnection!` (`nodes`, `pageInfo`);
+  gRPC `ListCategories` takes `page_size` / `page_token` and returns `next_page_token`. Default 20, max 50.
 - gRPC `ListExpenses` is paged: `page_size` (default 20, max 50), `page_token`, and `next_page_token` in the response.
 - Updates are patches: `updateCategory`, `updateExpense`, `updateUser` and gRPC `UpdateExpense` /
   `UpdateUserTelegramContext` change only the fields that are sent; omitted (or `null`) fields keep their value, and

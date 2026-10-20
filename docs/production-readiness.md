@@ -229,15 +229,15 @@ client later. Do these first.
   - [x] `Expense` (`CreateExpenseResponse`, `GetExpenseByIDResponse`, `UpdateExpenseResponse`,
     `ListExpensesResponse`).
   - [x] `UserTelegramContext` (`GetUserTelegramContextResponse`, `UpdateUserTelegramContextResponse`).
-- [ ] Optional: category pagination (`categories` / `ListCategories`), the same way as expenses. Skip it if the
-  per-user list stays short; adding it later changes the GraphQL return type.
-- [ ] CRUD conventions on the APIs (client-visible, so settle them before the first consumer):
+- [x] Category pagination (`categories` / `ListCategories`), by `category_name` (unique per user, so no tiebreaker
+  and no migration: the unique constraint's index matches).
+- [x] CRUD conventions on the APIs (client-visible, so settle them before the first consumer):
   - [x] Update semantics: **patch** for every entity. Omitted (or `null`) = keep; `""` clears `description` and
     `lastName`. gRPC uses proto3 `optional` fields (presence) rather than `update_mask`; GraphQL uses nullable input
     fields. SQL `COALESCE(narg, column)` per column; domain patches have pointer fields; usecases take the patch.
-    - [ ] gRPC `UpdateExpense` handler still requires `transaction_dt` and `amount` and always sends a category: it
-      must use `FromOptionalProtoDate`, a new `FromOptionalProtoDecimal`, and a `nil` category ID when it's omitted
-      (today an omitted `category_id` becomes a random UUID).
+    - [x] gRPC `UpdateExpense` handler fixed: it required `transaction_dt` and `amount` and turned an omitted
+      `category_id` into a random UUID; it now uses `FromOptionalProtoDate`, `FromOptionalProtoDecimal` and a `nil`
+      category ID.
   - [x] GraphQL mutation results: return the object directly. Payload types
     (`createExpense(input): CreateExpensePayload { expense }`) aren't needed yet.
   - Already settled: Create / Update / Get return the object as stored (including derived fields such as

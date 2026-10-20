@@ -20,6 +20,11 @@ type Category struct {
 	CategoryName string    `json:"categoryName"`
 }
 
+type CategoryConnection struct {
+	Nodes    []*Category `json:"nodes"`
+	PageInfo *PageInfo   `json:"pageInfo"`
+}
+
 type CreateCategoryInput struct {
 	CategoryName string `json:"categoryName"`
 }

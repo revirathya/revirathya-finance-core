@@ -130,6 +130,7 @@ func DecodeExpenseCursor(token string) (ExpenseCursor, error) {
 	}, nil
 }
 
+// Pagination
 type ExpenseListQuery struct {
 	TransactionDt *time.Time
 	After         *ExpenseCursor

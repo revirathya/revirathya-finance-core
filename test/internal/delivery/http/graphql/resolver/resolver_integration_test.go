@@ -227,10 +227,44 @@ func TestCategoryResolvers(t *testing.T) {
 	})
 
 	t.Run("list returns only the caller's categories, by name", func(t *testing.T) {
-		list := field(a.ok(alice, `{ categories { categoryName } }`, nil), "categories").([]any)
+		list := field(a.ok(alice, `{ categories { nodes { categoryName } } }`, nil), "categories", "nodes").([]any)
 		if len(list) != 2 || field(list[0], "categoryName") != "Bills" || field(list[1], "categoryName") != "Food" {
 			t.Fatalf("categories %v, want alice's Bills then Food", list)
 		}
+	})
+
+	t.Run("categories pages by name with first/after", func(t *testing.T) {
+		dewi, _ := a.login("Dewi", "")
+		for _, n := range []string{"Transport", "Food", "Bills", "Zakat", "Health"} {
+			a.ok(dewi, create, map[string]any{"n": n})
+		}
+		const list = `query($after: String) { categories(first: 2, after: $after) { nodes { categoryName } pageInfo { hasNextPage endCursor } } }`
+
+		var walked []string
+		var after any
+		for page := 0; ; page++ {
+			if page > 5 {
+				t.Fatal("pagination did not end")
+			}
+			conn := field(a.ok(dewi, list, map[string]any{"after": after}), "categories")
+			for _, n := range field(conn, "nodes").([]any) {
+				walked = append(walked, field(n, "categoryName").(string))
+			}
+			if field(conn, "pageInfo", "hasNextPage") != true {
+				if field(conn, "pageInfo", "endCursor") != nil {
+					t.Fatal("last page has an endCursor")
+				}
+				break
+			}
+			after = field(conn, "pageInfo", "endCursor")
+		}
+		if got := strings.Join(walked, " "); got != "Bills Food Health Transport Zakat" {
+			t.Fatalf("walked %q, want every category once, by name", got)
+		}
+		a.wantCode(dewi, list, map[string]any{"after": "garbage!"}, "BAD_USER_INPUT", "page_token")
+		a.wantCode(dewi, `{ categories(first: -1) { nodes { id } } }`, nil, "BAD_USER_INPUT", "page_size")
+		// A token that decodes to bytes that aren't UTF-8 must be bad input, not a database error.
+		a.wantCode(dewi, list, map[string]any{"after": "__4"}, "BAD_USER_INPUT", "page_token")
 	})
 
 	t.Run("another user's category is NOT_FOUND for get, update and delete", func(t *testing.T) {

@@ -3,6 +3,11 @@ type Category {
     categoryName: String!
 }
 
+type CategoryConnection {
+    nodes: [Category!]!
+    pageInfo: PageInfo!
+}
+
 input CreateCategoryInput {
     categoryName: String!
 }
@@ -13,7 +18,9 @@ input UpdateCategoryInput {
 
 extend type Query {
     category(id: UUID!): Category
-    categories: [Category!]!
+
+    "Alphabetical ordered. `first`: page size, default 20, max 50."
+    categories(first: Int, after: String): CategoryConnection!
 }
 
 extend type Mutation {

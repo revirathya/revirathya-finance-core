@@ -217,6 +217,39 @@ func TestCategoryHandler(t *testing.T) {
 		}
 	})
 
+	t.Run("list pages by name with page_size / page_token", func(t *testing.T) {
+		carol, carolTG := b.boundUser()
+		for _, n := range []string{"Transport", "Food", "Bills", "Zakat", "Health"} {
+			testutil.NewCategory(t, carol.ID, n)
+		}
+
+		var walked []string
+		token := ""
+		for page := 0; ; page++ {
+			if page > 5 {
+				t.Fatal("pagination did not end (is next_page_token set?)")
+			}
+			resp, err := b.categories.ListCategories(b.as(carolTG), &financecorev1.ListCategoriesRequest{PageSize: 2, PageToken: token})
+			if err != nil {
+				t.Fatalf("list: %v", err)
+			}
+			for _, c := range resp.GetCategories() {
+				walked = append(walked, c.GetCategoryName())
+			}
+			if token = resp.GetNextPageToken(); token == "" {
+				break
+			}
+		}
+		if got := strings.Join(walked, " "); got != "Bills Food Health Transport Zakat" {
+			t.Fatalf("walked %q, want every category once, by name (a missing next_page_token stops after the first page)", got)
+		}
+
+		_, err := b.categories.ListCategories(b.as(carolTG), &financecorev1.ListCategoriesRequest{PageToken: "garbage!"})
+		wantCode(t, err, codes.InvalidArgument, "page_token")
+		_, err = b.categories.ListCategories(b.as(carolTG), &financecorev1.ListCategoriesRequest{PageSize: -1})
+		wantCode(t, err, codes.InvalidArgument, "page_size")
+	})
+
 	t.Run("get returns the caller's category; another user's is NOT_FOUND", func(t *testing.T) {
 		resp, err := b.categories.GetCategoryByID(b.as(aliceTG), &financecorev1.GetCategoryByIDRequest{Id: food.ID.String()})
 		if err != nil || resp.GetCategory().GetId() != food.ID.String() || resp.GetCategory().GetCategoryName() != "Food" {
