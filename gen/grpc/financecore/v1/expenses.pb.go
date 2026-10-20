@@ -451,8 +451,9 @@ type UpdateExpenseRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Expense ID to update (UUID).
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Omit any field to keep its current value; description "" clears it.
 	// Category ID (UUID). Must reference an existing category.
-	CategoryId string `protobuf:"bytes,2,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
+	CategoryId *string `protobuf:"bytes,2,opt,name=category_id,json=categoryId,proto3,oneof" json:"category_id,omitempty"`
 	// Transaction date (YYYY-MM-DD).
 	TransactionDt *date.Date `protobuf:"bytes,3,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
 	// Free-text note about the expense. If omitted, the existing value is kept.
@@ -501,8 +502,8 @@ func (x *UpdateExpenseRequest) GetId() string {
 }
 
 func (x *UpdateExpenseRequest) GetCategoryId() string {
-	if x != nil {
-		return x.CategoryId
+	if x != nil && x.CategoryId != nil {
+		return *x.CategoryId
 	}
 	return ""
 }
@@ -689,14 +690,15 @@ const file_financecore_v1_expenses_proto_rawDesc = "" +
 	"\x15GetExpenseByIDRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"K\n" +
 	"\x16GetExpenseByIDResponse\x121\n" +
-	"\aexpense\x18\x01 \x01(\v2\x17.financecore.v1.ExpenseR\aexpense\"\xe6\x01\n" +
+	"\aexpense\x18\x01 \x01(\v2\x17.financecore.v1.ExpenseR\aexpense\"\xfb\x01\n" +
 	"\x14UpdateExpenseRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
-	"\vcategory_id\x18\x02 \x01(\tR\n" +
-	"categoryId\x128\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12$\n" +
+	"\vcategory_id\x18\x02 \x01(\tH\x00R\n" +
+	"categoryId\x88\x01\x01\x128\n" +
 	"\x0etransaction_dt\x18\x03 \x01(\v2\x11.google.type.DateR\rtransactionDt\x12%\n" +
-	"\vdescription\x18\x04 \x01(\tH\x00R\vdescription\x88\x01\x01\x12,\n" +
+	"\vdescription\x18\x04 \x01(\tH\x01R\vdescription\x88\x01\x01\x12,\n" +
 	"\x06amount\x18\x05 \x01(\v2\x14.google.type.DecimalR\x06amountB\x0e\n" +
+	"\f_category_idB\x0e\n" +
 	"\f_description\"J\n" +
 	"\x15UpdateExpenseResponse\x121\n" +
 	"\aexpense\x18\x01 \x01(\v2\x17.financecore.v1.ExpenseR\aexpense\"&\n" +

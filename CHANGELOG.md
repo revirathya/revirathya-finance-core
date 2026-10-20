@@ -52,6 +52,9 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
   `google.type.Decimal` (`{"value": "12500.50"}`) instead of strings; an impossible date (e.g. 2026-02-30) or a
   missing amount returns `INVALID_ARGUMENT` with the field name. Generated Go code is in `gen/grpc`.
 - gRPC `ListExpenses` is paged: `page_size` (default 20, max 50), `page_token`, and `next_page_token` in the response.
+- Updates are patches: `updateCategory`, `updateExpense`, `updateUser` and gRPC `UpdateExpense` /
+  `UpdateUserTelegramContext` change only the fields that are sent; omitted (or `null`) fields keep their value, and
+  `""` clears `description` / `lastName`. GraphQL update inputs are all nullable; `updateUser` takes `patch:`.
 - Expense descriptions are never null: an expense without one has `""` (GraphQL `String!`, gRPC plain `string`;
   database `NOT NULL DEFAULT ''`, migration `000005_expense_description_not_null`). On update, omitting the
   description keeps it and `""` clears it.
@@ -98,8 +101,7 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
 
 ### Fixed
 - GraphQL `createExpense` / `updateExpense` returned an empty `categoryId` (zero UUID) and `categoryName`.
-- GraphQL `updateUser`: a whitespace-only `lastName` now clears the last name (`null`) instead of storing `""`, and a
-  blank `firstName` reports `first_name: is required` like every other validation error.
+- GraphQL `updateUser`: a blank `firstName` reports `first_name: is required` like every other validation error.
 - GraphQL `deleteExpense` deleted nothing (it called the category usecase).
 - `GetUserByID` returned `NOT_FOUND` for users without a Telegram binding.
 - User repository returned an empty user instead of database errors.

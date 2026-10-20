@@ -58,17 +58,19 @@ func (f *UserForm) Validate() error {
 }
 
 type UserPatch struct {
-	FirstName string
+	FirstName *string
 	LastName  *string
 }
 
 func (p *UserPatch) Validate() error {
 	// First Name
-	firstName, err := validation.ValidateString("first_name", p.FirstName, 100, true)
-	if err != nil {
-		return err
+	if p.FirstName != nil {
+		firstName, err := validation.ValidateString("first_name", *p.FirstName, 100, true)
+		if err != nil {
+			return err
+		}
+		p.FirstName = &firstName
 	}
-	p.FirstName = firstName
 
 	// Last Name
 	if p.LastName != nil {
@@ -76,12 +78,7 @@ func (p *UserPatch) Validate() error {
 		if err != nil {
 			return err
 		}
-
-		if lastName == "" {
-			p.LastName = nil
-		} else {
-			p.LastName = &lastName
-		}
+		p.LastName = &lastName
 	}
 
 	return nil

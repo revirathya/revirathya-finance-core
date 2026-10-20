@@ -57,21 +57,25 @@ func (f *ExpenseForm) Validate() error {
 }
 
 type ExpensePatch struct {
-	CategoryID    uuid.UUID
-	TransactionDt time.Time
+	CategoryID    *uuid.UUID
+	TransactionDt *time.Time
 	Description   *string
-	Amount        decimal.Decimal
+	Amount        *decimal.Decimal
 }
 
 func (p *ExpensePatch) Validate() error {
 	// Amount
-	if err := validation.ValidateDecimal("amount", p.Amount, true, 14, 2); err != nil {
-		return err
+	if p.Amount != nil {
+		if err := validation.ValidateDecimal("amount", *p.Amount, true, 14, 2); err != nil {
+			return err
+		}
 	}
 
-	// Date
-	if err := validation.ValidateDate("transaction_dt", p.TransactionDt); err != nil {
-		return err
+	// Transaction Date
+	if p.TransactionDt != nil {
+		if err := validation.ValidateDate("transaction_dt", *p.TransactionDt); err != nil {
+			return err
+		}
 	}
 
 	// Description

@@ -13,7 +13,7 @@ type AuthPayload {
 }
 
 input UpdateUserInput {
-    firstName: String!
+    firstName: String
     lastName: String
 }
 
@@ -23,5 +23,5 @@ extend type Query {
 
 extend type Mutation {
     loginWithGoogle(idToken: String!): AuthPayload!
-    updateUser(input: UpdateUserInput!): User!
+    updateUser(patch: UpdateUserInput!): User!
 }

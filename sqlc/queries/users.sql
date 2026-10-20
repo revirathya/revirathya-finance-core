@@ -48,8 +48,11 @@ RETURNING id;
 -- name: UpdateUser :one
 UPDATE app.users
 SET
-  first_name = sqlc.arg('first_name'),
-  last_name = sqlc.arg('last_name')
+  first_name = COALESCE(sqlc.narg('first_name')::VARCHAR, first_name),
+  last_name = (CASE
+    WHEN sqlc.narg('last_name')::VARCHAR IS NULL THEN last_name
+    ELSE NULLIF(sqlc.narg('last_name')::VARCHAR, '')
+  END)
 WHERE
   id = sqlc.arg('id')
 RETURNING id;

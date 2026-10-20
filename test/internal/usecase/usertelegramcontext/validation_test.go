@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	// Internal
+	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/usertelegramcontext"
 )
@@ -19,7 +20,7 @@ func TestUserTelegramContextValidation(t *testing.T) {
 		uc := usertelegramcontext.NewUserTelegramContextUsecase(repo)
 		state := strings.Repeat("a", 101)
 
-		_, err := uc.UpdateUserTelegramContext(context.Background(), uuid.New(), nil, &state, nil, nil)
+		_, err := uc.UpdateUserTelegramContext(context.Background(), uuid.New(), domain.UserTelegramContextPatch{State: &state})
 
 		if !errors.Is(err, errDom.ErrInvalidInput) {
 			t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
@@ -34,7 +35,7 @@ func TestUserTelegramContextValidation(t *testing.T) {
 		uc := usertelegramcontext.NewUserTelegramContextUsecase(repo)
 		state, chatID := " ask_amount ", " 123 "
 
-		if _, err := uc.UpdateUserTelegramContext(context.Background(), uuid.New(), nil, &state, &chatID, nil); err != nil {
+		if _, err := uc.UpdateUserTelegramContext(context.Background(), uuid.New(), domain.UserTelegramContextPatch{State: &state, InteractionChatID: &chatID}); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if *repo.gotUpdateState != "ask_amount" || *repo.gotUpdateInteractionChatID != "123" {

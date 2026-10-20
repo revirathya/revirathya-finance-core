@@ -69,7 +69,7 @@ func TestCategoryRepository(t *testing.T) {
 		testutil.NewCategory(t, alice.ID, "Food")
 		bills := testutil.NewCategory(t, alice.ID, "Bills")
 
-		if _, err := repo.UpdateCategory(ctx, bills.ID, alice.ID, domain.CategoryPatch{CategoryName: "Food"}); !errors.Is(err, errDom.ErrConflict) {
+		if _, err := repo.UpdateCategory(ctx, bills.ID, alice.ID, domain.CategoryPatch{CategoryName: testutil.Ptr("Food")}); !errors.Is(err, errDom.ErrConflict) {
 			t.Fatalf("got %v, want errDom.ErrConflict", err)
 		}
 	})
@@ -81,7 +81,7 @@ func TestCategoryRepository(t *testing.T) {
 		if _, err := repo.GetCategoryByID(ctx, food.ID, alice.ID); err != nil {
 			t.Fatalf("get: %v", err)
 		}
-		renamed, err := repo.UpdateCategory(ctx, food.ID, alice.ID, domain.CategoryPatch{CategoryName: "Groceries"})
+		renamed, err := repo.UpdateCategory(ctx, food.ID, alice.ID, domain.CategoryPatch{CategoryName: testutil.Ptr("Groceries")})
 		if err != nil {
 			t.Fatalf("update: %v", err)
 		}
@@ -103,7 +103,7 @@ func TestCategoryRepository(t *testing.T) {
 		if _, err := repo.GetCategoryByID(ctx, food.ID, bob.ID); !errors.Is(err, errDom.ErrNotFound) {
 			t.Fatalf("get: got %v, want errDom.ErrNotFound", err)
 		}
-		if _, err := repo.UpdateCategory(ctx, food.ID, bob.ID, domain.CategoryPatch{CategoryName: "Hacked"}); !errors.Is(err, errDom.ErrNotFound) {
+		if _, err := repo.UpdateCategory(ctx, food.ID, bob.ID, domain.CategoryPatch{CategoryName: testutil.Ptr("Hacked")}); !errors.Is(err, errDom.ErrNotFound) {
 			t.Fatalf("update: got %v, want errDom.ErrNotFound", err)
 		}
 		if err := repo.DeleteCategory(ctx, food.ID, bob.ID); !errors.Is(err, errDom.ErrNotFound) {
@@ -140,6 +140,21 @@ func TestCategoryRepository(t *testing.T) {
 
 // Backstop for input that skipped Validate(): the database's own limits come back as
 // ErrInvalidInput, not as an unknown (internal) error.
+func TestCategoryRepositoryPatch(t *testing.T) {
+	ctx := context.Background()
+	repo := rCategory.NewCategoryRepositoryImpl(testutil.TestPool)
+
+	t.Run("an update without a name keeps it", func(t *testing.T) {
+		alice := testutil.NewUser(t)
+		food := testutil.NewCategory(t, alice.ID, "Food")
+
+		got, err := repo.UpdateCategory(ctx, food.ID, alice.ID, domain.CategoryPatch{})
+		if err != nil || got.CategoryName != "Food" {
+			t.Fatalf("got %v, %v; want Food unchanged", got, err)
+		}
+	})
+}
+
 func TestCategoryRepositoryLimits(t *testing.T) {
 	ctx := context.Background()
 	repo := rCategory.NewCategoryRepositoryImpl(testutil.TestPool)
@@ -161,7 +176,7 @@ func TestCategoryRepositoryLimits(t *testing.T) {
 		alice := testutil.NewUser(t)
 		food := testutil.NewCategory(t, alice.ID, "Food")
 
-		_, err := repo.UpdateCategory(ctx, food.ID, alice.ID, domain.CategoryPatch{CategoryName: strings.Repeat("a", 101)})
+		_, err := repo.UpdateCategory(ctx, food.ID, alice.ID, domain.CategoryPatch{CategoryName: testutil.Ptr(strings.Repeat("a", 101))})
 		if !errors.Is(err, errDom.ErrInvalidInput) {
 			t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
 		}

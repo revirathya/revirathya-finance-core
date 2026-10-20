@@ -11,6 +11,7 @@ import (
 
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
+	"github.com/revirathya/revirathya-finance-core/internal/domain"
 )
 
 // LoginWithGoogle is the resolver for the loginWithGoogle field.
@@ -40,13 +41,16 @@ func (r *mutationResolver) LoginWithGoogle(ctx context.Context, idToken string) 
 }
 
 // UpdateUser is the resolver for the updateUser field.
-func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUserInput) (*model.User, error) {
+func (r *mutationResolver) UpdateUser(ctx context.Context, patch model.UpdateUserInput) (*model.User, error) {
 	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	user, err := r.usecase.User.UpdateUser(ctx, userID, input.FirstName, input.LastName)
+	user, err := r.usecase.User.UpdateUser(ctx, userID, domain.UserPatch{
+		FirstName: patch.FirstName,
+		LastName:  patch.LastName,
+	})
 	if err != nil {
 		return nil, err
 	}

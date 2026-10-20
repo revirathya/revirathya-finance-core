@@ -132,7 +132,7 @@ func (q *Queries) ListCategories(ctx context.Context, userID pgtype.UUID) ([]Lis
 const updateCategory = `-- name: UpdateCategory :one
 UPDATE app.categories
 SET
-  category_name = $1
+  category_name = COALESCE($1::VARCHAR, category_name)
 WHERE
   id = $2
   AND user_id = $3
@@ -140,7 +140,7 @@ RETURNING id, category_name, created_at, updated_at, user_id
 `
 
 type UpdateCategoryParams struct {
-	CategoryName string      `json:"category_name"`
+	CategoryName *string     `json:"category_name"`
 	ID           pgtype.UUID `json:"id"`
 	UserID       pgtype.UUID `json:"user_id"`
 }

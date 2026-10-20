@@ -83,8 +83,9 @@ message UpdateExpenseRequest {
   // Expense ID to update (UUID).
   string id = 1;
 
+  // Omit any field to keep its current value; description "" clears it.
   // Category ID (UUID). Must reference an existing category.
-  string category_id = 2;
+  optional string category_id = 2;
 
   // Transaction date (YYYY-MM-DD).
   google.type.Date transaction_dt = 3;

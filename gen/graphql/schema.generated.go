@@ -32,7 +32,7 @@ type MutationResolver interface {
 	CreateTelegramBindCode(ctx context.Context) (*model.TelegramBindCode, error)
 	UnbindTelegram(ctx context.Context) (*model.User, error)
 	LoginWithGoogle(ctx context.Context, idToken string) (*model.AuthPayload, error)
-	UpdateUser(ctx context.Context, input model.UpdateUserInput) (*model.User, error)
+	UpdateUser(ctx context.Context, patch model.UpdateUserInput) (*model.User, error)
 }
 type QueryResolver interface {
 	Ok(ctx context.Context) (*bool, error)
@@ -164,14 +164,14 @@ func (ec *executionContext) field_Mutation_updateExpense_args(ctx context.Contex
 func (ec *executionContext) field_Mutation_updateUser_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "patch",
 		func(ctx context.Context, v any) (model.UpdateUserInput, error) {
 			return ec.unmarshalNUpdateUserInput2githubᚗcomᚋrevirathyaᚋrevirathyaᚑfinanceᚑcoreᚋgenᚋgraphqlᚋmodelᚐUpdateUserInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["input"] = arg0
+	args["patch"] = arg0
 	return args, nil
 }
 
@@ -656,7 +656,7 @@ func (ec *executionContext) _Mutation_updateUser(ctx context.Context, field grap
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().UpdateUser(ctx, fc.Args["input"].(model.UpdateUserInput))
+			return ec.Resolvers.Mutation().UpdateUser(ctx, fc.Args["patch"].(model.UpdateUserInput))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *model.User) graphql.Marshaler {
@@ -1468,6 +1468,42 @@ func (ec *executionContext) marshalODate2ᚖtimeᚐTime(ctx context.Context, sel
 	_ = sel
 	_ = ctx
 	res := scalar.MarshalDate(*v)
+	return res
+}
+
+func (ec *executionContext) unmarshalODecimal2ᚖgithubᚗcomᚋshopspringᚋdecimalᚐDecimal(ctx context.Context, v any) (*decimal.Decimal, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := scalar.UnmarshalDecimal(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalODecimal2ᚖgithubᚗcomᚋshopspringᚋdecimalᚐDecimal(ctx context.Context, sel ast.SelectionSet, v *decimal.Decimal) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	_ = sel
+	_ = ctx
+	res := scalar.MarshalDecimal(*v)
+	return res
+}
+
+func (ec *executionContext) unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx context.Context, v any) (*uuid.UUID, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := scalar.UnmarshalUUID(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx context.Context, sel ast.SelectionSet, v *uuid.UUID) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	_ = sel
+	_ = ctx
+	res := scalar.MarshalUUID(*v)
 	return res
 }
 

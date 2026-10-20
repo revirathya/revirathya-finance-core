@@ -113,27 +113,36 @@ func TestUserRepository(t *testing.T) {
 		}
 	})
 
-	t.Run("update changes names, keeps email, and nil clears the last name", func(t *testing.T) {
+	t.Run("update is a patch: nil keeps a field, a value replaces it, \"\" clears the last name", func(t *testing.T) {
 		alice := testutil.NewUser(t)
-		if _, err := repo.UpdateUser(ctx, alice.ID, domain.UserPatch{FirstName: "Alice", LastName: testutil.Ptr("Smith")}); err != nil {
+		if _, err := repo.UpdateUser(ctx, alice.ID, domain.UserPatch{FirstName: testutil.Ptr("Alice"), LastName: testutil.Ptr("Smith")}); err != nil {
 			t.Fatalf("first update: %v", err)
 		}
 
-		got, err := repo.UpdateUser(ctx, alice.ID, domain.UserPatch{FirstName: "Alicia"})
-
+		renamed, err := repo.UpdateUser(ctx, alice.ID, domain.UserPatch{FirstName: testutil.Ptr("Alicia")})
 		if err != nil {
-			t.Fatalf("second update: %v", err)
+			t.Fatalf("first-name-only update: %v", err)
 		}
-		if got.FirstName != "Alicia" || got.LastName != nil {
-			t.Fatalf("got %q %v, want Alicia and no last name", got.FirstName, got.LastName)
+		if renamed.FirstName != "Alicia" || renamed.LastName == nil || *renamed.LastName != "Smith" {
+			t.Fatalf("got %q %v, want Alicia and last name kept (Smith)", renamed.FirstName, renamed.LastName)
 		}
-		if got.Email != alice.Email {
-			t.Fatalf("email %q, want unchanged %q", got.Email, alice.Email)
+
+		cleared, err := repo.UpdateUser(ctx, alice.ID, domain.UserPatch{LastName: testutil.Ptr("")})
+		if err != nil {
+			t.Fatalf("clear last name: %v", err)
+		}
+		if cleared.FirstName != "Alicia" || cleared.LastName != nil {
+			t.Fatalf("got %q %v, want first name kept and last name NULL", cleared.FirstName, cleared.LastName)
+		}
+
+		same, err := repo.UpdateUser(ctx, alice.ID, domain.UserPatch{})
+		if err != nil || same.FirstName != "Alicia" || same.LastName != nil || same.Email != alice.Email {
+			t.Fatalf("empty patch: got %+v, %v; want nothing changed", same, err)
 		}
 	})
 
 	t.Run("updating an unknown user is not found", func(t *testing.T) {
-		if _, err := repo.UpdateUser(ctx, uuid.New(), domain.UserPatch{FirstName: "X"}); !errors.Is(err, errDom.ErrNotFound) {
+		if _, err := repo.UpdateUser(ctx, uuid.New(), domain.UserPatch{FirstName: testutil.Ptr("X")}); !errors.Is(err, errDom.ErrNotFound) {
 			t.Fatalf("got %v, want errDom.ErrNotFound", err)
 		}
 	})
@@ -153,7 +162,7 @@ func TestUserRepository(t *testing.T) {
 		if got, err := repo.CreateUser(cancelled, domain.UserForm{FirstName: "X", Email: id + "@test.local", GoogleSub: id}); err == nil || got != nil {
 			t.Fatalf("CreateUser: got user %v and error %v, want nil user and an error", got, err)
 		}
-		if got, err := repo.UpdateUser(cancelled, alice.ID, domain.UserPatch{FirstName: "X"}); err == nil || got != nil {
+		if got, err := repo.UpdateUser(cancelled, alice.ID, domain.UserPatch{FirstName: testutil.Ptr("X")}); err == nil || got != nil {
 			t.Fatalf("UpdateUser: got user %v and error %v, want nil user and an error", got, err)
 		}
 	})
@@ -175,7 +184,7 @@ func TestUserRepositoryLimits(t *testing.T) {
 	})
 
 	t.Run("too long last name on update is invalid input", func(t *testing.T) {
-		_, err := repo.UpdateUser(ctx, testutil.NewUser(t).ID, domain.UserPatch{FirstName: "Avi", LastName: &long})
+		_, err := repo.UpdateUser(ctx, testutil.NewUser(t).ID, domain.UserPatch{FirstName: testutil.Ptr("Avi"), LastName: &long})
 		if !errors.Is(err, errDom.ErrInvalidInput) {
 			t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
 		}

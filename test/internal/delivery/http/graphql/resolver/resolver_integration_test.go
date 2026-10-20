@@ -178,7 +178,7 @@ func TestAuthResolvers(t *testing.T) {
 
 	t.Run("updateUser trims, clears the last name with an empty string, and validates", func(t *testing.T) {
 		token, _ := a.login("Citra", "Dewi")
-		const q = `mutation($in: UpdateUserInput!) { updateUser(input: $in) { firstName lastName } }`
+		const q = `mutation($in: UpdateUserInput!) { updateUser(patch: $in) { firstName lastName } }`
 
 		user := field(a.ok(token, q, map[string]any{"in": map[string]any{"firstName": "  Citra Ayu ", "lastName": ""}}), "updateUser").(map[string]any)
 		if user["firstName"] != "Citra Ayu" || user["lastName"] != nil {
@@ -189,6 +189,21 @@ func TestAuthResolvers(t *testing.T) {
 			t.Fatalf("whitespace-only last name stored as %q, want null", blank)
 		}
 		a.wantCode(token, q, map[string]any{"in": map[string]any{"firstName": "   "}}, "BAD_USER_INPUT", "first_name: is required")
+
+		// Patch: omitted fields keep their value.
+		a.ok(token, q, map[string]any{"in": map[string]any{"firstName": "Citra", "lastName": "Dewi"}})
+		onlyFirst := field(a.ok(token, q, map[string]any{"in": map[string]any{"firstName": "Ayu"}}), "updateUser").(map[string]any)
+		if onlyFirst["firstName"] != "Ayu" || onlyFirst["lastName"] != "Dewi" {
+			t.Fatalf("user %v after a first-name-only update, want last name kept (Dewi)", onlyFirst)
+		}
+		onlyLast := field(a.ok(token, q, map[string]any{"in": map[string]any{"lastName": "Putri"}}), "updateUser").(map[string]any)
+		if onlyLast["firstName"] != "Ayu" || onlyLast["lastName"] != "Putri" {
+			t.Fatalf("user %v after a last-name-only update, want first name kept (Ayu)", onlyLast)
+		}
+		nulls := field(a.ok(token, q, map[string]any{"in": map[string]any{"firstName": nil, "lastName": nil}}), "updateUser").(map[string]any)
+		if nulls["firstName"] != "Ayu" || nulls["lastName"] != "Putri" {
+			t.Fatalf("user %v after an update with explicit nulls, want both kept", nulls)
+		}
 		a.wantCode(token, q, map[string]any{"in": map[string]any{"firstName": strings.Repeat("a", 101)}}, "BAD_USER_INPUT", "first_name: must be at most 100 characters")
 	})
 }
@@ -287,6 +302,37 @@ func TestExpenseResolvers(t *testing.T) {
 
 		if kept["description"] != "Lunch" || kept["amount"] != "20" || cleared["description"] != "" {
 			t.Fatalf("kept %v, cleared %v; want Lunch then empty", kept, cleared)
+		}
+	})
+
+	t.Run("update is a patch: each omitted field keeps its value", func(t *testing.T) {
+		bills := category(alice, "Groceries")
+		id := field(a.ok(alice, create, expenseInput("2026-01-15", "10", map[string]any{"description": "Lunch"})), "createExpense", "id")
+		const update = `mutation($id: UUID!, $p: UpdateExpenseInput!) { updateExpense(id: $id, patch: $p) { transactionDt categoryName description amount } }`
+
+		for _, step := range []struct {
+			patch map[string]any
+			want  string
+		}{
+			{map[string]any{"amount": "20"}, "2026-01-15 Food Lunch 20"},
+			{map[string]any{"categoryId": bills}, "2026-01-15 Groceries Lunch 20"},
+			{map[string]any{"transactionDt": "2026-01-20"}, "2026-01-20 Groceries Lunch 20"},
+			{map[string]any{"description": "Dinner"}, "2026-01-20 Groceries Dinner 20"},
+			{map[string]any{}, "2026-01-20 Groceries Dinner 20"},
+		} {
+			e := field(a.ok(alice, update, map[string]any{"id": id, "p": step.patch}), "updateExpense").(map[string]any)
+			if got := strings.Join([]string{e["transactionDt"].(string), e["categoryName"].(string), e["description"].(string), e["amount"].(string)}, " "); got != step.want {
+				t.Fatalf("after patch %v: got %q, want %q", step.patch, got, step.want)
+			}
+		}
+		a.wantCode(alice, update, map[string]any{"id": id, "p": map[string]any{"amount": "0"}}, "BAD_USER_INPUT", "amount: must be greater than 0")
+	})
+
+	t.Run("updateCategory without a name keeps it", func(t *testing.T) {
+		id := category(alice, "Transport")
+		got := field(a.ok(alice, `mutation($id: UUID!) { updateCategory(id: $id, patch: {}) { categoryName } }`, map[string]any{"id": id}), "updateCategory", "categoryName")
+		if got != "Transport" {
+			t.Fatalf("categoryName %v, want Transport unchanged", got)
 		}
 	})
 

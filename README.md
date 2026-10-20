@@ -334,6 +334,18 @@ grpcurl -plaintext -H "authorization: Bearer $GRPC_API_KEY" -H "x-telegram-user-
   -d '{"pageSize": 20, "pageToken": "MjAyNi0xMC0xN3w5YjJm..."}' localhost:50051 financecore.v1.ExpenseService/ListExpenses
 ```
 
+## Updates
+
+Every update is a **patch**: send only the fields to change. A field that is omitted (or `null` in GraphQL) keeps its
+current value; `""` clears `description` and `lastName`. An update with no fields returns the object unchanged.
+
+|API|Mutation / RPC|How "omitted" is expressed|
+|:--|:--|:--|
+|GraphQL|`updateCategory(id, patch)`, `updateExpense(id, patch)`, `updateUser(patch)`|Leave the input field out, or send `null`|
+|gRPC|`UpdateExpense`, `UpdateUserTelegramContext`|Leave the field unset (`optional` fields and message fields like `transaction_dt`)|
+
+Fields that are sent are validated the same way as on create.
+
 ## Input validation
 
 Both APIs validate input the same way, after trimming surrounding whitespace from text:
@@ -344,7 +356,7 @@ Both APIs validate input the same way, after trimming surrounding whitespace fro
 |Last name|Optional, at most 100 characters|
 |Expense amount|Greater than 0, at most 2 decimal places, below 1,000,000,000,000|
 |Expense date|From 2000-01-01 to tomorrow (Asia/Jakarta)|
-|Expense description|Optional, at most 500 characters. Never `null` in responses (`""` when there is none). On update, omit it to keep the current one, or send `""` to clear it|
+|Expense description|Optional, at most 500 characters. Never `null` in responses (`""` when there is none). On update, omit it to keep the current one, or send `""` to clear it (see Updates)|
 |Telegram context fields|Optional, at most 100 characters each|
 
 Invalid input returns `INVALID_ARGUMENT` (gRPC) or `BAD_USER_INPUT` (GraphQL) with a message naming the field,

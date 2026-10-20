@@ -39,14 +39,10 @@ func (uc *CategoryUsecase) ListCategories(ctx context.Context, userID uuid.UUID)
 	return uc.ctgRepo.ListCategories(ctx, userID)
 }
 
-func (uc *CategoryUsecase) UpdateCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID, categoryName string) (*domain.Category, error) {
-	patch := domain.CategoryPatch{
-		CategoryName: categoryName,
-	}
+func (uc *CategoryUsecase) UpdateCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.CategoryPatch) (*domain.Category, error) {
 	if err := patch.Validate(); err != nil {
 		return nil, err
 	}
-
 	return uc.ctgRepo.UpdateCategory(ctx, id, userID, patch)
 }
 

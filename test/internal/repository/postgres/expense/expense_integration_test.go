@@ -90,7 +90,7 @@ func TestExpenseRepository(t *testing.T) {
 		if err != nil {
 			t.Fatalf("create: %v", err)
 		}
-		patch := domain.ExpensePatch{CategoryID: food.ID, TransactionDt: testutil.Day(t, "2026-01-15"), Amount: decimal.RequireFromString("20")}
+		patch := domain.ExpensePatch{CategoryID: testutil.Ptr(food.ID), TransactionDt: testutil.Ptr(testutil.Day(t, "2026-01-15")), Amount: testutil.Ptr(decimal.RequireFromString("20"))}
 
 		kept, err := repo.UpdateExpense(ctx, created.ID, alice.ID, patch)
 		if err != nil {
@@ -140,9 +140,9 @@ func TestExpenseRepository(t *testing.T) {
 		bobsFood := testutil.NewCategory(t, bob.ID, "Food")
 
 		_, err := repo.UpdateExpense(ctx, expense.ID, alice.ID, domain.ExpensePatch{
-			CategoryID:    bobsFood.ID,
-			TransactionDt: testutil.Day(t, "2026-01-15"),
-			Amount:        decimal.RequireFromString("10"),
+			CategoryID:    testutil.Ptr(bobsFood.ID),
+			TransactionDt: testutil.Ptr(testutil.Day(t, "2026-01-15")),
+			Amount:        testutil.Ptr(decimal.RequireFromString("10")),
 		})
 		if !errors.Is(err, errDom.ErrInvalidInput) {
 			t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
@@ -155,9 +155,9 @@ func TestExpenseRepository(t *testing.T) {
 		expense := testutil.NewExpense(t, alice.ID, food.ID, "2026-01-15", "10")
 
 		updated, err := repo.UpdateExpense(ctx, expense.ID, alice.ID, domain.ExpensePatch{
-			CategoryID:    bills.ID,
-			TransactionDt: testutil.Day(t, "2026-01-20"),
-			Amount:        decimal.RequireFromString("99.99"),
+			CategoryID:    testutil.Ptr(bills.ID),
+			TransactionDt: testutil.Ptr(testutil.Day(t, "2026-01-20")),
+			Amount:        testutil.Ptr(decimal.RequireFromString("99.99")),
 		})
 		if err != nil {
 			t.Fatalf("update: %v", err)
@@ -183,9 +183,9 @@ func TestExpenseRepository(t *testing.T) {
 			t.Fatalf("get: got %v, want errDom.ErrNotFound", err)
 		}
 		_, err := repo.UpdateExpense(ctx, expense.ID, bob.ID, domain.ExpensePatch{
-			CategoryID:    bobsFood.ID,
-			TransactionDt: testutil.Day(t, "2026-01-15"),
-			Amount:        decimal.RequireFromString("0"),
+			CategoryID:    testutil.Ptr(bobsFood.ID),
+			TransactionDt: testutil.Ptr(testutil.Day(t, "2026-01-15")),
+			Amount:        testutil.Ptr(decimal.RequireFromString("0")),
 		})
 		if !errors.Is(err, errDom.ErrNotFound) {
 			t.Fatalf("update: got %v, want errDom.ErrNotFound", err)
@@ -301,9 +301,9 @@ func TestExpenseRepositoryLimits(t *testing.T) {
 		expense := testutil.NewExpense(t, alice.ID, food.ID, "2026-01-15", "10")
 
 		_, err := repo.UpdateExpense(ctx, expense.ID, alice.ID, domain.ExpensePatch{
-			CategoryID:    food.ID,
-			TransactionDt: testutil.Day(t, "2026-01-15"),
-			Amount:        decimal.RequireFromString("1000000000000"),
+			CategoryID:    testutil.Ptr(food.ID),
+			TransactionDt: testutil.Ptr(testutil.Day(t, "2026-01-15")),
+			Amount:        testutil.Ptr(decimal.RequireFromString("1000000000000")),
 		})
 		if !errors.Is(err, errDom.ErrInvalidInput) {
 			t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
@@ -416,4 +416,51 @@ func TestExpenseRepositoryPagination(t *testing.T) {
 			t.Fatalf("got %d rows, %v; want 3", len(got), err)
 		}
 	})
+}
+
+// Update is a patch: each field left nil keeps its stored value.
+func TestExpenseRepositoryPatch(t *testing.T) {
+	ctx := context.Background()
+	repo := rExpense.NewExpenseRepositoryImpl(testutil.TestPool)
+	alice := testutil.NewUser(t)
+	food, bills := testutil.NewCategory(t, alice.ID, "Food"), testutil.NewCategory(t, alice.ID, "Bills")
+	created, err := repo.CreateExpense(ctx, domain.ExpenseForm{
+		UserID: alice.ID, CategoryID: food.ID, TransactionDt: testutil.Day(t, "2026-01-15"),
+		Description: testutil.Ptr("Lunch"), Amount: decimal.RequireFromString("10"),
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	// Each step changes one field; every other field must still hold the previous value.
+	steps := []struct {
+		name  string
+		patch domain.ExpensePatch
+		check func(e *domain.Expense) bool
+	}{
+		{"only the amount", domain.ExpensePatch{Amount: testutil.Ptr(decimal.RequireFromString("20"))}, func(e *domain.Expense) bool {
+			return e.Amount.Equal(decimal.RequireFromString("20")) && e.CategoryID == food.ID && e.Description == "Lunch" && e.TransactionDt.Equal(testutil.Day(t, "2026-01-15"))
+		}},
+		{"only the category", domain.ExpensePatch{CategoryID: testutil.Ptr(bills.ID)}, func(e *domain.Expense) bool {
+			return e.CategoryID == bills.ID && e.CategoryName == "Bills" && e.Amount.Equal(decimal.RequireFromString("20")) && e.Description == "Lunch"
+		}},
+		{"only the date", domain.ExpensePatch{TransactionDt: testutil.Ptr(testutil.Day(t, "2026-01-20"))}, func(e *domain.Expense) bool {
+			return e.TransactionDt.Equal(testutil.Day(t, "2026-01-20")) && e.CategoryID == bills.ID && e.Amount.Equal(decimal.RequireFromString("20"))
+		}},
+		{"only the description", domain.ExpensePatch{Description: testutil.Ptr("Dinner")}, func(e *domain.Expense) bool {
+			return e.Description == "Dinner" && e.TransactionDt.Equal(testutil.Day(t, "2026-01-20")) && e.CategoryID == bills.ID
+		}},
+		{"nothing", domain.ExpensePatch{}, func(e *domain.Expense) bool {
+			return e.Description == "Dinner" && e.Amount.Equal(decimal.RequireFromString("20")) && e.CategoryID == bills.ID
+		}},
+	}
+	for _, step := range steps {
+		got, err := repo.UpdateExpense(ctx, created.ID, alice.ID, step.patch)
+		if err != nil {
+			t.Fatalf("update %s: %v", step.name, err)
+		}
+		if !step.check(got) {
+			t.Fatalf("update %s: got %+v, want only that field changed", step.name, got)
+		}
+	}
 }

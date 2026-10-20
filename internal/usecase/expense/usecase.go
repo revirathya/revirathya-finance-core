@@ -93,13 +93,7 @@ func (uc *ExpenseUsecase) ListExpenses(
 	return page, nil
 }
 
-func (uc *ExpenseUsecase) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, categoryID uuid.UUID, transactionDt time.Time, description *string, amount decimal.Decimal) (*domain.Expense, error) {
-	patch := domain.ExpensePatch{
-		CategoryID:    categoryID,
-		TransactionDt: transactionDt,
-		Description:   description,
-		Amount:        amount,
-	}
+func (uc *ExpenseUsecase) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.ExpensePatch) (*domain.Expense, error) {
 	if err := patch.Validate(); err != nil {
 		return nil, err
 	}

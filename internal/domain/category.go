@@ -28,15 +28,17 @@ func (f *CategoryForm) Validate() error {
 }
 
 type CategoryPatch struct {
-	CategoryName string
+	CategoryName *string
 }
 
 func (f *CategoryPatch) Validate() error {
-	categoryName, err := validation.ValidateString("category_name", f.CategoryName, 100, true)
-	if err != nil {
-		return err
+	if f.CategoryName != nil {
+		categoryName, err := validation.ValidateString("category_name", *f.CategoryName, 100, true)
+		if err != nil {
+			return err
+		}
+		f.CategoryName = &categoryName
 	}
-	f.CategoryName = categoryName
 	return nil
 }
 

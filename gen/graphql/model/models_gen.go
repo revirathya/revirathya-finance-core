@@ -64,18 +64,19 @@ type TelegramBindCode struct {
 }
 
 type UpdateCategoryInput struct {
-	CategoryName string `json:"categoryName"`
+	CategoryName *string `json:"categoryName,omitempty"`
 }
 
 type UpdateExpenseInput struct {
-	TransactionDt time.Time       `json:"transactionDt"`
-	CategoryID    uuid.UUID       `json:"categoryId"`
-	Description   *string         `json:"description,omitempty"`
-	Amount        decimal.Decimal `json:"amount"`
+	// Omit any field to keep its value; description "" clears it.
+	TransactionDt *time.Time       `json:"transactionDt,omitempty"`
+	CategoryID    *uuid.UUID       `json:"categoryId,omitempty"`
+	Description   *string          `json:"description,omitempty"`
+	Amount        *decimal.Decimal `json:"amount,omitempty"`
 }
 
 type UpdateUserInput struct {
-	FirstName string  `json:"firstName"`
+	FirstName *string `json:"firstName,omitempty"`
 	LastName  *string `json:"lastName,omitempty"`
 }
 

@@ -160,7 +160,7 @@ func TestUpdateCategory(t *testing.T) {
 		repo := &fakeCategoryRepo{updateResp: want}
 		uc := category.NewCategoryUsecase(repo)
 
-		got, err := uc.UpdateCategory(context.Background(), id, userID, "Groceries")
+		got, err := uc.UpdateCategory(context.Background(), id, userID, domain.CategoryPatch{CategoryName: ptr("Groceries")})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -171,8 +171,8 @@ func TestUpdateCategory(t *testing.T) {
 		if repo.gotUpdateID != id {
 			t.Fatalf("repo received id %v, want %v", repo.gotUpdateID, id)
 		}
-		if repo.gotUpdatePatch.CategoryName != "Groceries" {
-			t.Fatalf("repo received category_name %q, want %q", repo.gotUpdatePatch.CategoryName, "Groceries")
+		if repo.gotUpdatePatch.CategoryName == nil || *repo.gotUpdatePatch.CategoryName != "Groceries" {
+			t.Fatalf("repo received category_name %v, want %q", repo.gotUpdatePatch.CategoryName, "Groceries")
 		}
 	})
 
@@ -181,7 +181,7 @@ func TestUpdateCategory(t *testing.T) {
 		repo := &fakeCategoryRepo{err: errors.New("not found")}
 		uc := category.NewCategoryUsecase(repo)
 
-		if _, err := uc.UpdateCategory(context.Background(), id, userID, "Groceries"); err == nil {
+		if _, err := uc.UpdateCategory(context.Background(), id, userID, domain.CategoryPatch{CategoryName: ptr("Groceries")}); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})
@@ -213,3 +213,5 @@ func TestDeleteCategory(t *testing.T) {
 		}
 	})
 }
+
+func ptr[T any](v T) *T { return &v }

@@ -69,7 +69,7 @@ type ComplexityRoot struct {
 		UnbindTelegram         func(childComplexity int) int
 		UpdateCategory         func(childComplexity int, id uuid.UUID, patch model.UpdateCategoryInput) int
 		UpdateExpense          func(childComplexity int, id uuid.UUID, patch model.UpdateExpenseInput) int
-		UpdateUser             func(childComplexity int, input model.UpdateUserInput) int
+		UpdateUser             func(childComplexity int, patch model.UpdateUserInput) int
 	}
 
 	PageInfo struct {
@@ -307,7 +307,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Mutation.UpdateUser(childComplexity, args["input"].(model.UpdateUserInput)), true
+		return e.ComplexityRoot.Mutation.UpdateUser(childComplexity, args["patch"].(model.UpdateUserInput)), true
 
 	case "PageInfo.endCursor":
 		if e.ComplexityRoot.PageInfo.EndCursor == nil {
@@ -517,7 +517,7 @@ input CreateCategoryInput {
 }
 
 input UpdateCategoryInput {
-    categoryName: String!
+    categoryName: String
 }
 
 extend type Query {
@@ -553,10 +553,11 @@ input CreateExpenseInput {
 }
 
 input UpdateExpenseInput {
-    transactionDt: Date!
-    categoryId: UUID!
+    "Omit any field to keep its value; description \"\" clears it."
+    transactionDt: Date
+    categoryId: UUID
     description: String
-    amount: Decimal!
+    amount: Decimal
 }
 
 extend type Query {
@@ -621,7 +622,7 @@ type AuthPayload {
 }
 
 input UpdateUserInput {
-    firstName: String!
+    firstName: String
     lastName: String
 }
 
@@ -631,7 +632,7 @@ extend type Query {
 
 extend type Mutation {
     loginWithGoogle(idToken: String!): AuthPayload!
-    updateUser(input: UpdateUserInput!): User!
+    updateUser(patch: UpdateUserInput!): User!
 }
 `, BuiltIn: false},
 }

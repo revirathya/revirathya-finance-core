@@ -60,10 +60,10 @@ LIMIT sqlc.arg('row_limit');
 -- name: UpdateExpense :one
 UPDATE app.expenses
 SET
-  category_id = COALESCE(sqlc.arg('category_id'), category_id),
-  transaction_dt = COALESCE(sqlc.arg('transaction_dt'), transaction_dt),
-  description = COALESCE(sqlc.narg('description'), description),
-  amount = COALESCE(sqlc.narg('amount'), amount)
+  category_id = COALESCE(sqlc.narg('category_id')::UUID, category_id),
+  transaction_dt = COALESCE(sqlc.narg('transaction_dt')::DATE, transaction_dt),
+  description = COALESCE(sqlc.narg('description')::TEXT, description),
+  amount = COALESCE(sqlc.narg('amount')::NUMERIC(14,2), amount)
 WHERE
   id = sqlc.arg('id')
   AND user_id = sqlc.arg('user_id')

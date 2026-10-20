@@ -125,7 +125,7 @@ func (ec *executionContext) unmarshalInputUpdateCategoryInput(ctx context.Contex
 		switch k {
 		case "categoryName":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("categoryName"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}

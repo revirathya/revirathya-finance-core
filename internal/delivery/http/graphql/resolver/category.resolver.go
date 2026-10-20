@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
+	"github.com/revirathya/revirathya-finance-core/internal/domain"
 )
 
 // CreateCategory is the resolver for the createCategory field.
@@ -39,7 +40,9 @@ func (r *mutationResolver) UpdateCategory(ctx context.Context, id uuid.UUID, pat
 		return nil, err
 	}
 
-	result, err := r.usecase.Category.UpdateCategory(ctx, id, userID, patch.CategoryName)
+	result, err := r.usecase.Category.UpdateCategory(ctx, id, userID, domain.CategoryPatch{
+		CategoryName: patch.CategoryName,
+	})
 	if err != nil {
 		return nil, err
 	}
