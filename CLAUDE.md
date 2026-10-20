@@ -51,9 +51,7 @@ make proto-generate   # buf generate: proto/**/*.proto -> gen/grpc/** (deps from
 make sqlc-generate    # sqlc generate: sqlc/queries/*.sql -> gen/sqlc
 make gql-generate     # gqlgen generate: graphql/schema/*.graphql -> gen/graphql + resolver stubs in internal/delivery/http/graphql/resolver
 
-# gRPC dev tools (read local proto files; currently fail: grpcurl can't resolve google/type/*.proto from -import-path proto.
-# Use grpcurl with server reflection instead, GRPC_ENABLE_REFLECTION=true. Default GRPC_ADDR is the Docker-mode
-# port localhost:51051; pass GRPC_ADDR=localhost:50051 in local mode)
+# gRPC dev tools: build the protos with buf into bin/financecore.binpb and read it with grpcurl (no server, no reflection)
 make grpc-list
 make grpc-describe symbol=financecore.v1.CategoryService
 ```
@@ -69,7 +67,7 @@ passed through make variables (`args="..."`), not as `make docker-down -v`.
 
 Two run modes: local mode (`make docker-up svc=db` + `make run`, app reads `DATABASE_URI` pointing at
 `localhost:$DB_HOST_PORT`) and Docker mode (`make docker-up`, compose builds an in-network DSN to `db:5432` and
-pins container ports `50051`/`8080`/`9090`; host ports come from `*_HOST_PORT` and are bound to `127.0.0.1`).
+pins container ports `50051`/`8080`/`9090`; host ports come from `*_HOST_PORT`; the metrics port is bound to `127.0.0.1` only).
 
 ## Architecture
 
@@ -105,7 +103,8 @@ internal/delivery/grpc/
   interceptor/apikeyauth       bot API key (authorization: Bearer)
   interceptor/telegramuser     x-telegram-user-id -> principal (unbound users: BindTelegramAccount only)
 internal/delivery/http/
-  server.go                    Setup: the HTTP server + mux (requestid -> accesslog), /healthz, /readyz -> ServerLayer
+  server.go                    Setup(env, port, ping): the HTTP server + mux (requestid -> accesslog), /healthz, /readyz,
+                               and GET /playground (GraphiQL) only when APP_ENV=dev -> ServerLayer
   health/                      /healthz and /readyz handlers
   middleware/helper.go         ChainMiddleware (first listed = outermost, like grpc.ChainUnaryInterceptor)
   middleware/recorder.go       StatusRecorder: shared status capture (first status wins) for accesslog and metrics
@@ -125,7 +124,8 @@ internal/platform/ratelimit    in-memory fixed-window limiter (per process)
 internal/platform/metrics      Prometheus registry + collectors (gRPC, HTTP, GraphQL errors, pool); ObserveHTTP, GraphQLError
 internal/platform/logging      slog setup (LOG_FORMAT json/text, LOG_LEVEL), request ID in context, EnsureRequestID
 internal/utils                 SetPageSize: page-size rules shared by every list usecase (< 0 invalid, 0 -> default, cap at max)
-internal/config                env-based config loading (.env via godotenv, falls back to OS env)
+internal/config                env-based config loading (.env via godotenv, falls back to OS env); APP_ENV (dev|prod, default prod)
+                               sets the defaults of GRPC_ENABLE_REFLECTION / GQL_ENABLE_INTROSPECTION, explicit values win
 infra/docker/                  Dockerfile, migration.Dockerfile, docker-compose.yaml
 test/internal/...              all tests, mirroring the internal/ package they cover
 testutil/                      shared test helpers: RunWithPostgres/TestPool/New* (integration tag), CaptureLogs
@@ -220,6 +220,10 @@ including integration, with `-race` (the same command as `make test-integration`
   `internal/repository/postgres/<entity>/` -> usecase -> (grpc handler and/or graphql resolver) -> wire up in
   `internal/repository/bootstrap.go`, `internal/usecase/bootstrap.go`, `internal/delivery/grpc/server.go` and
   `internal/delivery/http/graphql/setup.go`.
+- API docs live in the contracts: every proto service, RPC, message and field has a comment directly above it, and
+  every GraphQL type, field, argument and input field a `"description"`. State what the type doesn't: formats,
+  limits, ordering, patch/pagination behaviour, and each RPC's error codes. Keep them in sync when behaviour changes,
+  then regenerate (`make proto-generate`, `make gql-generate`); `make grpc-describe` and the dev playground show them.
 - Code must pass `make lint` (CI runs golangci-lint). Silence a finding only with a targeted
   `//nolint:<linter> // <reason>` on that line, never by disabling the linter.
 - Logging: use `log/slog`'s `*Context` methods (`slog.InfoContext`, `slog.ErrorContext`, ...) wherever a request

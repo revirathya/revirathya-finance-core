@@ -27,11 +27,21 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// CategoryService provides read access to expense categories.
+// CategoryService gives the Telegram bot read access to the calling user's categories. Categories are
+// created and changed through the GraphQL API.
+//
+// Every call needs the metadata "authorization: Bearer <api key>" and "x-telegram-user-id: <Telegram user
+// ID>" of a bound Telegram account; otherwise it fails with UNAUTHENTICATED. Calls without a deadline time
+// out after 10 seconds (DEADLINE_EXCEEDED).
 type CategoryServiceClient interface {
-	// Returns all categories, ordered alphabetically by category_name.
+	// Returns the caller's categories, ordered by category_name, one page at a time.
+	//
+	// Errors: INVALID_ARGUMENT (negative page_size, invalid page_token), UNAUTHENTICATED.
 	ListCategories(ctx context.Context, in *ListCategoriesRequest, opts ...grpc.CallOption) (*ListCategoriesResponse, error)
-	// Returns a single category by its ID.
+	// Returns one of the caller's categories.
+	//
+	// Errors: INVALID_ARGUMENT (id is not a UUID), NOT_FOUND (no such category for the caller, including
+	// another user's), UNAUTHENTICATED.
 	GetCategoryByID(ctx context.Context, in *GetCategoryByIDRequest, opts ...grpc.CallOption) (*GetCategoryByIDResponse, error)
 }
 
@@ -67,11 +77,21 @@ func (c *categoryServiceClient) GetCategoryByID(ctx context.Context, in *GetCate
 // All implementations must embed UnimplementedCategoryServiceServer
 // for forward compatibility.
 //
-// CategoryService provides read access to expense categories.
+// CategoryService gives the Telegram bot read access to the calling user's categories. Categories are
+// created and changed through the GraphQL API.
+//
+// Every call needs the metadata "authorization: Bearer <api key>" and "x-telegram-user-id: <Telegram user
+// ID>" of a bound Telegram account; otherwise it fails with UNAUTHENTICATED. Calls without a deadline time
+// out after 10 seconds (DEADLINE_EXCEEDED).
 type CategoryServiceServer interface {
-	// Returns all categories, ordered alphabetically by category_name.
+	// Returns the caller's categories, ordered by category_name, one page at a time.
+	//
+	// Errors: INVALID_ARGUMENT (negative page_size, invalid page_token), UNAUTHENTICATED.
 	ListCategories(context.Context, *ListCategoriesRequest) (*ListCategoriesResponse, error)
-	// Returns a single category by its ID.
+	// Returns one of the caller's categories.
+	//
+	// Errors: INVALID_ARGUMENT (id is not a UUID), NOT_FOUND (no such category for the caller, including
+	// another user's), UNAUTHENTICATED.
 	GetCategoryByID(context.Context, *GetCategoryByIDRequest) (*GetCategoryByIDResponse, error)
 	mustEmbedUnimplementedCategoryServiceServer()
 }

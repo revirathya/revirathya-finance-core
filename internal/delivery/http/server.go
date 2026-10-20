@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	// Internal
+	"github.com/99designs/gqlgen/graphql/playground"
 
 	// Internal - HTTP
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/health"
@@ -30,6 +30,7 @@ type ServerLayer struct {
 }
 
 func Setup(
+	env string,
 	port string,
 	ping func(ctx context.Context) error,
 ) *ServerLayer {
@@ -39,6 +40,10 @@ func Setup(
 	// Set Handler
 	mux.HandleFunc("GET /healthz", health.Healthz())
 	mux.HandleFunc("GET /readyz", health.Readyz(ping))
+
+	if env == "dev" {
+		mux.Handle("GET /playground", playground.Handler("Finance Core", "/graphql"))
+	}
 
 	// Set Server
 	httpServer := &http.Server{

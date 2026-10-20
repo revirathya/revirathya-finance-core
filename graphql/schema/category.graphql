@@ -1,30 +1,49 @@
+"A category used to group the signed-in user's expenses, e.g. \"Food\" or \"Transport\"."
 type Category {
     id: UUID!
+
+    "1-100 characters, trimmed, unique per user."
     categoryName: String!
 }
 
+"One page of categories."
 type CategoryConnection {
+    "The categories on this page, ordered by name."
     nodes: [Category!]!
     pageInfo: PageInfo!
 }
 
 input CreateCategoryInput {
+    "1-100 characters, trimmed. A name the user already has is `CONFLICT`."
     categoryName: String!
 }
 
+"Patch: omitted fields keep their current value."
 input UpdateCategoryInput {
+    "1-100 characters, trimmed. A name the user already has is `CONFLICT`."
     categoryName: String
 }
 
 extend type Query {
+    "One of the signed-in user's categories. Another user's category is `NOT_FOUND`."
     category(id: UUID!): Category
 
-    "Alphabetical ordered. `first`: page size, default 20, max 50."
-    categories(first: Int, after: String): CategoryConnection!
+    "The signed-in user's categories, ordered by name."
+    categories(
+        "Page size: default 20, capped at 50; negative is `BAD_USER_INPUT`."
+        first: Int
+        "`pageInfo.endCursor` from the previous page; omit for the first page."
+        after: String
+    ): CategoryConnection!
 }
 
 extend type Mutation {
+    "Creates a category and returns it."
     createCategory(input: CreateCategoryInput!): Category
+
+    "Renames a category (patch) and returns it. Another user's category is `NOT_FOUND`."
     updateCategory(id: UUID!, patch: UpdateCategoryInput!): Category
+
+    "Deletes a category and returns its ID. A category still used by an expense is `CONFLICT`."
     deleteCategory(id: UUID!): UUID!
 }

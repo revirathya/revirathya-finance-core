@@ -9,6 +9,11 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
 ## [Unreleased]
 
 ### Added
+- `APP_ENV` (`dev` / `prod`, default `prod`). In `dev`, gRPC reflection and GraphQL introspection default to on and
+  `GET /playground` serves GraphiQL; explicit `GRPC_ENABLE_REFLECTION` / `GQL_ENABLE_INTROSPECTION` still win.
+- API documentation in the contracts: doc comments on every proto service, RPC, message and field (with error
+  codes), and descriptions on every GraphQL type, field and argument. README section "Integrating a new service".
+- `make grpc-list` / `make grpc-describe` work without a running server (buf-built descriptor set).
 - Prometheus metrics at `GET /metrics` on a separate port (`METRICS_PORT`, default `9090`; Docker host port
   `METRICS_HOST_PORT`, default `9900`): gRPC calls and latency, `/graphql` requests and latency, GraphQL errors by
   code, connection pool stats, Go runtime and process metrics.
@@ -92,7 +97,7 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
 - Config: ports are plain numbers (`50051`, not `:50051`): `GRPC_PORT`, `HTTP_PORT` (GraphQL and health checks) and
   `METRICS_PORT`, with Docker host ports `GRPC_HOST_PORT`, `HTTP_HOST_PORT` and `METRICS_HOST_PORT`. Required:
   `GRPC_API_KEY`, `GOOGLE_CLIENT_ID`, `JWT_SECRET`, `MIGRATION_VERSION`.
-- Docker compose publishes the app's ports on `127.0.0.1` only.
+- Docker compose publishes the metrics port on `127.0.0.1` only.
 - Go 1.26; all generated code is committed.
 
 ### Removed

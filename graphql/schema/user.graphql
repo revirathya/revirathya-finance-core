@@ -1,27 +1,53 @@
+"A user, created on their first Google sign-in."
 type User {
     id: UUID!
+
+    "1-100 characters."
     firstName: String!
+
+    "At most 100 characters; null when there is none."
     lastName: String
+
+    "From the Google account, lowercase."
     email: String!
+
+    "The linked Telegram account; null if none is linked."
     telegramChatId: String
 }
 
+"The result of signing in."
 type AuthPayload {
+    "Session token: send it as `Authorization: Bearer <token>` on every other request."
     token: String!
-    expiresAt: String! # REF 3339
+
+    "When the token expires (RFC 3339)."
+    expiresAt: String!
+
+    "The signed-in user."
     user: User!
 }
 
+"Patch: omitted (or null) fields keep their current value."
 input UpdateUserInput {
+    "1-100 characters, trimmed."
     firstName: String
+
+    "At most 100 characters, trimmed; `\"\"` clears it."
     lastName: String
 }
 
 extend type Query {
+    "The signed-in user."
     me: User
 }
 
 extend type Mutation {
+    """
+    Signs in with a Google ID token (issued for this service's OAuth client, with a verified email) and returns a
+    session token. Creates the user on first sign-in. An invalid token or unverified email is `UNAUTHENTICATED`.
+    """
     loginWithGoogle(idToken: String!): AuthPayload!
+
+    "Updates the signed-in user's names (patch) and returns the user."
     updateUser(patch: UpdateUserInput!): User!
 }

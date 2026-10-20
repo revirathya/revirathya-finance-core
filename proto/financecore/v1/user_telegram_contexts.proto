@@ -4,85 +4,100 @@ package financecore.v1;
 
 option go_package = "github.com/revirathya/revirathya-finance-core/gen/grpc/financecore/v1;financecorev1";
 
-// Field meanings shared by the messages below. The values of conversation,
-// state and the interaction IDs are defined by the bot; this service stores
-// them as-is (max 100 characters each).
-
+// The calling user's conversation state with the Telegram bot. conversation, state and the interaction IDs
+// are defined by the bot; this service only stores them (trimmed, at most 100 characters each).
 message UserTelegramContext {
   // Context ID (UUID).
   string id = 1;
 
-  // User ID (UUID).
+  // ID of the user the context belongs to (UUID).
   string user_id = 2;
 
-  // Telegram chat ID linked to the user. Unique across users.
+  // Telegram account bound to the user. Unique: one Telegram account per user.
   optional string telegram_chat_id = 3;
 
-  // Active bot conversation.
+  // The bot's active conversation; unset if none was stored.
   optional string conversation = 4;
 
-  // Current state within the conversation.
+  // The current step within the conversation; unset if none was stored.
   optional string state = 5;
 
-  // Chat ID of the message the bot is currently interacting with.
+  // Chat ID of the message the bot is currently interacting with; unset if none was stored.
   optional string interaction_chat_id = 6;
 
-  // ID of the message the bot is currently interacting with.
+  // ID of the message the bot is currently interacting with; unset if none was stored.
   optional string interaction_message_id = 7;
 }
 
+// Request for GetUserTelegramContext. The user comes from the caller's Telegram binding.
 message GetUserTelegramContextRequest {}
 
+// Response for GetUserTelegramContext.
 message GetUserTelegramContextResponse {
+  // The caller's context.
   UserTelegramContext user_telegram_context = 1;
 }
 
+// Request for UpdateUserTelegramContext. Every field is optional: unset fields keep their current value, and ""
+// stores an empty value.
 message UpdateUserTelegramContextRequest {
-  // Active bot conversation. If omitted, the current value is kept.
+  // The bot's active conversation, at most 100 characters.
   optional string conversation = 1;
 
-  // Current state within the conversation. If omitted, the current value is kept.
+  // The current step within the conversation, at most 100 characters.
   optional string state = 2;
 
-  // Chat ID of the message the bot is interacting with. If omitted, the current value is kept.
+  // Chat ID of the message the bot is interacting with, at most 100 characters.
   optional string interaction_chat_id = 3;
 
-  // ID of the message the bot is interacting with. If omitted, the current value is kept.
+  // ID of the message the bot is interacting with, at most 100 characters.
   optional string interaction_message_id = 4;
 }
 
+// Response for UpdateUserTelegramContext.
 message UpdateUserTelegramContextResponse {
+  // The caller's context after the update.
   UserTelegramContext user_telegram_context = 1;
 }
 
+// Request for BindTelegramAccount.
 message BindTelegramAccountRequest {
-  // Code shown in the Web Console, in XXXX-XXXX format.
+  // One-time code the user created in the Web Console: exactly XXXX-XXXX, uppercase, valid for 10 minutes.
   string code = 1;
 }
 
+// Response for BindTelegramAccount.
 message BindTelegramAccountResponse {
+  // ID of the user the Telegram account is now bound to (UUID).
   string user_id = 1;
-  // So the bot can reply "Bound to <first_name>'s account".
+
+  // The user's first name, e.g. so the bot can reply "Bound to Avi's account".
   string first_name = 2;
 }
 
-// UserTelegramContextService stores each user's conversation state with the
-// Telegram bot. Every user has at most one context.
+// UserTelegramContextService binds Telegram accounts to users and stores each user's conversation state with
+// the bot. Every user has at most one context.
+//
+// Every call needs the metadata "authorization: Bearer <api key>" and "x-telegram-user-id: <Telegram user
+// ID>". The Telegram account must be bound for every RPC except BindTelegramAccount; otherwise the call fails
+// with UNAUTHENTICATED. Calls without a deadline time out after 10 seconds (DEADLINE_EXCEEDED).
 service UserTelegramContextService {
-  // Returns the Telegram context of a user, looked up by user ID.
+  // Returns the caller's context.
+  //
+  // Errors: UNAUTHENTICATED.
   rpc GetUserTelegramContext(GetUserTelegramContextRequest) returns (GetUserTelegramContextResponse);
 
-  // Updates a user's Telegram context and returns it. Only the fields that
-  // are set are changed; omitted fields keep their current value.
-  // telegram_chat_id cannot be changed through this RPC.
+  // Updates the caller's context: only the fields that are set change. telegram_chat_id can't be changed
+  // here; rebind instead.
+  //
+  // Errors: INVALID_ARGUMENT (a field over 100 characters; the message names it), UNAUTHENTICATED.
   rpc UpdateUserTelegramContext(UpdateUserTelegramContextRequest) returns (UpdateUserTelegramContextResponse);
 
-  // Binds the calling Telegram account (from "x-telegram-user-id" metadata) to the
-  // user who created the code in the Web Console.
+  // Binds the calling Telegram account (from the "x-telegram-user-id" metadata) to the user who created the
+  // code, and resets that user's conversation state. The only RPC an unbound Telegram account may call.
   //
-  // Errors:
-  //   - INVALID_ARGUMENT: the code is malformed, unknown, expired or already used.
-  //   - ALREADY_EXISTS: this Telegram account is already bound to another user.
-  //   - RESOURCE_EXHAUSTED: too many attempts; try again later.
+  // Errors: INVALID_ARGUMENT (the code is malformed, unknown, expired or already used), ALREADY_EXISTS
+  // (this Telegram account is bound to another user; unbind it there first), RESOURCE_EXHAUSTED (more than
+  // 10 attempts per Telegram account in 5 minutes), UNAUTHENTICATED (missing API key or Telegram user ID).
   rpc BindTelegramAccount(BindTelegramAccountRequest) returns (BindTelegramAccountResponse);
 }

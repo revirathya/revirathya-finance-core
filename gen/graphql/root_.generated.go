@@ -530,138 +530,244 @@ func newExecutionContext(
 }
 
 var sources = []*ast.Source{
-	{Name: "../../graphql/schema/category.graphql", Input: `type Category {
+	{Name: "../../graphql/schema/category.graphql", Input: `"A category used to group the signed-in user's expenses, e.g. \"Food\" or \"Transport\"."
+type Category {
     id: UUID!
+
+    "1-100 characters, trimmed, unique per user."
     categoryName: String!
 }
 
+"One page of categories."
 type CategoryConnection {
+    "The categories on this page, ordered by name."
     nodes: [Category!]!
     pageInfo: PageInfo!
 }
 
 input CreateCategoryInput {
+    "1-100 characters, trimmed. A name the user already has is ` + "`" + `CONFLICT` + "`" + `."
     categoryName: String!
 }
 
+"Patch: omitted fields keep their current value."
 input UpdateCategoryInput {
+    "1-100 characters, trimmed. A name the user already has is ` + "`" + `CONFLICT` + "`" + `."
     categoryName: String
 }
 
 extend type Query {
+    "One of the signed-in user's categories. Another user's category is ` + "`" + `NOT_FOUND` + "`" + `."
     category(id: UUID!): Category
 
-    "Alphabetical ordered. ` + "`" + `first` + "`" + `: page size, default 20, max 50."
-    categories(first: Int, after: String): CategoryConnection!
+    "The signed-in user's categories, ordered by name."
+    categories(
+        "Page size: default 20, capped at 50; negative is ` + "`" + `BAD_USER_INPUT` + "`" + `."
+        first: Int
+        "` + "`" + `pageInfo.endCursor` + "`" + ` from the previous page; omit for the first page."
+        after: String
+    ): CategoryConnection!
 }
 
 extend type Mutation {
+    "Creates a category and returns it."
     createCategory(input: CreateCategoryInput!): Category
+
+    "Renames a category (patch) and returns it. Another user's category is ` + "`" + `NOT_FOUND` + "`" + `."
     updateCategory(id: UUID!, patch: UpdateCategoryInput!): Category
+
+    "Deletes a category and returns its ID. A category still used by an expense is ` + "`" + `CONFLICT` + "`" + `."
     deleteCategory(id: UUID!): UUID!
-}`, BuiltIn: false},
-	{Name: "../../graphql/schema/expense.graphql", Input: `type Expense {
+}
+`, BuiltIn: false},
+	{Name: "../../graphql/schema/expense.graphql", Input: `"An expense owned by the signed-in user."
+type Expense {
     id: UUID!
+
+    "The owner: always the signed-in user."
     userId: UUID!
+
+    "Date of the transaction."
     transactionDt: Date!
+
     categoryId: UUID!
+
+    "Name of the expense's category."
     categoryName: String!
+
+    "Free-text note; ` + "`" + `\"\"` + "`" + ` when there is none."
     description: String!
+
+    "Greater than 0, at most 2 decimal places."
     amount: Decimal!
 }
 
+"One page of expenses."
 type ExpenseConnection {
+    "The expenses on this page, newest ` + "`" + `transactionDt` + "`" + ` first."
     nodes: [Expense!]!
     pageInfo: PageInfo!
 }
 
 input CreateExpenseInput {
+    "From 2000-01-01 to tomorrow (Asia/Jakarta)."
     transactionDt: Date!
+
+    "One of the signed-in user's categories; another user's is ` + "`" + `BAD_USER_INPUT` + "`" + `."
     categoryId: UUID!
+
+    "At most 500 characters, trimmed. Omitted means none (` + "`" + `\"\"` + "`" + `)."
     description: String
+
+    "Greater than 0, at most 2 decimal places, below 1,000,000,000,000."
     amount: Decimal!
 }
 
+"Patch: omitted (or null) fields keep their current value. Fields that are sent follow the same rules as on create."
 input UpdateExpenseInput {
-    "Omit any field to keep its value; description \"\" clears it."
     transactionDt: Date
     categoryId: UUID
+
+    "` + "`" + `\"\"` + "`" + ` clears it."
     description: String
+
     amount: Decimal
 }
 
 extend type Query {
+    "One of the signed-in user's expenses. Another user's expense is ` + "`" + `NOT_FOUND` + "`" + `."
     expense(id: UUID!): Expense
 
-    "Newest first. ` + "`" + `first` + "`" + `: page size, default 20, max 50."
-    expenses(transactionDt: Date, first: Int, after: String): ExpenseConnection!
+    "The signed-in user's expenses, newest ` + "`" + `transactionDt` + "`" + ` first."
+    expenses(
+        "Only expenses on this date."
+        transactionDt: Date
+        "Page size: default 20, capped at 50; negative is ` + "`" + `BAD_USER_INPUT` + "`" + `."
+        first: Int
+        "` + "`" + `pageInfo.endCursor` + "`" + ` from the previous page; omit for the first page."
+        after: String
+    ): ExpenseConnection!
 }
 
 extend type Mutation {
+    "Creates an expense and returns it as stored."
     createExpense(input: CreateExpenseInput!): Expense
+
+    "Updates an expense (patch) and returns it as stored. Another user's expense is ` + "`" + `NOT_FOUND` + "`" + `."
     updateExpense(id: UUID!, patch: UpdateExpenseInput!): Expense
+
+    "Deletes an expense and returns its ID. Another user's, or one already deleted, is ` + "`" + `NOT_FOUND` + "`" + `."
     deleteExpense(id: UUID!): UUID!
-}`, BuiltIn: false},
+}
+`, BuiltIn: false},
 	{Name: "../../graphql/schema/schema.graphql", Input: `# Scalar
-"Calendar date, ` + "`" + `YYYY-MM-DD` + "`" + `, e.g. ` + "`" + `\"2026-10-17\"` + "`" + `."
+"Calendar date, ` + "`" + `YYYY-MM-DD` + "`" + `, e.g. ` + "`" + `\"2026-10-17\"` + "`" + `. Must be a real date."
 scalar Date
 
 "Decimal number as a string, e.g. ` + "`" + `\"12500.50\"` + "`" + `. Never a JSON number, so no precision is lost."
 scalar Decimal
 
-"UUID string, e.g. \"9b2f6c1e-4a7d-4c3e-8f1a-2d5e6b7c8a90\"."
+"UUID string, e.g. ` + "`" + `\"9b2f6c1e-4a7d-4c3e-8f1a-2d5e6b7c8a90\"` + "`" + `."
 scalar UUID
 
 # Shared - Pagination
-type PageInfo { 
+"Where a page ends, for cursor pagination (` + "`" + `first` + "`" + ` / ` + "`" + `after` + "`" + `)."
+type PageInfo {
+    "Whether another page follows this one."
     hasNextPage: Boolean!
-    
-    "Pass as ` + "`" + `after` + "`" + ` to get the next page; null on the last page."
+
+    "Pass as ` + "`" + `after` + "`" + ` to get the next page; null on the last page. Opaque: don't build or parse it."
     endCursor: String
 }
 
 # Base
+"""
+Read operations. Everything except ` + "`" + `ok` + "`" + ` needs a session token: send ` + "`" + `Authorization: Bearer <token>` + "`" + ` from
+` + "`" + `loginWithGoogle` + "`" + `. Errors carry ` + "`" + `extensions.code` + "`" + `: ` + "`" + `UNAUTHENTICATED` + "`" + `, ` + "`" + `NOT_FOUND` + "`" + `, ` + "`" + `BAD_USER_INPUT` + "`" + ` (the message
+names the field), ` + "`" + `CONFLICT` + "`" + `, ` + "`" + `INTERNAL` + "`" + `.
+"""
 type Query {
+    "Placeholder; always true."
     ok: Boolean
 }
 
+"""
+Write operations. Everything except ` + "`" + `loginWithGoogle` + "`" + ` and ` + "`" + `ok` + "`" + ` needs a session token. Updates are patches: omitted
+(or null) input fields keep their current value.
+"""
 type Mutation {
+    "Placeholder; always true."
     ok: Boolean
-}`, BuiltIn: false},
-	{Name: "../../graphql/schema/telegram.graphql", Input: `type TelegramBindCode {
+}
+`, BuiltIn: false},
+	{Name: "../../graphql/schema/telegram.graphql", Input: `"A one-time code for linking a Telegram account: the user sends ` + "`" + `/bind <code>` + "`" + ` to the bot in a private chat."
+type TelegramBindCode {
+    "` + "`" + `XXXX-XXXX` + "`" + `, uppercase."
     code: String!
+
+    "When the code stops working (RFC 3339), 10 minutes after it was created."
     expiresAt: String!
 }
 
 extend type Mutation {
+    "Creates a bind code for the signed-in user. A new code replaces the previous one."
     createTelegramBindCode: TelegramBindCode!
+
+    "Unlinks the signed-in user's Telegram account and returns the user."
     unbindTelegram: User!
-}`, BuiltIn: false},
-	{Name: "../../graphql/schema/user.graphql", Input: `type User {
+}
+`, BuiltIn: false},
+	{Name: "../../graphql/schema/user.graphql", Input: `"A user, created on their first Google sign-in."
+type User {
     id: UUID!
+
+    "1-100 characters."
     firstName: String!
+
+    "At most 100 characters; null when there is none."
     lastName: String
+
+    "From the Google account, lowercase."
     email: String!
+
+    "The linked Telegram account; null if none is linked."
     telegramChatId: String
 }
 
+"The result of signing in."
 type AuthPayload {
+    "Session token: send it as ` + "`" + `Authorization: Bearer <token>` + "`" + ` on every other request."
     token: String!
-    expiresAt: String! # REF 3339
+
+    "When the token expires (RFC 3339)."
+    expiresAt: String!
+
+    "The signed-in user."
     user: User!
 }
 
+"Patch: omitted (or null) fields keep their current value."
 input UpdateUserInput {
+    "1-100 characters, trimmed."
     firstName: String
+
+    "At most 100 characters, trimmed; ` + "`" + `\"\"` + "`" + ` clears it."
     lastName: String
 }
 
 extend type Query {
+    "The signed-in user."
     me: User
 }
 
 extend type Mutation {
+    """
+    Signs in with a Google ID token (issued for this service's OAuth client, with a verified email) and returns a
+    session token. Creates the user on first sign-in. An invalid token or unverified email is ` + "`" + `UNAUTHENTICATED` + "`" + `.
+    """
     loginWithGoogle(idToken: String!): AuthPayload!
+
+    "Updates the signed-in user's names (patch) and returns the user."
     updateUser(patch: UpdateUserInput!): User!
 }
 `, BuiltIn: false},

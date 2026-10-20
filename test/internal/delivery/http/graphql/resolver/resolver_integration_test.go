@@ -42,7 +42,7 @@ func newAPI(t *testing.T) *api {
 	t.Helper()
 	verifier := testutil.NewFakeGoogleVerifier()
 	tokens := auth.NewTokenManager("0123456789abcdef0123456789abcdef", time.Hour)
-	layer := dlvHttp.Setup(":0", func(ctx context.Context) error { return nil })
+	layer := dlvHttp.Setup("prod", ":0", func(ctx context.Context) error { return nil })
 	dlvGql.RegisterHandler(layer, nil, false, tokens, metrics.NewMetrics(nil), testutil.NewUsecases(verifier))
 	return &api{t: t, handler: layer.Server.Handler, verifier: verifier}
 }
