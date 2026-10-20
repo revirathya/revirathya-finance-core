@@ -9,10 +9,11 @@ import (
 	"google.golang.org/grpc/status"
 
 	// Generated
-	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
+	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/grpc/financecore/v1"
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
+	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 
 	// Internal - gRPC
@@ -30,6 +31,13 @@ func NewCategoryHandler(ctgUc *category.CategoryUsecase) *CategoryHandler {
 	}
 }
 
+func toProtoCategory(c *domain.Category) *financecorev1.Category {
+	return &financecorev1.Category{
+		Id:           c.ID.String(),
+		CategoryName: c.CategoryName,
+	}
+}
+
 func (h *CategoryHandler) ListCategories(ctx context.Context, req *financecorev1.ListCategoriesRequest) (*financecorev1.ListCategoriesResponse, error) {
 	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
@@ -42,13 +50,10 @@ func (h *CategoryHandler) ListCategories(ctx context.Context, req *financecorev1
 	}
 
 	resp := &financecorev1.ListCategoriesResponse{
-		Categories: make([]*financecorev1.CategoryResponse, 0, len(categories)),
+		Categories: make([]*financecorev1.Category, 0, len(categories)),
 	}
-	for _, c := range categories {
-		resp.Categories = append(resp.Categories, &financecorev1.CategoryResponse{
-			Id:           c.ID.String(),
-			CategoryName: c.CategoryName,
-		})
+	for _, category := range categories {
+		resp.Categories = append(resp.Categories, toProtoCategory(&category))
 	}
 
 	return resp, nil
@@ -70,9 +75,6 @@ func (h *CategoryHandler) GetCategoryByID(ctx context.Context, req *financecorev
 		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("get category by id %s", uuidId.String()), err)
 	}
 
-	response := &financecorev1.GetCategoryByIDResponse{
-		Id:           category.ID.String(),
-		CategoryName: category.CategoryName,
-	}
+	response := &financecorev1.GetCategoryByIDResponse{Category: toProtoCategory(category)}
 	return response, nil
 }

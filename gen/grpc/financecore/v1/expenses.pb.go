@@ -7,6 +7,8 @@
 package financecorev1
 
 import (
+	date "google.golang.org/genproto/googleapis/type/date"
+	decimal "google.golang.org/genproto/googleapis/type/decimal"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -22,7 +24,7 @@ const (
 )
 
 // An expense, including the name of its category.
-type ExpenseResponse struct {
+type Expense struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Expense ID (UUID).
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -33,29 +35,29 @@ type ExpenseResponse struct {
 	// Category name.
 	CategoryName string `protobuf:"bytes,4,opt,name=category_name,json=categoryName,proto3" json:"category_name,omitempty"`
 	// Transaction date (YYYY-MM-DD).
-	TransactionDt string `protobuf:"bytes,5,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
+	TransactionDt *date.Date `protobuf:"bytes,5,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
 	// Free-text note about the expense.
 	Description string `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
 	// Amount as a decimal string, e.g. "12500.50".
-	Amount        string `protobuf:"bytes,7,opt,name=amount,proto3" json:"amount,omitempty"`
+	Amount        *decimal.Decimal `protobuf:"bytes,7,opt,name=amount,proto3" json:"amount,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ExpenseResponse) Reset() {
-	*x = ExpenseResponse{}
+func (x *Expense) Reset() {
+	*x = Expense{}
 	mi := &file_financecore_v1_expenses_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ExpenseResponse) String() string {
+func (x *Expense) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ExpenseResponse) ProtoMessage() {}
+func (*Expense) ProtoMessage() {}
 
-func (x *ExpenseResponse) ProtoReflect() protoreflect.Message {
+func (x *Expense) ProtoReflect() protoreflect.Message {
 	mi := &file_financecore_v1_expenses_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -67,58 +69,58 @@ func (x *ExpenseResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ExpenseResponse.ProtoReflect.Descriptor instead.
-func (*ExpenseResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use Expense.ProtoReflect.Descriptor instead.
+func (*Expense) Descriptor() ([]byte, []int) {
 	return file_financecore_v1_expenses_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *ExpenseResponse) GetId() string {
+func (x *Expense) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *ExpenseResponse) GetUserId() string {
+func (x *Expense) GetUserId() string {
 	if x != nil {
 		return x.UserId
 	}
 	return ""
 }
 
-func (x *ExpenseResponse) GetCategoryId() string {
+func (x *Expense) GetCategoryId() string {
 	if x != nil {
 		return x.CategoryId
 	}
 	return ""
 }
 
-func (x *ExpenseResponse) GetCategoryName() string {
+func (x *Expense) GetCategoryName() string {
 	if x != nil {
 		return x.CategoryName
 	}
 	return ""
 }
 
-func (x *ExpenseResponse) GetTransactionDt() string {
+func (x *Expense) GetTransactionDt() *date.Date {
 	if x != nil {
 		return x.TransactionDt
 	}
-	return ""
+	return nil
 }
 
-func (x *ExpenseResponse) GetDescription() string {
+func (x *Expense) GetDescription() string {
 	if x != nil {
 		return x.Description
 	}
 	return ""
 }
 
-func (x *ExpenseResponse) GetAmount() string {
+func (x *Expense) GetAmount() *decimal.Decimal {
 	if x != nil {
 		return x.Amount
 	}
-	return ""
+	return nil
 }
 
 type CreateExpenseRequest struct {
@@ -126,11 +128,11 @@ type CreateExpenseRequest struct {
 	// Category ID (UUID). Must reference an existing category.
 	CategoryId string `protobuf:"bytes,1,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
 	// Transaction date (YYYY-MM-DD).
-	TransactionDt string `protobuf:"bytes,2,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
+	TransactionDt *date.Date `protobuf:"bytes,2,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
 	// Free-text note about the expense.
 	Description *string `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	// Amount as a decimal string with up to 2 decimal places, e.g. "12500.50".
-	Amount        string `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
+	Amount        *decimal.Decimal `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -172,11 +174,11 @@ func (x *CreateExpenseRequest) GetCategoryId() string {
 	return ""
 }
 
-func (x *CreateExpenseRequest) GetTransactionDt() string {
+func (x *CreateExpenseRequest) GetTransactionDt() *date.Date {
 	if x != nil {
 		return x.TransactionDt
 	}
-	return ""
+	return nil
 }
 
 func (x *CreateExpenseRequest) GetDescription() string {
@@ -186,27 +188,17 @@ func (x *CreateExpenseRequest) GetDescription() string {
 	return ""
 }
 
-func (x *CreateExpenseRequest) GetAmount() string {
+func (x *CreateExpenseRequest) GetAmount() *decimal.Decimal {
 	if x != nil {
 		return x.Amount
 	}
-	return ""
+	return nil
 }
 
 type CreateExpenseResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Expense ID (UUID), generated by the server.
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// ID of the user who owns the expense (UUID).
-	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// Category ID (UUID).
-	CategoryId string `protobuf:"bytes,3,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
-	// Transaction date (YYYY-MM-DD).
-	TransactionDt string `protobuf:"bytes,4,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
-	// Free-text note about the expense.
-	Description string `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
-	// Amount as a decimal string, e.g. "12500.50".
-	Amount        string `protobuf:"bytes,6,opt,name=amount,proto3" json:"amount,omitempty"`
+	// Wrapped expense objcet
+	Expense       *Expense `protobuf:"bytes,1,opt,name=expense,proto3" json:"expense,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -241,52 +233,17 @@ func (*CreateExpenseResponse) Descriptor() ([]byte, []int) {
 	return file_financecore_v1_expenses_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *CreateExpenseResponse) GetId() string {
+func (x *CreateExpenseResponse) GetExpense() *Expense {
 	if x != nil {
-		return x.Id
+		return x.Expense
 	}
-	return ""
-}
-
-func (x *CreateExpenseResponse) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
-}
-
-func (x *CreateExpenseResponse) GetCategoryId() string {
-	if x != nil {
-		return x.CategoryId
-	}
-	return ""
-}
-
-func (x *CreateExpenseResponse) GetTransactionDt() string {
-	if x != nil {
-		return x.TransactionDt
-	}
-	return ""
-}
-
-func (x *CreateExpenseResponse) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-
-func (x *CreateExpenseResponse) GetAmount() string {
-	if x != nil {
-		return x.Amount
-	}
-	return ""
+	return nil
 }
 
 type ListExpensesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// If set, only returns expenses on this date (YYYY-MM-DD).
-	TransactionDt *string `protobuf:"bytes,1,opt,name=transaction_dt,json=transactionDt,proto3,oneof" json:"transaction_dt,omitempty"`
+	TransactionDt *date.Date `protobuf:"bytes,1,opt,name=transaction_dt,json=transactionDt,proto3,oneof" json:"transaction_dt,omitempty"`
 	// Max expenses to return. default 20, max 50
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// next_page_token from previous response; empty for the first page
@@ -325,11 +282,11 @@ func (*ListExpensesRequest) Descriptor() ([]byte, []int) {
 	return file_financecore_v1_expenses_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *ListExpensesRequest) GetTransactionDt() string {
-	if x != nil && x.TransactionDt != nil {
-		return *x.TransactionDt
+func (x *ListExpensesRequest) GetTransactionDt() *date.Date {
+	if x != nil {
+		return x.TransactionDt
 	}
-	return ""
+	return nil
 }
 
 func (x *ListExpensesRequest) GetPageSize() int32 {
@@ -349,8 +306,9 @@ func (x *ListExpensesRequest) GetPageToken() string {
 type ListExpensesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Expenses ordered by transaction_dt, newest first.
-	Expenses      []*ExpenseResponse `protobuf:"bytes,1,rep,name=expenses,proto3" json:"expenses,omitempty"`
-	NextPageToken string             `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Expenses []*Expense `protobuf:"bytes,1,rep,name=expenses,proto3" json:"expenses,omitempty"`
+	// Pagination navigator token
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -385,7 +343,7 @@ func (*ListExpensesResponse) Descriptor() ([]byte, []int) {
 	return file_financecore_v1_expenses_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *ListExpensesResponse) GetExpenses() []*ExpenseResponse {
+func (x *ListExpensesResponse) GetExpenses() []*Expense {
 	if x != nil {
 		return x.Expenses
 	}
@@ -446,20 +404,8 @@ func (x *GetExpenseByIDRequest) GetId() string {
 
 type GetExpenseByIDResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Expense ID (UUID).
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// ID of the user who owns the expense (UUID).
-	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// Category ID (UUID).
-	CategoryId string `protobuf:"bytes,3,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
-	// Category name.
-	CategoryName string `protobuf:"bytes,4,opt,name=category_name,json=categoryName,proto3" json:"category_name,omitempty"`
-	// Transaction date (YYYY-MM-DD).
-	TransactionDt string `protobuf:"bytes,5,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
-	// Free-text note about the expense.
-	Description string `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
-	// Amount as a decimal string, e.g. "12500.50".
-	Amount        string `protobuf:"bytes,7,opt,name=amount,proto3" json:"amount,omitempty"`
+	// Wrapped expense objcet
+	Expense       *Expense `protobuf:"bytes,1,opt,name=expense,proto3" json:"expense,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -494,53 +440,11 @@ func (*GetExpenseByIDResponse) Descriptor() ([]byte, []int) {
 	return file_financecore_v1_expenses_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *GetExpenseByIDResponse) GetId() string {
+func (x *GetExpenseByIDResponse) GetExpense() *Expense {
 	if x != nil {
-		return x.Id
+		return x.Expense
 	}
-	return ""
-}
-
-func (x *GetExpenseByIDResponse) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
-}
-
-func (x *GetExpenseByIDResponse) GetCategoryId() string {
-	if x != nil {
-		return x.CategoryId
-	}
-	return ""
-}
-
-func (x *GetExpenseByIDResponse) GetCategoryName() string {
-	if x != nil {
-		return x.CategoryName
-	}
-	return ""
-}
-
-func (x *GetExpenseByIDResponse) GetTransactionDt() string {
-	if x != nil {
-		return x.TransactionDt
-	}
-	return ""
-}
-
-func (x *GetExpenseByIDResponse) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-
-func (x *GetExpenseByIDResponse) GetAmount() string {
-	if x != nil {
-		return x.Amount
-	}
-	return ""
+	return nil
 }
 
 type UpdateExpenseRequest struct {
@@ -550,11 +454,11 @@ type UpdateExpenseRequest struct {
 	// Category ID (UUID). Must reference an existing category.
 	CategoryId string `protobuf:"bytes,2,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
 	// Transaction date (YYYY-MM-DD).
-	TransactionDt string `protobuf:"bytes,3,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
+	TransactionDt *date.Date `protobuf:"bytes,3,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
 	// Free-text note about the expense. If omitted, the existing value is kept.
 	Description *string `protobuf:"bytes,4,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	// Amount as a decimal string with up to 2 decimal places, e.g. "12500.50".
-	Amount        string `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
+	Amount        *decimal.Decimal `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -603,11 +507,11 @@ func (x *UpdateExpenseRequest) GetCategoryId() string {
 	return ""
 }
 
-func (x *UpdateExpenseRequest) GetTransactionDt() string {
+func (x *UpdateExpenseRequest) GetTransactionDt() *date.Date {
 	if x != nil {
 		return x.TransactionDt
 	}
-	return ""
+	return nil
 }
 
 func (x *UpdateExpenseRequest) GetDescription() string {
@@ -617,27 +521,17 @@ func (x *UpdateExpenseRequest) GetDescription() string {
 	return ""
 }
 
-func (x *UpdateExpenseRequest) GetAmount() string {
+func (x *UpdateExpenseRequest) GetAmount() *decimal.Decimal {
 	if x != nil {
 		return x.Amount
 	}
-	return ""
+	return nil
 }
 
 type UpdateExpenseResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Expense ID (UUID).
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// ID of the user who owns the expense (UUID).
-	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// Category ID (UUID).
-	CategoryId string `protobuf:"bytes,3,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
-	// Transaction date (YYYY-MM-DD).
-	TransactionDt string `protobuf:"bytes,4,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
-	// Free-text note about the expense.
-	Description string `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
-	// Amount as a decimal string, e.g. "12500.50".
-	Amount        string `protobuf:"bytes,6,opt,name=amount,proto3" json:"amount,omitempty"`
+	// Wrapped expense objcet
+	Expense       *Expense `protobuf:"bytes,1,opt,name=expense,proto3" json:"expense,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -672,46 +566,11 @@ func (*UpdateExpenseResponse) Descriptor() ([]byte, []int) {
 	return file_financecore_v1_expenses_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *UpdateExpenseResponse) GetId() string {
+func (x *UpdateExpenseResponse) GetExpense() *Expense {
 	if x != nil {
-		return x.Id
+		return x.Expense
 	}
-	return ""
-}
-
-func (x *UpdateExpenseResponse) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
-}
-
-func (x *UpdateExpenseResponse) GetCategoryId() string {
-	if x != nil {
-		return x.CategoryId
-	}
-	return ""
-}
-
-func (x *UpdateExpenseResponse) GetTransactionDt() string {
-	if x != nil {
-		return x.TransactionDt
-	}
-	return ""
-}
-
-func (x *UpdateExpenseResponse) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-
-func (x *UpdateExpenseResponse) GetAmount() string {
-	if x != nil {
-		return x.Amount
-	}
-	return ""
+	return nil
 }
 
 type DeleteExpenseRequest struct {
@@ -799,67 +658,48 @@ var File_financecore_v1_expenses_proto protoreflect.FileDescriptor
 
 const file_financecore_v1_expenses_proto_rawDesc = "" +
 	"\n" +
-	"\x1dfinancecore/v1/expenses.proto\x12\x0efinancecore.v1\"\xe1\x01\n" +
-	"\x0fExpenseResponse\x12\x0e\n" +
+	"\x1dfinancecore/v1/expenses.proto\x12\x0efinancecore.v1\x1a\x16google/type/date.proto\x1a\x19google/type/decimal.proto\"\x82\x02\n" +
+	"\aExpense\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1f\n" +
 	"\vcategory_id\x18\x03 \x01(\tR\n" +
 	"categoryId\x12#\n" +
-	"\rcategory_name\x18\x04 \x01(\tR\fcategoryName\x12%\n" +
-	"\x0etransaction_dt\x18\x05 \x01(\tR\rtransactionDt\x12 \n" +
-	"\vdescription\x18\x06 \x01(\tR\vdescription\x12\x16\n" +
-	"\x06amount\x18\a \x01(\tR\x06amount\"\xad\x01\n" +
+	"\rcategory_name\x18\x04 \x01(\tR\fcategoryName\x128\n" +
+	"\x0etransaction_dt\x18\x05 \x01(\v2\x11.google.type.DateR\rtransactionDt\x12 \n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\x12,\n" +
+	"\x06amount\x18\a \x01(\v2\x14.google.type.DecimalR\x06amount\"\xd6\x01\n" +
 	"\x14CreateExpenseRequest\x12\x1f\n" +
 	"\vcategory_id\x18\x01 \x01(\tR\n" +
-	"categoryId\x12%\n" +
-	"\x0etransaction_dt\x18\x02 \x01(\tR\rtransactionDt\x12%\n" +
-	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x16\n" +
-	"\x06amount\x18\x05 \x01(\tR\x06amountB\x0e\n" +
-	"\f_description\"\xc2\x01\n" +
-	"\x15CreateExpenseResponse\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1f\n" +
-	"\vcategory_id\x18\x03 \x01(\tR\n" +
-	"categoryId\x12%\n" +
-	"\x0etransaction_dt\x18\x04 \x01(\tR\rtransactionDt\x12 \n" +
-	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x16\n" +
-	"\x06amount\x18\x06 \x01(\tR\x06amount\"\x90\x01\n" +
-	"\x13ListExpensesRequest\x12*\n" +
-	"\x0etransaction_dt\x18\x01 \x01(\tH\x00R\rtransactionDt\x88\x01\x01\x12\x1b\n" +
+	"categoryId\x128\n" +
+	"\x0etransaction_dt\x18\x02 \x01(\v2\x11.google.type.DateR\rtransactionDt\x12%\n" +
+	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x12,\n" +
+	"\x06amount\x18\x05 \x01(\v2\x14.google.type.DecimalR\x06amountB\x0e\n" +
+	"\f_description\"J\n" +
+	"\x15CreateExpenseResponse\x121\n" +
+	"\aexpense\x18\x01 \x01(\v2\x17.financecore.v1.ExpenseR\aexpense\"\xa3\x01\n" +
+	"\x13ListExpensesRequest\x12=\n" +
+	"\x0etransaction_dt\x18\x01 \x01(\v2\x11.google.type.DateH\x00R\rtransactionDt\x88\x01\x01\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
 	"page_token\x18\x03 \x01(\tR\tpageTokenB\x11\n" +
-	"\x0f_transaction_dt\"{\n" +
-	"\x14ListExpensesResponse\x12;\n" +
-	"\bexpenses\x18\x01 \x03(\v2\x1f.financecore.v1.ExpenseResponseR\bexpenses\x12&\n" +
+	"\x0f_transaction_dt\"s\n" +
+	"\x14ListExpensesResponse\x123\n" +
+	"\bexpenses\x18\x01 \x03(\v2\x17.financecore.v1.ExpenseR\bexpenses\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"'\n" +
 	"\x15GetExpenseByIDRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xe8\x01\n" +
-	"\x16GetExpenseByIDResponse\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1f\n" +
-	"\vcategory_id\x18\x03 \x01(\tR\n" +
-	"categoryId\x12#\n" +
-	"\rcategory_name\x18\x04 \x01(\tR\fcategoryName\x12%\n" +
-	"\x0etransaction_dt\x18\x05 \x01(\tR\rtransactionDt\x12 \n" +
-	"\vdescription\x18\x06 \x01(\tR\vdescription\x12\x16\n" +
-	"\x06amount\x18\a \x01(\tR\x06amount\"\xbd\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"K\n" +
+	"\x16GetExpenseByIDResponse\x121\n" +
+	"\aexpense\x18\x01 \x01(\v2\x17.financecore.v1.ExpenseR\aexpense\"\xe6\x01\n" +
 	"\x14UpdateExpenseRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vcategory_id\x18\x02 \x01(\tR\n" +
-	"categoryId\x12%\n" +
-	"\x0etransaction_dt\x18\x03 \x01(\tR\rtransactionDt\x12%\n" +
-	"\vdescription\x18\x04 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x16\n" +
-	"\x06amount\x18\x05 \x01(\tR\x06amountB\x0e\n" +
-	"\f_description\"\xc2\x01\n" +
-	"\x15UpdateExpenseResponse\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1f\n" +
-	"\vcategory_id\x18\x03 \x01(\tR\n" +
-	"categoryId\x12%\n" +
-	"\x0etransaction_dt\x18\x04 \x01(\tR\rtransactionDt\x12 \n" +
-	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x16\n" +
-	"\x06amount\x18\x06 \x01(\tR\x06amount\"&\n" +
+	"categoryId\x128\n" +
+	"\x0etransaction_dt\x18\x03 \x01(\v2\x11.google.type.DateR\rtransactionDt\x12%\n" +
+	"\vdescription\x18\x04 \x01(\tH\x00R\vdescription\x88\x01\x01\x12,\n" +
+	"\x06amount\x18\x05 \x01(\v2\x14.google.type.DecimalR\x06amountB\x0e\n" +
+	"\f_description\"J\n" +
+	"\x15UpdateExpenseResponse\x121\n" +
+	"\aexpense\x18\x01 \x01(\v2\x17.financecore.v1.ExpenseR\aexpense\"&\n" +
 	"\x14DeleteExpenseRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x17\n" +
 	"\x15DeleteExpenseResponse2\xe6\x03\n" +
@@ -868,7 +708,7 @@ const file_financecore_v1_expenses_proto_rawDesc = "" +
 	"\x0eGetExpenseByID\x12%.financecore.v1.GetExpenseByIDRequest\x1a&.financecore.v1.GetExpenseByIDResponse\x12Y\n" +
 	"\fListExpenses\x12#.financecore.v1.ListExpensesRequest\x1a$.financecore.v1.ListExpensesResponse\x12\\\n" +
 	"\rUpdateExpense\x12$.financecore.v1.UpdateExpenseRequest\x1a%.financecore.v1.UpdateExpenseResponse\x12\\\n" +
-	"\rDeleteExpense\x12$.financecore.v1.DeleteExpenseRequest\x1a%.financecore.v1.DeleteExpenseResponseBSZQgithub.com/revirathya/revirathya-finance-core/gen/go/financecore/v1;financecorev1b\x06proto3"
+	"\rDeleteExpense\x12$.financecore.v1.DeleteExpenseRequest\x1a%.financecore.v1.DeleteExpenseResponseBUZSgithub.com/revirathya/revirathya-finance-core/gen/grpc/financecore/v1;financecorev1b\x06proto3"
 
 var (
 	file_financecore_v1_expenses_proto_rawDescOnce sync.Once
@@ -884,7 +724,7 @@ func file_financecore_v1_expenses_proto_rawDescGZIP() []byte {
 
 var file_financecore_v1_expenses_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_financecore_v1_expenses_proto_goTypes = []any{
-	(*ExpenseResponse)(nil),        // 0: financecore.v1.ExpenseResponse
+	(*Expense)(nil),                // 0: financecore.v1.Expense
 	(*CreateExpenseRequest)(nil),   // 1: financecore.v1.CreateExpenseRequest
 	(*CreateExpenseResponse)(nil),  // 2: financecore.v1.CreateExpenseResponse
 	(*ListExpensesRequest)(nil),    // 3: financecore.v1.ListExpensesRequest
@@ -895,24 +735,36 @@ var file_financecore_v1_expenses_proto_goTypes = []any{
 	(*UpdateExpenseResponse)(nil),  // 8: financecore.v1.UpdateExpenseResponse
 	(*DeleteExpenseRequest)(nil),   // 9: financecore.v1.DeleteExpenseRequest
 	(*DeleteExpenseResponse)(nil),  // 10: financecore.v1.DeleteExpenseResponse
+	(*date.Date)(nil),              // 11: google.type.Date
+	(*decimal.Decimal)(nil),        // 12: google.type.Decimal
 }
 var file_financecore_v1_expenses_proto_depIdxs = []int32{
-	0,  // 0: financecore.v1.ListExpensesResponse.expenses:type_name -> financecore.v1.ExpenseResponse
-	1,  // 1: financecore.v1.ExpenseService.CreateExpense:input_type -> financecore.v1.CreateExpenseRequest
-	5,  // 2: financecore.v1.ExpenseService.GetExpenseByID:input_type -> financecore.v1.GetExpenseByIDRequest
-	3,  // 3: financecore.v1.ExpenseService.ListExpenses:input_type -> financecore.v1.ListExpensesRequest
-	7,  // 4: financecore.v1.ExpenseService.UpdateExpense:input_type -> financecore.v1.UpdateExpenseRequest
-	9,  // 5: financecore.v1.ExpenseService.DeleteExpense:input_type -> financecore.v1.DeleteExpenseRequest
-	2,  // 6: financecore.v1.ExpenseService.CreateExpense:output_type -> financecore.v1.CreateExpenseResponse
-	6,  // 7: financecore.v1.ExpenseService.GetExpenseByID:output_type -> financecore.v1.GetExpenseByIDResponse
-	4,  // 8: financecore.v1.ExpenseService.ListExpenses:output_type -> financecore.v1.ListExpensesResponse
-	8,  // 9: financecore.v1.ExpenseService.UpdateExpense:output_type -> financecore.v1.UpdateExpenseResponse
-	10, // 10: financecore.v1.ExpenseService.DeleteExpense:output_type -> financecore.v1.DeleteExpenseResponse
-	6,  // [6:11] is the sub-list for method output_type
-	1,  // [1:6] is the sub-list for method input_type
-	1,  // [1:1] is the sub-list for extension type_name
-	1,  // [1:1] is the sub-list for extension extendee
-	0,  // [0:1] is the sub-list for field type_name
+	11, // 0: financecore.v1.Expense.transaction_dt:type_name -> google.type.Date
+	12, // 1: financecore.v1.Expense.amount:type_name -> google.type.Decimal
+	11, // 2: financecore.v1.CreateExpenseRequest.transaction_dt:type_name -> google.type.Date
+	12, // 3: financecore.v1.CreateExpenseRequest.amount:type_name -> google.type.Decimal
+	0,  // 4: financecore.v1.CreateExpenseResponse.expense:type_name -> financecore.v1.Expense
+	11, // 5: financecore.v1.ListExpensesRequest.transaction_dt:type_name -> google.type.Date
+	0,  // 6: financecore.v1.ListExpensesResponse.expenses:type_name -> financecore.v1.Expense
+	0,  // 7: financecore.v1.GetExpenseByIDResponse.expense:type_name -> financecore.v1.Expense
+	11, // 8: financecore.v1.UpdateExpenseRequest.transaction_dt:type_name -> google.type.Date
+	12, // 9: financecore.v1.UpdateExpenseRequest.amount:type_name -> google.type.Decimal
+	0,  // 10: financecore.v1.UpdateExpenseResponse.expense:type_name -> financecore.v1.Expense
+	1,  // 11: financecore.v1.ExpenseService.CreateExpense:input_type -> financecore.v1.CreateExpenseRequest
+	5,  // 12: financecore.v1.ExpenseService.GetExpenseByID:input_type -> financecore.v1.GetExpenseByIDRequest
+	3,  // 13: financecore.v1.ExpenseService.ListExpenses:input_type -> financecore.v1.ListExpensesRequest
+	7,  // 14: financecore.v1.ExpenseService.UpdateExpense:input_type -> financecore.v1.UpdateExpenseRequest
+	9,  // 15: financecore.v1.ExpenseService.DeleteExpense:input_type -> financecore.v1.DeleteExpenseRequest
+	2,  // 16: financecore.v1.ExpenseService.CreateExpense:output_type -> financecore.v1.CreateExpenseResponse
+	6,  // 17: financecore.v1.ExpenseService.GetExpenseByID:output_type -> financecore.v1.GetExpenseByIDResponse
+	4,  // 18: financecore.v1.ExpenseService.ListExpenses:output_type -> financecore.v1.ListExpensesResponse
+	8,  // 19: financecore.v1.ExpenseService.UpdateExpense:output_type -> financecore.v1.UpdateExpenseResponse
+	10, // 20: financecore.v1.ExpenseService.DeleteExpense:output_type -> financecore.v1.DeleteExpenseResponse
+	16, // [16:21] is the sub-list for method output_type
+	11, // [11:16] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_financecore_v1_expenses_proto_init() }

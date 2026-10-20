@@ -100,8 +100,6 @@ Last reviewed: 2026-10-19
     categories.
   - [x] Phase 6: authorization sweep. No client-supplied user IDs remain in GraphQL or gRPC; every query filters
     by the caller's `user_id`, and other users' records return `NOT_FOUND`.
-  - [ ] Coordinated Telegram bot update for phases 4–6: send the API key and `x-telegram-user-id` on every call,
-    implement `/bind`, drop the removed `user_id` fields and `GetUserTelegramContextByTelegramID`.
   - Later, if the API is ever reached over an untrusted network or by more services: mTLS instead of the shared
     API key.
 - [ ] **TLS** on both listeners, or terminated by a trusted proxy or mesh, with that decision documented.
@@ -180,8 +178,7 @@ Last reviewed: 2026-10-19
     - Optional later: `revive` (naming, e.g. `uuidId` -> `uuidID`) and `noctx`.
   - [x] `go test -race -tags=integration ./test/...` (unit and integration tests in one step)
   - [x] `buf lint`
-  - [ ] `buf breaking --against main`. Optional: per CLAUDE.md, breaking gRPC changes are allowed because
-    downstream services follow this repo, so this would only be useful as an informational check.
+  - [ ] Later: `buf breaking --against main`, once other services depend on the gRPC API.
   - [ ] `govulncheck` (deferred, see section 5)
   - [x] Generated-code drift check (regenerate, then fail on any modified or untracked file)
   - [x] Migration test: `up`, `down --all`, `up` against a Postgres service container
@@ -219,6 +216,42 @@ Last reviewed: 2026-10-19
 
 ## 3. Nice-to-have
 
+### Before the first consumer (breaking changes are free now)
+There are no downstream consumers yet (see CLAUDE.md), so API shape changes cost nothing today and break every
+client later. Do these first.
+- [x] Proto `google.type.Date` for dates and `google.type.Decimal` for amounts instead of strings, matching the
+  GraphQL `Date` / `Decimal` scalars (`Decimal` rather than `Money`: one currency, and `NUMERIC(14, 2)` is exactly a
+  decimal). Converters in `internal/delivery/grpc/converter`; googleapis is a buf dependency (`buf.lock`).
+  Generated Go code moved to `gen/grpc`.
+- [x] Shared messages: one message per resource, wrapped by each RPC's own `<Rpc>Response` (buf `STANDARD` lint
+  requires a unique, `<Rpc>Response`-named response per RPC).
+  - [x] `Category` (`ListCategoriesResponse`, `GetCategoryByIDResponse`).
+  - [x] `Expense` (`CreateExpenseResponse`, `GetExpenseByIDResponse`, `UpdateExpenseResponse`,
+    `ListExpensesResponse`).
+  - [x] `UserTelegramContext` (`GetUserTelegramContextResponse`, `UpdateUserTelegramContextResponse`).
+- [ ] Optional: category pagination (`categories` / `ListCategories`), the same way as expenses. Skip it if the
+  per-user list stays short; adding it later changes the GraphQL return type.
+- [ ] CRUD conventions on the APIs (client-visible, so settle them before the first consumer):
+  - [ ] Update semantics, one rule for every entity: replace (every field required) or patch (every field optional,
+    omitted = keep; gRPC `google.protobuf.FieldMask update_mask` per [AIP-134](https://google.aip.dev/134), GraphQL
+    nullable input fields). Today it's mixed: every field is required except `description`.
+  - [ ] GraphQL mutation results: return the object directly (as now) or payload types
+    (`createExpense(input): CreateExpensePayload { expense }`), which leave room to add fields later.
+  - Already settled: Create / Update / Get return the object as stored (including derived fields such as
+    `category_name`); gRPC wraps it in a one-field `<Rpc>Response` (buf `STANDARD` lint); Delete returns an empty
+    `Delete*Response` on gRPC ([AIP-135](https://google.aip.dev/135)) and the deleted `UUID!` on GraphQL (for client
+    cache eviction); deleting something missing is `NOT_FOUND`.
+
+### Integration docs (for the first new service)
+- [ ] Proto doc comments on every field (see section 4 for the rules); now that the gRPC error mapping is fixed,
+  document each RPC's error codes too.
+- [ ] GraphQL `"""descriptions"""` on every type, field and argument (section 4).
+- [ ] `APP_ENV` (section 2, Config validation) and a dev-only GraphQL playground (section 4), so a new developer can
+  explore the API without Postman.
+- [ ] README section "Integrating a new service": auth (gRPC API key + `x-telegram-user-id`, or a GraphQL session
+  JWT), required metadata and headers, error codes, limits, pagination, scalars and retries, in one place. Most of
+  it exists already, spread across the README.
+
 ### Observability
 - [x] Prometheus metrics at `/metrics` on a separate `METRICS_PORT` listener: gRPC via the `go-grpc-middleware`
   prometheus provider, `/graphql` requests and latency, GraphQL errors by code, pgxpool stats, Go runtime and process.
@@ -232,10 +265,23 @@ Last reviewed: 2026-10-19
   that changes.
 - [x] GraphQL custom scalars `Date` and `Decimal` instead of `String` for `transactionDt` and `amount`, and `UUID`
   instead of `ID` for identifiers (`internal/delivery/http/graphql/scalar`, function-based, mapped in `gqlgen.yml`).
-- [ ] Proto `google.type.Date`, plus `google.type.Money` or a units/nanos pattern for amounts.
-- [ ] Reuse `Category` messages instead of duplicating fields in `GetCategoryByIDResponse`.
-- [ ] Idempotency key on create mutations, so Telegram retries don't create duplicate expenses.
-- [ ] Rate limiting, per client or per user.
+- [ ] When the first client that retries is built: idempotency key on `CreateExpense` (`request_id` per
+  [AIP-155](https://google.aip.dev/155), `requestId` in GraphQL), so retries don't create duplicate expenses. It's an
+  optional field, so adding it later breaks no one.
+- [ ] Later, once there are clients: rate limiting, per client or per user (today only Telegram binding is
+  limited).
+- [ ] Later: normalize CRUD in the repositories and usecases (internal only, so no client impact; the end-to-end
+  tests cover the behaviour):
+  - Create / Update return the stored object, read back after the write when it has derived fields.
+  - Get never returns `(nil, nil)`: missing, or another user's, is `errDom.ErrNotFound`.
+  - List returns an empty slice (not `nil`, not an error) for no results; unbounded lists are paginated.
+  - Delete returns only `error`, with `ErrNotFound` for a missing row; `ErrConflict` when it's in use.
+  - One update rule (from the API decision above) applied the same way to every form/patch.
+- [ ] Later: gRPC input errors in one format. The handlers' 8 `uuid.Parse` sites (`id`, `category_id`) build their
+  own `status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)`, which leaks the library's error text
+  and differs from every other validation message. Add `converter.ParseUUID(field, s)` returning an
+  `errDom.ValidationError` (`id: must be a UUID`) and pass it to `errGrpc.ToStatus`, like the date and decimal
+  converters and the GraphQL `UUID` scalar.
 
 ### Repo hygiene
 - [ ] `LICENSE`
@@ -262,7 +308,7 @@ files into client repos by hand.
 | Consumer | How they get the spec |
 |---|---|
 | People and tools (Postman, grpcurl, Evans) | Server reflection (dev/staging), or import `.proto` files with `proto/` as the import path |
-| Go clients | `go get` this module and import `gen/go/financecore/v1` |
+| Go clients | `go get` this module and import `gen/grpc/financecore/v1` |
 | Non-Go clients | `buf generate "https://github.com/revirathya/revirathya-finance-core.git#subdir=proto"` |
 | Several teams or languages (later) | Buf Schema Registry: versioned modules, rendered docs, generated SDKs |
 
@@ -270,18 +316,19 @@ files into client repos by hand.
   discover services without proto files.
   - Done: gated by `GRPC_ENABLE_REFLECTION` (default `false`); set it to `true` in the local `.env`.
   - Keep it off in production, at least until auth is in place.
-- [ ] **Simplify `make grpc-list` / `make grpc-describe`** to rely on reflection, dropping `GRPC_PROTOS`.
-- [ ] **Proto doc comments** on every service, RPC, message and field.
+- [ ] **Switch `make grpc-list` / `make grpc-describe` to reflection**, dropping `GRPC_PROTOS`. Now required, not just a
+  simplification: with `-import-path proto` grpcurl can't resolve `google/type/*.proto`, so both targets fail.
+- [ ] **Proto doc comments** on every service, RPC, message and field (tracked in section 3, Integration docs).
   - Comments must sit directly above the element (no blank line), or tools ignore them.
   - Remove detached section labels such as `// Common` and `// RPC: ...`.
   - Document what types don't say: formats (UUID), constraints (unique, max length), ordering, error codes.
-  - Only document error codes once the gRPC error mapping (section 1) is fixed.
+  - Error codes can be documented now: the gRPC error mapping (section 1) is fixed.
   - [x] `categories.proto` (error codes to be added after the gRPC error mapping fix)
   - [x] `expenses.proto` (error codes to be added after the gRPC error mapping fix)
   - [x] `user_telegram_contexts.proto` (error codes to be added after the gRPC error mapping fix; refine the
     meaning of `conversation` / `state` / interaction IDs once the bot's usage is settled)
-- [ ] **`buf breaking` in CI.** The most important guard for clients.
-- [ ] **Evolution rules** written down: mark removed fields as `reserved` (number and name), never reuse field
+- [ ] Later, once other services depend on the API: **`buf breaking` in CI**, the main guard for their clients.
+- [ ] Later, at the same point: **evolution rules** written down: mark removed fields as `reserved` (number and name), never reuse field
   numbers, and introduce `financecore.v2` for breaking redesigns while keeping `v1` running.
 - [ ] Optional: render docs with `protoc-gen-doc`, or rely on Buf Schema Registry's rendered docs.
 - [ ] Later: **Buf Schema Registry** (`buf push`) once more than one client team or language depends on the
@@ -289,7 +336,8 @@ files into client repos by hand.
 
 ### GraphQL
 - [x] **Introspection** gated by `GQL_ENABLE_INTROSPECTION` (default `false`).
-- [ ] **`"""descriptions"""`** on SDL types and fields. GraphiQL and Apollo Sandbox show them as documentation.
+- [ ] **`"""descriptions"""`** on SDL types and fields. GraphiQL and Apollo Sandbox show them as documentation
+  (tracked in section 3, Integration docs).
 - [ ] **Playground** at `/playground`, enabled only in dev.
 - Schema registry (Hive, Apollo GraphOS): skip unless there are several GraphQL consumers or federation.
 
@@ -304,17 +352,21 @@ files into client repos by hand.
     `COALESCE(sqlc.narg('description'), '')` in the query (or default to `""` before inserting).
   - After `make sqlc-generate`, `description` in the generated rows becomes `string` instead of `*string`; adjust
     the repository mapping. Input can keep `*string` (`nil` = keep, `""` = clear).
-  - Downstream (CLAUDE.md): GraphQL `Expense.description` can become `String!`, and gRPC responses always carry
-    a value. Clients that treat `null` as "no description" must accept `""`.
 - [ ] **Enable `govulncheck` in CI before the first deploy.** It's commented out in
   [`.github/workflows/ci.yaml`](../.github/workflows/ci.yaml) until a deployment target exists. Uncomment it, pin
   the latest release, and fix any reported vulnerabilities before the service goes live.
 
 ## 6. Suggested order
 
-1. Bug fixes (section 1).
-2. Auth, health checks, gRPC error mapping, timeouts.
-3. Logging, recovery interceptors, GraphQL limits.
-4. CI with lint, test, `buf breaking` and the codegen drift check.
-5. Environment-gated reflection and introspection; proto and SDL doc comments.
-6. Metrics and tracing, pagination, proper scalars.
+Done so far: bug fixes, auth, health checks, error mapping, timeouts and limits, logging, recovery, GraphQL
+hardening, input validation, CI with lint and drift checks, metrics, pagination, scalars, delivery tests.
+
+1. **Breaking cleanups while there are no consumers** (section 3): proto `Date` / `Money`, shared `Category` /
+   `Expense` messages, and category pagination if wanted.
+2. **Integration docs** (section 3): proto field comments with error codes, GraphQL descriptions, `APP_ENV` and the
+   playground, the "Integrating a new service" README section.
+3. **When the first client is built:** the idempotency key, then per-user rate limiting.
+4. **When the deploy target is chosen:** TLS, secrets, migrations as a separate job, `govulncheck`, Trivy, and the
+   runbook (deploy steps, migration rollback).
+5. **When the first consumer depends on the API:** `buf breaking`, written evolution rules, and revisiting the
+   CLAUDE.md compatibility rule.
