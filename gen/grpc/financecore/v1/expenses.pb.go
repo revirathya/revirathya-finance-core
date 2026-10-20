@@ -23,22 +23,22 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// An expense, including the name of its category.
+// An expense owned by the calling user, including the name of its category.
 type Expense struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Expense ID (UUID).
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// ID of the user who owns the expense (UUID).
 	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// Category ID (UUID).
+	// ID of the expense's category (UUID).
 	CategoryId string `protobuf:"bytes,3,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
-	// Category name.
+	// Name of the expense's category.
 	CategoryName string `protobuf:"bytes,4,opt,name=category_name,json=categoryName,proto3" json:"category_name,omitempty"`
-	// Transaction date (YYYY-MM-DD).
+	// Date of the transaction.
 	TransactionDt *date.Date `protobuf:"bytes,5,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
-	// Free-text note about the expense.
+	// Free-text note; empty when there is none.
 	Description string `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
-	// Amount as a decimal string, e.g. "12500.50".
+	// Amount, an exact decimal with at most 2 decimal places, e.g. value "12500.50".
 	Amount        *decimal.Decimal `protobuf:"bytes,7,opt,name=amount,proto3" json:"amount,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -123,15 +123,16 @@ func (x *Expense) GetAmount() *decimal.Decimal {
 	return nil
 }
 
+// Request for CreateExpense.
 type CreateExpenseRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Category ID (UUID). Must reference an existing category.
+	// ID of one of the caller's categories (UUID).
 	CategoryId string `protobuf:"bytes,1,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
-	// Transaction date (YYYY-MM-DD).
+	// Date of the transaction: a real calendar date from 2000-01-01 to tomorrow (Asia/Jakarta).
 	TransactionDt *date.Date `protobuf:"bytes,2,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
-	// Free-text note about the expense.
+	// Free-text note, at most 500 characters, trimmed. Unset means none ("").
 	Description *string `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	// Amount as a decimal string with up to 2 decimal places, e.g. "12500.50".
+	// Amount: greater than 0, at most 2 decimal places, below 1,000,000,000,000.
 	Amount        *decimal.Decimal `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -195,9 +196,10 @@ func (x *CreateExpenseRequest) GetAmount() *decimal.Decimal {
 	return nil
 }
 
+// Response for CreateExpense.
 type CreateExpenseResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Wrapped expense objcet
+	// The created expense, as stored.
 	Expense       *Expense `protobuf:"bytes,1,opt,name=expense,proto3" json:"expense,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -240,13 +242,15 @@ func (x *CreateExpenseResponse) GetExpense() *Expense {
 	return nil
 }
 
+// Request for ListExpenses.
 type ListExpensesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// If set, only returns expenses on this date (YYYY-MM-DD).
+	// If set, only expenses on this date.
 	TransactionDt *date.Date `protobuf:"bytes,1,opt,name=transaction_dt,json=transactionDt,proto3,oneof" json:"transaction_dt,omitempty"`
-	// Max expenses to return. default 20, max 50
+	// Maximum expenses to return: 0 or unset means 20, values above 50 are capped at 50, negative is
+	// INVALID_ARGUMENT.
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	// next_page_token from previous response; empty for the first page
+	// next_page_token from the previous response; empty for the first page. Opaque: don't build or parse it.
 	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -303,11 +307,12 @@ func (x *ListExpensesRequest) GetPageToken() string {
 	return ""
 }
 
+// Response for ListExpenses.
 type ListExpensesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Expenses ordered by transaction_dt, newest first.
+	// The caller's expenses, newest transaction_dt first (ties by ID).
 	Expenses []*Expense `protobuf:"bytes,1,rep,name=expenses,proto3" json:"expenses,omitempty"`
-	// Pagination navigator token
+	// Token for the next page; empty when this is the last page. Stop when it's empty, not when a page is short.
 	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -357,9 +362,10 @@ func (x *ListExpensesResponse) GetNextPageToken() string {
 	return ""
 }
 
+// Request for GetExpenseByID.
 type GetExpenseByIDRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Expense ID to fetch (UUID).
+	// Expense ID (UUID).
 	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -402,9 +408,10 @@ func (x *GetExpenseByIDRequest) GetId() string {
 	return ""
 }
 
+// Response for GetExpenseByID.
 type GetExpenseByIDResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Wrapped expense objcet
+	// The requested expense.
 	Expense       *Expense `protobuf:"bytes,1,opt,name=expense,proto3" json:"expense,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -447,18 +454,18 @@ func (x *GetExpenseByIDResponse) GetExpense() *Expense {
 	return nil
 }
 
+// Request for UpdateExpense. Every field except id is optional: unset fields keep their current value.
 type UpdateExpenseRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Expense ID to update (UUID).
+	// ID of the expense to update (UUID).
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// Omit any field to keep its current value; description "" clears it.
-	// Category ID (UUID). Must reference an existing category.
+	// ID of one of the caller's categories (UUID). Unset keeps the current category.
 	CategoryId *string `protobuf:"bytes,2,opt,name=category_id,json=categoryId,proto3,oneof" json:"category_id,omitempty"`
-	// Transaction date (YYYY-MM-DD).
+	// Date of the transaction, with the same rules as CreateExpense. Unset keeps the current date.
 	TransactionDt *date.Date `protobuf:"bytes,3,opt,name=transaction_dt,json=transactionDt,proto3" json:"transaction_dt,omitempty"`
-	// Free-text note about the expense. If omitted, the existing value is kept.
+	// Free-text note, at most 500 characters, trimmed. Unset keeps it; "" clears it.
 	Description *string `protobuf:"bytes,4,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	// Amount as a decimal string with up to 2 decimal places, e.g. "12500.50".
+	// Amount, with the same rules as CreateExpense. Unset keeps the current amount.
 	Amount        *decimal.Decimal `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -529,9 +536,10 @@ func (x *UpdateExpenseRequest) GetAmount() *decimal.Decimal {
 	return nil
 }
 
+// Response for UpdateExpense.
 type UpdateExpenseResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Wrapped expense objcet
+	// The expense after the update, as stored.
 	Expense       *Expense `protobuf:"bytes,1,opt,name=expense,proto3" json:"expense,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -574,9 +582,10 @@ func (x *UpdateExpenseResponse) GetExpense() *Expense {
 	return nil
 }
 
+// Request for DeleteExpense.
 type DeleteExpenseRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Expense ID to delete (UUID).
+	// ID of the expense to delete (UUID).
 	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -619,6 +628,7 @@ func (x *DeleteExpenseRequest) GetId() string {
 	return ""
 }
 
+// Response for DeleteExpense. Empty: success is the OK status.
 type DeleteExpenseResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields

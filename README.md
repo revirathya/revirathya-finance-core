@@ -103,7 +103,8 @@ make docker-up                    # Start db -> migration -> core
 ```
 
 In Docker mode the app is reachable on the host ports (gRPC `:51051`, GraphQL `:8180/graphql`, metrics
-`:9900/metrics` by default). The app's ports are published on `127.0.0.1` only, so other machines can't reach them.
+`:9900/metrics` by default). The metrics port is published on `127.0.0.1` only, so other machines can't reach it; gRPC and HTTP are published on
+all interfaces.
 
 The Docker files live in `infra/docker/` (`Dockerfile`, `migration.Dockerfile`, `docker-compose.yaml`). The Makefile
 runs compose with `--project-directory .`, so it reads the root `.env` and keeps the project name
@@ -156,6 +157,7 @@ Copy `.env.example` to `.env`. Only the required variables must be set; prefer t
 
 |Var|Default|Description|
 |:--|:--|:--|
+|`APP_ENV`|`prod`|`dev` or `prod`. Sets the defaults for dev-only features: in `dev`, gRPC reflection, GraphQL introspection and the GraphQL playground (`/playground`) are on. Any other value is a startup error.|
 |`DB_USER`|`revirathya`|Postgres user|
 |`DB_NAME`|`finance`|Postgres database name|
 |`GRPC_PORT`|`50051`|gRPC listen port (plain number, no `:`), local mode only|
@@ -163,10 +165,10 @@ Copy `.env.example` to `.env`. Only the required variables must be set; prefer t
 |`METRICS_PORT`|`9090`|Listen port for Prometheus metrics (`/metrics`), local mode only. Keep it internal.|
 |`ALLOWED_ORIGINS`|`http://localhost,http://127.0.0.1`|Comma-separated CORS origins for GraphQL. Must be full origins including scheme and port, e.g. `http://localhost:3000`|
 |`JWT_TTL`|`24h`|Session token lifetime, as a Go duration (e.g. `30m`, `12h`)|
-|`GRPC_ENABLE_REFLECTION`|`false`|Register gRPC server reflection, so `grpcurl` and Postman can discover services without proto files. Keep it off in production.|
+|`GRPC_ENABLE_REFLECTION`|`false` (`true` in `dev`)|Register gRPC server reflection, so `grpcurl` and Postman can discover services without proto files. Keep it off in production.|
 |`LOG_FORMAT`|`json`|Log output format: `json` (one JSON object per line, for log platforms) or `text` (readable in a terminal; handy in your local `.env`)|
 |`LOG_LEVEL`|`info`|Minimum level logged: `debug`, `info`, `warn` or `error`|
-|`GQL_ENABLE_INTROSPECTION`|`false`|Allow GraphQL introspection (schema download) and "Did you mean …?" hints in validation errors. Keep it off in production.|
+|`GQL_ENABLE_INTROSPECTION`|`false` (`true` in `dev`)|Allow GraphQL introspection (schema download) and "Did you mean …?" hints in validation errors. Keep it off in production.|
 
 ### Optional: host ports for Docker mode
 
@@ -186,6 +188,25 @@ effect in Docker mode.
 - Local: `make migrate-up` / `make migrate-down` / `make migrate-create name=<X>` / `make migrate-version`
 - Docker: built from `infra/docker/migration.Dockerfile` (`migrate/migrate` + bundled `migrations`); the `migration`
   service runs `up` automatically before `core` starts.
+
+## Integrating a new service
+
+A checklist for a new client. Each point links to the section with the details.
+
+|Topic|gRPC (`:50051`)|GraphQL (`POST /graphql` on `:8080`)|
+|:--|:--|:--|
+|**Auth**|`authorization: Bearer <GRPC_API_KEY>` plus `x-telegram-user-id` of a bound Telegram account on every call ([gRPC auth](#grpc-telegram-bot), [binding](#telegram-binding))|`Authorization: Bearer <session token>` from `loginWithGoogle` ([GraphQL auth](#graphql-web-console))|
+|**Contract**|`proto/financecore/v1/*.proto`; Go clients import `gen/grpc/financecore/v1` ([messages](#grpc-messages), [tools](#grpc-tools))|`graphql/schema/*.graphql`; explore with the [playground](#playground-app_envdev-only) in dev|
+|**Types**|`google.type.Date`, `google.type.Decimal`, IDs as UUID strings|`Date`, `Decimal`, `UUID` scalars, all JSON strings ([scalars](#custom-scalars))|
+|**Errors**|Status codes; validation is `INVALID_ARGUMENT` with `field: reason`; another user's record is `NOT_FOUND`|`extensions.code`: `BAD_USER_INPUT` (`field: reason`), `NOT_FOUND`, `UNAUTHENTICATED`, `CONFLICT`, `INTERNAL`|
+|**Lists**|`page_size` / `page_token` → `next_page_token` ([pagination](#pagination))|`first` / `after` → `pageInfo` ([pagination](#pagination))|
+|**Updates**|Patch: unset fields are kept ([updates](#updates))|Patch: omitted or `null` fields are kept ([updates](#updates))|
+|**Limits**|1 MB messages, 10 s default deadline, keepalive pings ≥ 30 s ([gRPC server](#grpc-server))|1 MB body, 10 s, 5000 tokens, complexity 200 ([GraphQL server](#graphql-server))|
+|**Tracing**|Send `x-request-id` to correlate with this service's logs ([request IDs](#request-ids))|Send `X-Request-ID` ([request IDs](#request-ids))|
+|**Health**|`grpc.health.v1.Health/Check` ([health checks](#health-checks))|`GET /healthz`, `GET /readyz`|
+
+Retries: reads and updates are safe to retry. A retried `createExpense` / `CreateExpense` can create a duplicate;
+an idempotency key is planned for when the first client that retries is built.
 
 ## Authentication
 
@@ -265,9 +286,16 @@ All three travel as JSON strings. Variables must be declared with the scalar typ
 `$id: UUID!`, not `$id: ID!`), or the query fails with `GRAPHQL_VALIDATION_FAILED`. A value in the wrong format, or a JSON number for a `Decimal`, returns
 `BAD_USER_INPUT` with a message naming the scalar.
 
-Introspection is off unless `GQL_ENABLE_INTROSPECTION=true`. With it off, tools can't download the schema from
-the server (e.g. Postman's "fetch schema", GraphQL codegen); point them at the committed schema in
-`graphql/schema/*.graphql` instead, or enable it in development.
+Introspection is off unless `GQL_ENABLE_INTROSPECTION=true` (the default with `APP_ENV=dev`). With it off, tools
+can't download the schema from the server (e.g. Postman's "fetch schema", GraphQL codegen); point them at the
+committed schema in `graphql/schema/*.graphql` instead, or enable it in development.
+
+### Playground (`APP_ENV=dev` only)
+
+With `APP_ENV=dev`, `GET /playground` serves GraphiQL against `/graphql`, with the schema's descriptions in its docs
+panel. To call authenticated operations, put a session token in its headers panel:
+`{"Authorization": "Bearer <token>"}` (from `loginWithGoogle`, or see [docs/postman-google-login.md](docs/postman-google-login.md)).
+The page loads its scripts from a CDN, and it is never served with `APP_ENV=prod`.
 
 ## gRPC server
 
@@ -401,23 +429,21 @@ grpcurl -plaintext localhost:50051 grpc.health.v1.Health/Check   # needs GRPC_EN
 
 ## gRPC tools
 
-`make grpc-list` and `make grpc-describe` read the local proto files, so they work without a running server:
+`make grpc-list` and `make grpc-describe` build the protos with buf (`bin/financecore.binpb`, including the
+`google/type` imports) and read that, so they need no running server and no reflection. `describe` shows the doc
+comments:
 
 ```sh
 make grpc-list
-make grpc-describe symbol=financecore.v1.CategoryService
+make grpc-describe symbol=financecore.v1.ExpenseService
+make grpc-describe symbol=financecore.v1.UpdateExpenseRequest
 ```
 
-Both target the Docker-mode port by default (`GRPC_ADDR=localhost:51051`); in local mode pass
-`GRPC_ADDR=localhost:50051`. They currently fail, though: the protos import `google/type/*.proto`, which grpcurl can't find under `-import-path proto`.
-Until they're switched to reflection, set `GRPC_ENABLE_REFLECTION=true` and use grpcurl directly, e.g.
-`grpcurl -plaintext localhost:50051 list` and `grpcurl -plaintext localhost:50051 describe financecore.v1.Expense`.
-
-To call RPCs, set `GRPC_ENABLE_REFLECTION=true` and send both metadata entries, e.g. (after
-`set -a; source .env; set +a` to load `.env` into your shell):
+To call RPCs, send both metadata entries. Use the same descriptor set (or reflection, which is on with
+`APP_ENV=dev`), e.g. after `set -a; source .env; set +a` to load `.env` into your shell:
 
 ```sh
-grpcurl -plaintext \
+grpcurl -plaintext -protoset bin/financecore.binpb \
   -H "authorization: Bearer $GRPC_API_KEY" \
   -H "x-telegram-user-id: 123456789" \
   localhost:50051 financecore.v1.CategoryService/ListCategories   # Docker mode: localhost:51051

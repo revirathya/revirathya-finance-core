@@ -146,7 +146,7 @@ Last reviewed: 2026-10-19
 - [ ] **Config validation.**
   - [x] Fail fast on invalid values: required secrets, `JWT_SECRET` length, `JWT_TTL` duration.
   - [ ] Keep secrets in env or a secret manager.
-  - [ ] Add `APP_ENV` to gate dev-only features (reflection, introspection, playground).
+  - [x] `APP_ENV` gates dev-only features: in `dev`, reflection, introspection and the playground default to on.
 - [ ] **Migrations.**
   - [x] Remove `000002_temp_seed` (per `CHANGELOG.md`).
   - [ ] Run migrations as a separate job before deploy, not on app start.
@@ -246,12 +246,11 @@ client later. Do these first.
     cache eviction); deleting something missing is `NOT_FOUND`.
 
 ### Integration docs (for the first new service)
-- [ ] Proto doc comments on every field (see section 4 for the rules); now that the gRPC error mapping is fixed,
-  document each RPC's error codes too.
-- [ ] GraphQL `"""descriptions"""` on every type, field and argument (section 4).
-- [ ] `APP_ENV` (section 2, Config validation) and a dev-only GraphQL playground (section 4), so a new developer can
-  explore the API without Postman.
-- [ ] README section "Integrating a new service": auth (gRPC API key + `x-telegram-user-id`, or a GraphQL session
+- [x] Proto doc comments on every service, RPC, message and field, with each RPC's error codes, limits, ordering,
+  and patch/pagination behaviour.
+- [x] GraphQL descriptions on every type, field and argument, including auth and error codes on `Query` / `Mutation`.
+- [x] `APP_ENV` (`dev` / `prod`, default `prod`) and a dev-only GraphQL playground (`GET /playground`, GraphiQL).
+- [x] README section "Integrating a new service": auth (gRPC API key + `x-telegram-user-id`, or a GraphQL session
   JWT), required metadata and headers, error codes, limits, pagination, scalars and retries, in one place. Most of
   it exists already, spread across the README.
 
@@ -319,9 +318,9 @@ files into client repos by hand.
   discover services without proto files.
   - Done: gated by `GRPC_ENABLE_REFLECTION` (default `false`); set it to `true` in the local `.env`.
   - Keep it off in production, at least until auth is in place.
-- [ ] **Switch `make grpc-list` / `make grpc-describe` to reflection**, dropping `GRPC_PROTOS`. Now required, not just a
-  simplification: with `-import-path proto` grpcurl can't resolve `google/type/*.proto`, so both targets fail.
-- [ ] **Proto doc comments** on every service, RPC, message and field (tracked in section 3, Integration docs).
+- [x] **`make grpc-list` / `make grpc-describe`** read a buf-built descriptor set (`bin/financecore.binpb`, includes the
+  `google/type` imports): no server and no reflection needed. `GRPC_PROTOS` removed.
+- [x] **Proto doc comments** on every service, RPC, message and field.
   - Comments must sit directly above the element (no blank line), or tools ignore them.
   - Remove detached section labels such as `// Common` and `// RPC: ...`.
   - Document what types don't say: formats (UUID), constraints (unique, max length), ordering, error codes.
@@ -339,9 +338,8 @@ files into client repos by hand.
 
 ### GraphQL
 - [x] **Introspection** gated by `GQL_ENABLE_INTROSPECTION` (default `false`).
-- [ ] **`"""descriptions"""`** on SDL types and fields. GraphiQL and Apollo Sandbox show them as documentation
-  (tracked in section 3, Integration docs).
-- [ ] **Playground** at `/playground`, enabled only in dev.
+- [x] **Descriptions** on SDL types and fields; the dev playground shows them as documentation.
+- [x] **Playground** at `/playground`, enabled only with `APP_ENV=dev`.
 - Schema registry (Hive, Apollo GraphOS): skip unless there are several GraphQL consumers or federation.
 
 ## 5. Later (after the production-readiness checklist)

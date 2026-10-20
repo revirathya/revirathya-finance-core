@@ -92,9 +92,11 @@ gql-generate:
 	go run github.com/99designs/gqlgen generate
 
 ## --- gRPC dev tools (reflection isn't registered, so proto files are passed explicitly) ---
-
+PROTOSET := bin/financecore.binpb
 grpc-list:
-	grpcurl -plaintext -import-path proto $(GRPC_PROTOS) $(GRPC_ADDR) list
+	buf build -o $(PROTOSET)
+	grpcurl -protoset $(PROTOSET) list
 
 grpc-describe:
-	grpcurl -plaintext -import-path proto $(GRPC_PROTOS) $(GRPC_ADDR) describe $(symbol)
+	buf build -o $(PROTOSET)
+	grpcurl -protoset $(PROTOSET) describe $(symbol)

@@ -21,21 +21,23 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// The calling user's conversation state with the Telegram bot. conversation, state and the interaction IDs
+// are defined by the bot; this service only stores them (trimmed, at most 100 characters each).
 type UserTelegramContext struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Context ID (UUID).
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// User ID (UUID).
+	// ID of the user the context belongs to (UUID).
 	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// Telegram chat ID linked to the user. Unique across users.
+	// Telegram account bound to the user. Unique: one Telegram account per user.
 	TelegramChatId *string `protobuf:"bytes,3,opt,name=telegram_chat_id,json=telegramChatId,proto3,oneof" json:"telegram_chat_id,omitempty"`
-	// Active bot conversation.
+	// The bot's active conversation; unset if none was stored.
 	Conversation *string `protobuf:"bytes,4,opt,name=conversation,proto3,oneof" json:"conversation,omitempty"`
-	// Current state within the conversation.
+	// The current step within the conversation; unset if none was stored.
 	State *string `protobuf:"bytes,5,opt,name=state,proto3,oneof" json:"state,omitempty"`
-	// Chat ID of the message the bot is currently interacting with.
+	// Chat ID of the message the bot is currently interacting with; unset if none was stored.
 	InteractionChatId *string `protobuf:"bytes,6,opt,name=interaction_chat_id,json=interactionChatId,proto3,oneof" json:"interaction_chat_id,omitempty"`
-	// ID of the message the bot is currently interacting with.
+	// ID of the message the bot is currently interacting with; unset if none was stored.
 	InteractionMessageId *string `protobuf:"bytes,7,opt,name=interaction_message_id,json=interactionMessageId,proto3,oneof" json:"interaction_message_id,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
@@ -120,6 +122,7 @@ func (x *UserTelegramContext) GetInteractionMessageId() string {
 	return ""
 }
 
+// Request for GetUserTelegramContext. The user comes from the caller's Telegram binding.
 type GetUserTelegramContextRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -156,9 +159,11 @@ func (*GetUserTelegramContextRequest) Descriptor() ([]byte, []int) {
 	return file_financecore_v1_user_telegram_contexts_proto_rawDescGZIP(), []int{1}
 }
 
+// Response for GetUserTelegramContext.
 type GetUserTelegramContextResponse struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	UserTelegramContext *UserTelegramContext   `protobuf:"bytes,1,opt,name=user_telegram_context,json=userTelegramContext,proto3" json:"user_telegram_context,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The caller's context.
+	UserTelegramContext *UserTelegramContext `protobuf:"bytes,1,opt,name=user_telegram_context,json=userTelegramContext,proto3" json:"user_telegram_context,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -200,15 +205,17 @@ func (x *GetUserTelegramContextResponse) GetUserTelegramContext() *UserTelegramC
 	return nil
 }
 
+// Request for UpdateUserTelegramContext. Every field is optional: unset fields keep their current value, and ""
+// stores an empty value.
 type UpdateUserTelegramContextRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Active bot conversation. If omitted, the current value is kept.
+	// The bot's active conversation, at most 100 characters.
 	Conversation *string `protobuf:"bytes,1,opt,name=conversation,proto3,oneof" json:"conversation,omitempty"`
-	// Current state within the conversation. If omitted, the current value is kept.
+	// The current step within the conversation, at most 100 characters.
 	State *string `protobuf:"bytes,2,opt,name=state,proto3,oneof" json:"state,omitempty"`
-	// Chat ID of the message the bot is interacting with. If omitted, the current value is kept.
+	// Chat ID of the message the bot is interacting with, at most 100 characters.
 	InteractionChatId *string `protobuf:"bytes,3,opt,name=interaction_chat_id,json=interactionChatId,proto3,oneof" json:"interaction_chat_id,omitempty"`
-	// ID of the message the bot is interacting with. If omitted, the current value is kept.
+	// ID of the message the bot is interacting with, at most 100 characters.
 	InteractionMessageId *string `protobuf:"bytes,4,opt,name=interaction_message_id,json=interactionMessageId,proto3,oneof" json:"interaction_message_id,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
@@ -272,9 +279,11 @@ func (x *UpdateUserTelegramContextRequest) GetInteractionMessageId() string {
 	return ""
 }
 
+// Response for UpdateUserTelegramContext.
 type UpdateUserTelegramContextResponse struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	UserTelegramContext *UserTelegramContext   `protobuf:"bytes,1,opt,name=user_telegram_context,json=userTelegramContext,proto3" json:"user_telegram_context,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The caller's context after the update.
+	UserTelegramContext *UserTelegramContext `protobuf:"bytes,1,opt,name=user_telegram_context,json=userTelegramContext,proto3" json:"user_telegram_context,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -316,9 +325,10 @@ func (x *UpdateUserTelegramContextResponse) GetUserTelegramContext() *UserTelegr
 	return nil
 }
 
+// Request for BindTelegramAccount.
 type BindTelegramAccountRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Code shown in the Web Console, in XXXX-XXXX format.
+	// One-time code the user created in the Web Console: exactly XXXX-XXXX, uppercase, valid for 10 minutes.
 	Code          string `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -361,10 +371,12 @@ func (x *BindTelegramAccountRequest) GetCode() string {
 	return ""
 }
 
+// Response for BindTelegramAccount.
 type BindTelegramAccountResponse struct {
-	state  protoimpl.MessageState `protogen:"open.v1"`
-	UserId string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// So the bot can reply "Bound to <first_name>'s account".
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// ID of the user the Telegram account is now bound to (UUID).
+	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// The user's first name, e.g. so the bot can reply "Bound to Avi's account".
 	FirstName     string `protobuf:"bytes,2,opt,name=first_name,json=firstName,proto3" json:"first_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

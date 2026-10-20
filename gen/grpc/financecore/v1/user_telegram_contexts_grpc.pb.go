@@ -28,22 +28,28 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// UserTelegramContextService stores each user's conversation state with the
-// Telegram bot. Every user has at most one context.
+// UserTelegramContextService binds Telegram accounts to users and stores each user's conversation state with
+// the bot. Every user has at most one context.
+//
+// Every call needs the metadata "authorization: Bearer <api key>" and "x-telegram-user-id: <Telegram user
+// ID>". The Telegram account must be bound for every RPC except BindTelegramAccount; otherwise the call fails
+// with UNAUTHENTICATED. Calls without a deadline time out after 10 seconds (DEADLINE_EXCEEDED).
 type UserTelegramContextServiceClient interface {
-	// Returns the Telegram context of a user, looked up by user ID.
-	GetUserTelegramContext(ctx context.Context, in *GetUserTelegramContextRequest, opts ...grpc.CallOption) (*GetUserTelegramContextResponse, error)
-	// Updates a user's Telegram context and returns it. Only the fields that
-	// are set are changed; omitted fields keep their current value.
-	// telegram_chat_id cannot be changed through this RPC.
-	UpdateUserTelegramContext(ctx context.Context, in *UpdateUserTelegramContextRequest, opts ...grpc.CallOption) (*UpdateUserTelegramContextResponse, error)
-	// Binds the calling Telegram account (from "x-telegram-user-id" metadata) to the
-	// user who created the code in the Web Console.
+	// Returns the caller's context.
 	//
-	// Errors:
-	//   - INVALID_ARGUMENT: the code is malformed, unknown, expired or already used.
-	//   - ALREADY_EXISTS: this Telegram account is already bound to another user.
-	//   - RESOURCE_EXHAUSTED: too many attempts; try again later.
+	// Errors: UNAUTHENTICATED.
+	GetUserTelegramContext(ctx context.Context, in *GetUserTelegramContextRequest, opts ...grpc.CallOption) (*GetUserTelegramContextResponse, error)
+	// Updates the caller's context: only the fields that are set change. telegram_chat_id can't be changed
+	// here; rebind instead.
+	//
+	// Errors: INVALID_ARGUMENT (a field over 100 characters; the message names it), UNAUTHENTICATED.
+	UpdateUserTelegramContext(ctx context.Context, in *UpdateUserTelegramContextRequest, opts ...grpc.CallOption) (*UpdateUserTelegramContextResponse, error)
+	// Binds the calling Telegram account (from the "x-telegram-user-id" metadata) to the user who created the
+	// code, and resets that user's conversation state. The only RPC an unbound Telegram account may call.
+	//
+	// Errors: INVALID_ARGUMENT (the code is malformed, unknown, expired or already used), ALREADY_EXISTS
+	// (this Telegram account is bound to another user; unbind it there first), RESOURCE_EXHAUSTED (more than
+	// 10 attempts per Telegram account in 5 minutes), UNAUTHENTICATED (missing API key or Telegram user ID).
 	BindTelegramAccount(ctx context.Context, in *BindTelegramAccountRequest, opts ...grpc.CallOption) (*BindTelegramAccountResponse, error)
 }
 
@@ -89,22 +95,28 @@ func (c *userTelegramContextServiceClient) BindTelegramAccount(ctx context.Conte
 // All implementations must embed UnimplementedUserTelegramContextServiceServer
 // for forward compatibility.
 //
-// UserTelegramContextService stores each user's conversation state with the
-// Telegram bot. Every user has at most one context.
+// UserTelegramContextService binds Telegram accounts to users and stores each user's conversation state with
+// the bot. Every user has at most one context.
+//
+// Every call needs the metadata "authorization: Bearer <api key>" and "x-telegram-user-id: <Telegram user
+// ID>". The Telegram account must be bound for every RPC except BindTelegramAccount; otherwise the call fails
+// with UNAUTHENTICATED. Calls without a deadline time out after 10 seconds (DEADLINE_EXCEEDED).
 type UserTelegramContextServiceServer interface {
-	// Returns the Telegram context of a user, looked up by user ID.
-	GetUserTelegramContext(context.Context, *GetUserTelegramContextRequest) (*GetUserTelegramContextResponse, error)
-	// Updates a user's Telegram context and returns it. Only the fields that
-	// are set are changed; omitted fields keep their current value.
-	// telegram_chat_id cannot be changed through this RPC.
-	UpdateUserTelegramContext(context.Context, *UpdateUserTelegramContextRequest) (*UpdateUserTelegramContextResponse, error)
-	// Binds the calling Telegram account (from "x-telegram-user-id" metadata) to the
-	// user who created the code in the Web Console.
+	// Returns the caller's context.
 	//
-	// Errors:
-	//   - INVALID_ARGUMENT: the code is malformed, unknown, expired or already used.
-	//   - ALREADY_EXISTS: this Telegram account is already bound to another user.
-	//   - RESOURCE_EXHAUSTED: too many attempts; try again later.
+	// Errors: UNAUTHENTICATED.
+	GetUserTelegramContext(context.Context, *GetUserTelegramContextRequest) (*GetUserTelegramContextResponse, error)
+	// Updates the caller's context: only the fields that are set change. telegram_chat_id can't be changed
+	// here; rebind instead.
+	//
+	// Errors: INVALID_ARGUMENT (a field over 100 characters; the message names it), UNAUTHENTICATED.
+	UpdateUserTelegramContext(context.Context, *UpdateUserTelegramContextRequest) (*UpdateUserTelegramContextResponse, error)
+	// Binds the calling Telegram account (from the "x-telegram-user-id" metadata) to the user who created the
+	// code, and resets that user's conversation state. The only RPC an unbound Telegram account may call.
+	//
+	// Errors: INVALID_ARGUMENT (the code is malformed, unknown, expired or already used), ALREADY_EXISTS
+	// (this Telegram account is bound to another user; unbind it there first), RESOURCE_EXHAUSTED (more than
+	// 10 attempts per Telegram account in 5 minutes), UNAUTHENTICATED (missing API key or Telegram user ID).
 	BindTelegramAccount(context.Context, *BindTelegramAccountRequest) (*BindTelegramAccountResponse, error)
 	mustEmbedUnimplementedUserTelegramContextServiceServer()
 }

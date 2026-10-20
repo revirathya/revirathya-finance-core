@@ -4,46 +4,61 @@ package financecore.v1;
 
 option go_package = "github.com/revirathya/revirathya-finance-core/gen/grpc/financecore/v1;financecorev1";
 
-// A category used to group expenses, e.g. "Food" or "Transport".
+// A category used to group the calling user's expenses, e.g. "Food" or "Transport".
 message Category {
   // Category ID (UUID).
   string id = 1;
 
-  // Category name, unique across all categories (max 100 characters).
+  // Category name: 1-100 characters, trimmed, unique per user.
   string category_name = 2;
 }
 
+// Request for ListCategories.
 message ListCategoriesRequest {
-  // Max categories to return. default 20, max 50
+  // Maximum categories to return: 0 or unset means 20, values above 50 are capped at 50, negative is
+  // INVALID_ARGUMENT.
   int32 page_size = 1;
 
-  // next_page_token from previous response; empty for the first page
+  // next_page_token from the previous response; empty for the first page. Opaque: don't build or parse it.
   string page_token = 2;
 }
 
+// Response for ListCategories.
 message ListCategoriesResponse {
-  // Categories ordered alphabetically
+  // The caller's categories, ordered by category_name.
   repeated Category categories = 1;
 
-  // Pagination navigator token
+  // Token for the next page; empty when this is the last page. Stop when it's empty, not when a page is short.
   string next_page_token = 2;
 }
 
+// Request for GetCategoryByID.
 message GetCategoryByIDRequest {
-  // Category ID to fetch. Must be a valid UUID.
+  // Category ID (UUID).
   string id = 1;
 }
 
+// Response for GetCategoryByID.
 message GetCategoryByIDResponse {
-  // Wrapped category object
+  // The requested category.
   Category category = 1;
 }
 
-// CategoryService provides read access to expense categories.
+// CategoryService gives the Telegram bot read access to the calling user's categories. Categories are
+// created and changed through the GraphQL API.
+//
+// Every call needs the metadata "authorization: Bearer <api key>" and "x-telegram-user-id: <Telegram user
+// ID>" of a bound Telegram account; otherwise it fails with UNAUTHENTICATED. Calls without a deadline time
+// out after 10 seconds (DEADLINE_EXCEEDED).
 service CategoryService {
-  // Returns all categories, ordered alphabetically by category_name.
+  // Returns the caller's categories, ordered by category_name, one page at a time.
+  //
+  // Errors: INVALID_ARGUMENT (negative page_size, invalid page_token), UNAUTHENTICATED.
   rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse);
 
-  // Returns a single category by its ID.
+  // Returns one of the caller's categories.
+  //
+  // Errors: INVALID_ARGUMENT (id is not a UUID), NOT_FOUND (no such category for the caller, including
+  // another user's), UNAUTHENTICATED.
   rpc GetCategoryByID(GetCategoryByIDRequest) returns (GetCategoryByIDResponse);
 }

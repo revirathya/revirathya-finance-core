@@ -1,42 +1,79 @@
+"An expense owned by the signed-in user."
 type Expense {
     id: UUID!
+
+    "The owner: always the signed-in user."
     userId: UUID!
+
+    "Date of the transaction."
     transactionDt: Date!
+
     categoryId: UUID!
+
+    "Name of the expense's category."
     categoryName: String!
+
+    "Free-text note; `\"\"` when there is none."
     description: String!
+
+    "Greater than 0, at most 2 decimal places."
     amount: Decimal!
 }
 
+"One page of expenses."
 type ExpenseConnection {
+    "The expenses on this page, newest `transactionDt` first."
     nodes: [Expense!]!
     pageInfo: PageInfo!
 }
 
 input CreateExpenseInput {
+    "From 2000-01-01 to tomorrow (Asia/Jakarta)."
     transactionDt: Date!
+
+    "One of the signed-in user's categories; another user's is `BAD_USER_INPUT`."
     categoryId: UUID!
+
+    "At most 500 characters, trimmed. Omitted means none (`\"\"`)."
     description: String
+
+    "Greater than 0, at most 2 decimal places, below 1,000,000,000,000."
     amount: Decimal!
 }
 
+"Patch: omitted (or null) fields keep their current value. Fields that are sent follow the same rules as on create."
 input UpdateExpenseInput {
-    "Omit any field to keep its value; description \"\" clears it."
     transactionDt: Date
     categoryId: UUID
+
+    "`\"\"` clears it."
     description: String
+
     amount: Decimal
 }
 
 extend type Query {
+    "One of the signed-in user's expenses. Another user's expense is `NOT_FOUND`."
     expense(id: UUID!): Expense
 
-    "Newest first. `first`: page size, default 20, max 50."
-    expenses(transactionDt: Date, first: Int, after: String): ExpenseConnection!
+    "The signed-in user's expenses, newest `transactionDt` first."
+    expenses(
+        "Only expenses on this date."
+        transactionDt: Date
+        "Page size: default 20, capped at 50; negative is `BAD_USER_INPUT`."
+        first: Int
+        "`pageInfo.endCursor` from the previous page; omit for the first page."
+        after: String
+    ): ExpenseConnection!
 }
 
 extend type Mutation {
+    "Creates an expense and returns it as stored."
     createExpense(input: CreateExpenseInput!): Expense
+
+    "Updates an expense (patch) and returns it as stored. Another user's expense is `NOT_FOUND`."
     updateExpense(id: UUID!, patch: UpdateExpenseInput!): Expense
+
+    "Deletes an expense and returns its ID. Another user's, or one already deleted, is `NOT_FOUND`."
     deleteExpense(id: UUID!): UUID!
 }

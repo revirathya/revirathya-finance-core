@@ -11,6 +11,7 @@ import (
 )
 
 type Config struct {
+	AppEnv                 string
 	DatabaseURI            string
 	GrpcApiKey             string
 	GrpcPort               string
@@ -47,17 +48,35 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	cfg := &Config{}
+	cfg.AppEnv = getEnv("APP_ENV", "prod")
 	cfg.DatabaseURI = getEnv("DATABASE_URI", "")
 	cfg.GrpcApiKey = getEnv("GRPC_API_KEY", "")
 	cfg.GrpcPort = ":" + getEnv("GRPC_PORT", "50051")
 	cfg.HttpPort = ":" + getEnv("HTTP_PORT", "8080")
 	cfg.MetricsPort = ":" + getEnv("METRICS_PORT", "9090")
-	cfg.GrpcEnableReflection = getEnv("GRPC_ENABLE_REFLECTION", "false") == "true"
-	cfg.GqlEnableIntrospection = getEnv("GQL_ENABLE_INTROSPECTION", "false") == "true"
 	cfg.AllowedOrigins = getEnvArray("ALLOWED_ORIGINS", "http://localhost,http://127.0.0.1")
 	cfg.GoogleClientID = getEnv("GOOGLE_CLIENT_ID", "")
 	cfg.JwtSecret = getEnv("JWT_SECRET", "")
 	cfg.LogFormat = getEnv("LOG_FORMAT", "json")
+
+	// Env validation
+	if (cfg.AppEnv != "dev") && (cfg.AppEnv != "prod") {
+		return nil, fmt.Errorf("APP_ENV must be 'dev' or 'prod': %s", cfg.AppEnv)
+	}
+
+	// Env-based defaults
+	var grpcEnableReflectionDefault string
+	var gqlEnableIntrospectionDefault string
+	switch cfg.AppEnv {
+	case "dev":
+		grpcEnableReflectionDefault = "true"
+		gqlEnableIntrospectionDefault = "true"
+	case "prod":
+		grpcEnableReflectionDefault = "false"
+		gqlEnableIntrospectionDefault = "false"
+	}
+	cfg.GrpcEnableReflection = getEnv("GRPC_ENABLE_REFLECTION", grpcEnableReflectionDefault) == "true"
+	cfg.GqlEnableIntrospection = getEnv("GQL_ENABLE_INTROSPECTION", gqlEnableIntrospectionDefault) == "true"
 
 	// Parse JwtTtl
 	jwtTtl, err := time.ParseDuration(getEnv("JWT_TTL", "24h"))

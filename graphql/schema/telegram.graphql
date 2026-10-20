@@ -1,9 +1,16 @@
+"A one-time code for linking a Telegram account: the user sends `/bind <code>` to the bot in a private chat."
 type TelegramBindCode {
+    "`XXXX-XXXX`, uppercase."
     code: String!
+
+    "When the code stops working (RFC 3339), 10 minutes after it was created."
     expiresAt: String!
 }
 
 extend type Mutation {
+    "Creates a bind code for the signed-in user. A new code replaces the previous one."
     createTelegramBindCode: TelegramBindCode!
+
+    "Unlinks the signed-in user's Telegram account and returns the user."
     unbindTelegram: User!
 }

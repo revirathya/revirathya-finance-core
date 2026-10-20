@@ -1,26 +1,39 @@
 # Scalar
-"Calendar date, `YYYY-MM-DD`, e.g. `\"2026-10-17\"`."
+"Calendar date, `YYYY-MM-DD`, e.g. `\"2026-10-17\"`. Must be a real date."
 scalar Date
 
 "Decimal number as a string, e.g. `\"12500.50\"`. Never a JSON number, so no precision is lost."
 scalar Decimal
 
-"UUID string, e.g. \"9b2f6c1e-4a7d-4c3e-8f1a-2d5e6b7c8a90\"."
+"UUID string, e.g. `\"9b2f6c1e-4a7d-4c3e-8f1a-2d5e6b7c8a90\"`."
 scalar UUID
 
 # Shared - Pagination
-type PageInfo { 
+"Where a page ends, for cursor pagination (`first` / `after`)."
+type PageInfo {
+    "Whether another page follows this one."
     hasNextPage: Boolean!
-    
-    "Pass as `after` to get the next page; null on the last page."
+
+    "Pass as `after` to get the next page; null on the last page. Opaque: don't build or parse it."
     endCursor: String
 }
 
 # Base
+"""
+Read operations. Everything except `ok` needs a session token: send `Authorization: Bearer <token>` from
+`loginWithGoogle`. Errors carry `extensions.code`: `UNAUTHENTICATED`, `NOT_FOUND`, `BAD_USER_INPUT` (the message
+names the field), `CONFLICT`, `INTERNAL`.
+"""
 type Query {
+    "Placeholder; always true."
     ok: Boolean
 }
 
+"""
+Write operations. Everything except `loginWithGoogle` and `ok` needs a session token. Updates are patches: omitted
+(or null) input fields keep their current value.
+"""
 type Mutation {
+    "Placeholder; always true."
     ok: Boolean
 }

@@ -97,7 +97,7 @@ func run(cfg *config.Config) error {
 	}
 
 	// Setup server - HTTP
-	httpSrvLayer := dlvHttp.Setup(cfg.HttpPort, pool.Ping)
+	httpSrvLayer := dlvHttp.Setup(cfg.AppEnv, cfg.HttpPort, pool.Ping)
 
 	// Configure GraphQL
 	httpGql.RegisterHandler(

@@ -21,12 +21,12 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// A category used to group expenses, e.g. "Food" or "Transport".
+// A category used to group the calling user's expenses, e.g. "Food" or "Transport".
 type Category struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Category ID (UUID).
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// Category name, unique across all categories (max 100 characters).
+	// Category name: 1-100 characters, trimmed, unique per user.
 	CategoryName  string `protobuf:"bytes,2,opt,name=category_name,json=categoryName,proto3" json:"category_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -76,11 +76,13 @@ func (x *Category) GetCategoryName() string {
 	return ""
 }
 
+// Request for ListCategories.
 type ListCategoriesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Max categories to return. default 20, max 50
+	// Maximum categories to return: 0 or unset means 20, values above 50 are capped at 50, negative is
+	// INVALID_ARGUMENT.
 	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	// next_page_token from previous response; empty for the first page
+	// next_page_token from the previous response; empty for the first page. Opaque: don't build or parse it.
 	PageToken     string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -130,11 +132,12 @@ func (x *ListCategoriesRequest) GetPageToken() string {
 	return ""
 }
 
+// Response for ListCategories.
 type ListCategoriesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Categories ordered alphabetically
+	// The caller's categories, ordered by category_name.
 	Categories []*Category `protobuf:"bytes,1,rep,name=categories,proto3" json:"categories,omitempty"`
-	// Pagination navigator token
+	// Token for the next page; empty when this is the last page. Stop when it's empty, not when a page is short.
 	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -184,9 +187,10 @@ func (x *ListCategoriesResponse) GetNextPageToken() string {
 	return ""
 }
 
+// Request for GetCategoryByID.
 type GetCategoryByIDRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Category ID to fetch. Must be a valid UUID.
+	// Category ID (UUID).
 	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -229,9 +233,10 @@ func (x *GetCategoryByIDRequest) GetId() string {
 	return ""
 }
 
+// Response for GetCategoryByID.
 type GetCategoryByIDResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Wrapped category object
+	// The requested category.
 	Category      *Category `protobuf:"bytes,1,opt,name=category,proto3" json:"category,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

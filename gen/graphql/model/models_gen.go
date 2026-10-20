@@ -9,86 +9,128 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// The result of signing in.
 type AuthPayload struct {
-	Token     string `json:"token"`
+	// Session token: send it as `Authorization: Bearer <token>` on every other request.
+	Token string `json:"token"`
+	// When the token expires (RFC 3339).
 	ExpiresAt string `json:"expiresAt"`
-	User      *User  `json:"user"`
+	// The signed-in user.
+	User *User `json:"user"`
 }
 
+// A category used to group the signed-in user's expenses, e.g. "Food" or "Transport".
 type Category struct {
-	ID           uuid.UUID `json:"id"`
-	CategoryName string    `json:"categoryName"`
+	ID uuid.UUID `json:"id"`
+	// 1-100 characters, trimmed, unique per user.
+	CategoryName string `json:"categoryName"`
 }
 
+// One page of categories.
 type CategoryConnection struct {
+	// The categories on this page, ordered by name.
 	Nodes    []*Category `json:"nodes"`
 	PageInfo *PageInfo   `json:"pageInfo"`
 }
 
 type CreateCategoryInput struct {
+	// 1-100 characters, trimmed. A name the user already has is `CONFLICT`.
 	CategoryName string `json:"categoryName"`
 }
 
 type CreateExpenseInput struct {
-	TransactionDt time.Time       `json:"transactionDt"`
-	CategoryID    uuid.UUID       `json:"categoryId"`
-	Description   *string         `json:"description,omitempty"`
-	Amount        decimal.Decimal `json:"amount"`
+	// From 2000-01-01 to tomorrow (Asia/Jakarta).
+	TransactionDt time.Time `json:"transactionDt"`
+	// One of the signed-in user's categories; another user's is `BAD_USER_INPUT`.
+	CategoryID uuid.UUID `json:"categoryId"`
+	// At most 500 characters, trimmed. Omitted means none (`""`).
+	Description *string `json:"description,omitempty"`
+	// Greater than 0, at most 2 decimal places, below 1,000,000,000,000.
+	Amount decimal.Decimal `json:"amount"`
 }
 
+// An expense owned by the signed-in user.
 type Expense struct {
-	ID            uuid.UUID       `json:"id"`
-	UserID        uuid.UUID       `json:"userId"`
-	TransactionDt time.Time       `json:"transactionDt"`
-	CategoryID    uuid.UUID       `json:"categoryId"`
-	CategoryName  string          `json:"categoryName"`
-	Description   string          `json:"description"`
-	Amount        decimal.Decimal `json:"amount"`
+	ID uuid.UUID `json:"id"`
+	// The owner: always the signed-in user.
+	UserID uuid.UUID `json:"userId"`
+	// Date of the transaction.
+	TransactionDt time.Time `json:"transactionDt"`
+	CategoryID    uuid.UUID `json:"categoryId"`
+	// Name of the expense's category.
+	CategoryName string `json:"categoryName"`
+	// Free-text note; `""` when there is none.
+	Description string `json:"description"`
+	// Greater than 0, at most 2 decimal places.
+	Amount decimal.Decimal `json:"amount"`
 }
 
+// One page of expenses.
 type ExpenseConnection struct {
+	// The expenses on this page, newest `transactionDt` first.
 	Nodes    []*Expense `json:"nodes"`
 	PageInfo *PageInfo  `json:"pageInfo"`
 }
 
+// Write operations. Everything except `loginWithGoogle` and `ok` needs a session token. Updates are patches: omitted
+// (or null) input fields keep their current value.
 type Mutation struct {
 }
 
+// Where a page ends, for cursor pagination (`first` / `after`).
 type PageInfo struct {
+	// Whether another page follows this one.
 	HasNextPage bool `json:"hasNextPage"`
-	// Pass as `after` to get the next page; null on the last page.
+	// Pass as `after` to get the next page; null on the last page. Opaque: don't build or parse it.
 	EndCursor *string `json:"endCursor,omitempty"`
 }
 
+// Read operations. Everything except `ok` needs a session token: send `Authorization: Bearer <token>` from
+// `loginWithGoogle`. Errors carry `extensions.code`: `UNAUTHENTICATED`, `NOT_FOUND`, `BAD_USER_INPUT` (the message
+// names the field), `CONFLICT`, `INTERNAL`.
 type Query struct {
 }
 
+// A one-time code for linking a Telegram account: the user sends `/bind <code>` to the bot in a private chat.
 type TelegramBindCode struct {
-	Code      string `json:"code"`
+	// `XXXX-XXXX`, uppercase.
+	Code string `json:"code"`
+	// When the code stops working (RFC 3339), 10 minutes after it was created.
 	ExpiresAt string `json:"expiresAt"`
 }
 
+// Patch: omitted fields keep their current value.
 type UpdateCategoryInput struct {
+	// 1-100 characters, trimmed. A name the user already has is `CONFLICT`.
 	CategoryName *string `json:"categoryName,omitempty"`
 }
 
+// Patch: omitted (or null) fields keep their current value. Fields that are sent follow the same rules as on create.
 type UpdateExpenseInput struct {
-	// Omit any field to keep its value; description "" clears it.
-	TransactionDt *time.Time       `json:"transactionDt,omitempty"`
-	CategoryID    *uuid.UUID       `json:"categoryId,omitempty"`
-	Description   *string          `json:"description,omitempty"`
-	Amount        *decimal.Decimal `json:"amount,omitempty"`
+	TransactionDt *time.Time `json:"transactionDt,omitempty"`
+	CategoryID    *uuid.UUID `json:"categoryId,omitempty"`
+	// `""` clears it.
+	Description *string          `json:"description,omitempty"`
+	Amount      *decimal.Decimal `json:"amount,omitempty"`
 }
 
+// Patch: omitted (or null) fields keep their current value.
 type UpdateUserInput struct {
+	// 1-100 characters, trimmed.
 	FirstName *string `json:"firstName,omitempty"`
-	LastName  *string `json:"lastName,omitempty"`
+	// At most 100 characters, trimmed; `""` clears it.
+	LastName *string `json:"lastName,omitempty"`
 }
 
+// A user, created on their first Google sign-in.
 type User struct {
-	ID             uuid.UUID `json:"id"`
-	FirstName      string    `json:"firstName"`
-	LastName       *string   `json:"lastName,omitempty"`
-	Email          string    `json:"email"`
-	TelegramChatID *string   `json:"telegramChatId,omitempty"`
+	ID uuid.UUID `json:"id"`
+	// 1-100 characters.
+	FirstName string `json:"firstName"`
+	// At most 100 characters; null when there is none.
+	LastName *string `json:"lastName,omitempty"`
+	// From the Google account, lowercase.
+	Email string `json:"email"`
+	// The linked Telegram account; null if none is linked.
+	TelegramChatID *string `json:"telegramChatId,omitempty"`
 }

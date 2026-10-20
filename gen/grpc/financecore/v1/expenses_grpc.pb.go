@@ -30,26 +30,38 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// ExpenseService manages users' expense records.
+// ExpenseService manages the calling user's expenses.
 //
-// Formats used by all RPCs:
-//   - IDs are UUIDs.
-//   - transaction_dt is a date in YYYY-MM-DD format.
-//   - amount is a decimal string with up to 2 decimal places, e.g. "12500.50".
+// Every call needs the metadata "authorization: Bearer <api key>" and "x-telegram-user-id: <Telegram user
+// ID>" of a bound Telegram account; otherwise it fails with UNAUTHENTICATED. Calls without a deadline time
+// out after 10 seconds (DEADLINE_EXCEEDED). Validation errors are INVALID_ARGUMENT with a message naming the
+// field, e.g. "amount: must be greater than 0".
 type ExpenseServiceClient interface {
-	// Creates an expense and returns it.
+	// Creates an expense and returns it as stored.
+	//
+	// Errors: INVALID_ARGUMENT (malformed or invalid field, or a category that isn't the caller's),
+	// UNAUTHENTICATED.
 	CreateExpense(ctx context.Context, in *CreateExpenseRequest, opts ...grpc.CallOption) (*CreateExpenseResponse, error)
-	// Returns a single expense by its ID, including its category name.
+	// Returns one of the caller's expenses.
+	//
+	// Errors: INVALID_ARGUMENT (id is not a UUID), NOT_FOUND (no such expense for the caller, including
+	// another user's), UNAUTHENTICATED.
 	GetExpenseByID(ctx context.Context, in *GetExpenseByIDRequest, opts ...grpc.CallOption) (*GetExpenseByIDResponse, error)
-	// Returns a user's expenses, newest transaction_dt first, optionally
-	// filtered to a single date.
+	// Returns the caller's expenses, newest transaction_dt first, one page at a time, optionally only those
+	// on one date.
+	//
+	// Errors: INVALID_ARGUMENT (invalid date, negative page_size, invalid page_token), UNAUTHENTICATED.
 	ListExpenses(ctx context.Context, in *ListExpensesRequest, opts ...grpc.CallOption) (*ListExpensesResponse, error)
-	// Updates an expense and returns it. All fields except description are
-	// required; if description is omitted, the existing value is kept.
-	// send an empty string to clear it.
-	// The expense's owner (user_id) cannot be changed.
+	// Updates an expense: only the fields that are set change. Returns the expense as stored. The owner
+	// (user_id) can't be changed.
+	//
+	// Errors: INVALID_ARGUMENT (malformed or invalid field, or a category that isn't the caller's),
+	// NOT_FOUND (no such expense for the caller), UNAUTHENTICATED.
 	UpdateExpense(ctx context.Context, in *UpdateExpenseRequest, opts ...grpc.CallOption) (*UpdateExpenseResponse, error)
-	// Deletes an expense by its ID.
+	// Deletes one of the caller's expenses.
+	//
+	// Errors: INVALID_ARGUMENT (id is not a UUID), NOT_FOUND (no such expense for the caller, including one
+	// already deleted), UNAUTHENTICATED.
 	DeleteExpense(ctx context.Context, in *DeleteExpenseRequest, opts ...grpc.CallOption) (*DeleteExpenseResponse, error)
 }
 
@@ -115,26 +127,38 @@ func (c *expenseServiceClient) DeleteExpense(ctx context.Context, in *DeleteExpe
 // All implementations must embed UnimplementedExpenseServiceServer
 // for forward compatibility.
 //
-// ExpenseService manages users' expense records.
+// ExpenseService manages the calling user's expenses.
 //
-// Formats used by all RPCs:
-//   - IDs are UUIDs.
-//   - transaction_dt is a date in YYYY-MM-DD format.
-//   - amount is a decimal string with up to 2 decimal places, e.g. "12500.50".
+// Every call needs the metadata "authorization: Bearer <api key>" and "x-telegram-user-id: <Telegram user
+// ID>" of a bound Telegram account; otherwise it fails with UNAUTHENTICATED. Calls without a deadline time
+// out after 10 seconds (DEADLINE_EXCEEDED). Validation errors are INVALID_ARGUMENT with a message naming the
+// field, e.g. "amount: must be greater than 0".
 type ExpenseServiceServer interface {
-	// Creates an expense and returns it.
+	// Creates an expense and returns it as stored.
+	//
+	// Errors: INVALID_ARGUMENT (malformed or invalid field, or a category that isn't the caller's),
+	// UNAUTHENTICATED.
 	CreateExpense(context.Context, *CreateExpenseRequest) (*CreateExpenseResponse, error)
-	// Returns a single expense by its ID, including its category name.
+	// Returns one of the caller's expenses.
+	//
+	// Errors: INVALID_ARGUMENT (id is not a UUID), NOT_FOUND (no such expense for the caller, including
+	// another user's), UNAUTHENTICATED.
 	GetExpenseByID(context.Context, *GetExpenseByIDRequest) (*GetExpenseByIDResponse, error)
-	// Returns a user's expenses, newest transaction_dt first, optionally
-	// filtered to a single date.
+	// Returns the caller's expenses, newest transaction_dt first, one page at a time, optionally only those
+	// on one date.
+	//
+	// Errors: INVALID_ARGUMENT (invalid date, negative page_size, invalid page_token), UNAUTHENTICATED.
 	ListExpenses(context.Context, *ListExpensesRequest) (*ListExpensesResponse, error)
-	// Updates an expense and returns it. All fields except description are
-	// required; if description is omitted, the existing value is kept.
-	// send an empty string to clear it.
-	// The expense's owner (user_id) cannot be changed.
+	// Updates an expense: only the fields that are set change. Returns the expense as stored. The owner
+	// (user_id) can't be changed.
+	//
+	// Errors: INVALID_ARGUMENT (malformed or invalid field, or a category that isn't the caller's),
+	// NOT_FOUND (no such expense for the caller), UNAUTHENTICATED.
 	UpdateExpense(context.Context, *UpdateExpenseRequest) (*UpdateExpenseResponse, error)
-	// Deletes an expense by its ID.
+	// Deletes one of the caller's expenses.
+	//
+	// Errors: INVALID_ARGUMENT (id is not a UUID), NOT_FOUND (no such expense for the caller, including one
+	// already deleted), UNAUTHENTICATED.
 	DeleteExpense(context.Context, *DeleteExpenseRequest) (*DeleteExpenseResponse, error)
 	mustEmbedUnimplementedExpenseServiceServer()
 }
