@@ -327,14 +327,14 @@ func (ec *executionContext) unmarshalInputUpdateExpenseInput(ctx context.Context
 		switch k {
 		case "transactionDt":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("transactionDt"))
-			data, err := ec.unmarshalNDate2timeᚐTime(ctx, v)
+			data, err := ec.unmarshalODate2ᚖtimeᚐTime(ctx, v)
 			if err != nil {
 				return it, err
 			}
 			it.TransactionDt = data
 		case "categoryId":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("categoryId"))
-			data, err := ec.unmarshalNUUID2githubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			data, err := ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -348,7 +348,7 @@ func (ec *executionContext) unmarshalInputUpdateExpenseInput(ctx context.Context
 			it.Description = data
 		case "amount":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("amount"))
-			data, err := ec.unmarshalNDecimal2githubᚗcomᚋshopspringᚋdecimalᚐDecimal(ctx, v)
+			data, err := ec.unmarshalODecimal2ᚖgithubᚗcomᚋshopspringᚋdecimalᚐDecimal(ctx, v)
 			if err != nil {
 				return it, err
 			}

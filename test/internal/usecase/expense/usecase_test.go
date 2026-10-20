@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	"github.com/revirathya/revirathya-finance-core/internal/domain/constant"
 	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
 	"github.com/shopspring/decimal"
@@ -169,10 +170,10 @@ func TestListExpenses(t *testing.T) {
 
 	t.Run("page size defaults and is capped", func(t *testing.T) {
 		for _, tt := range []struct{ in, wantLimit int }{
-			{0, domain.DefaultPageSize + 1},
-			{domain.MaxPageSize, domain.MaxPageSize + 1},
-			{domain.MaxPageSize + 1, domain.MaxPageSize + 1},
-			{1_000_000, domain.MaxPageSize + 1},
+			{0, constant.DefaultPageSize + 1},
+			{constant.MaxPageSize, constant.MaxPageSize + 1},
+			{constant.MaxPageSize + 1, constant.MaxPageSize + 1},
+			{1_000_000, constant.MaxPageSize + 1},
 		} {
 			repo := &fakeExpenseRepo{}
 			uc := expense.NewExpenseUsecase(repo)
@@ -202,6 +203,16 @@ func TestListExpenses(t *testing.T) {
 		want := domain.ExpenseCursor{TransactionDt: rows[1].TransactionDt, ID: rows[1].ID}
 		if page.NextCursor == nil || *page.NextCursor != want {
 			t.Fatalf("next cursor %v, want %v (the last returned row)", page.NextCursor, want)
+		}
+	})
+
+	t.Run("the default and capped sizes are the ones used to cut the page", func(t *testing.T) {
+		for _, tt := range []struct{ in, want int }{{0, constant.DefaultPageSize}, {1_000_000, constant.MaxPageSize}} {
+			rows := expenses(tt.want + 1) // what the repository returns for limit want+1
+			page, err := expense.NewExpenseUsecase(&fakeExpenseRepo{listResp: rows}).ListExpenses(context.Background(), userID, nil, tt.in, "")
+			if err != nil || len(page.Expenses) != tt.want || page.NextCursor == nil || page.NextCursor.ID != rows[tt.want-1].ID {
+				t.Fatalf("page size %d: got %d expenses, cursor %v, %v; want %d and a cursor at the last one", tt.in, len(page.Expenses), page.NextCursor, err, tt.want)
+			}
 		}
 	})
 
@@ -283,7 +294,7 @@ func TestUpdateExpense(t *testing.T) {
 		repo := &fakeExpenseRepo{updateResp: want}
 		uc := expense.NewExpenseUsecase(repo)
 
-		got, err := uc.UpdateExpense(context.Background(), id, userID, categoryID, dt, &description, amount)
+		got, err := uc.UpdateExpense(context.Background(), id, userID, domain.ExpensePatch{CategoryID: &categoryID, TransactionDt: &dt, Description: &description, Amount: &amount})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -296,10 +307,10 @@ func TestUpdateExpense(t *testing.T) {
 		}
 
 		wantPatch := domain.ExpensePatch{
-			CategoryID:    categoryID,
-			TransactionDt: dt,
+			CategoryID:    &categoryID,
+			TransactionDt: &dt,
 			Description:   &description,
-			Amount:        amount,
+			Amount:        &amount,
 		}
 		if !reflect.DeepEqual(repo.gotUpdatePatch, wantPatch) {
 			t.Fatalf("repo received patch %v, want %v", repo.gotUpdatePatch, wantPatch)
@@ -310,7 +321,7 @@ func TestUpdateExpense(t *testing.T) {
 		repo := &fakeExpenseRepo{err: errors.New("not found")}
 		uc := expense.NewExpenseUsecase(repo)
 
-		if _, err := uc.UpdateExpense(context.Background(), id, userID, categoryID, dt, &description, amount); err == nil {
+		if _, err := uc.UpdateExpense(context.Background(), id, userID, domain.ExpensePatch{CategoryID: &categoryID, TransactionDt: &dt, Description: &description, Amount: &amount}); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})
@@ -341,3 +352,5 @@ func TestDeleteExpense(t *testing.T) {
 		}
 	})
 }
+
+func ptr[T any](v T) *T { return &v }

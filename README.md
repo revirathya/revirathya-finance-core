@@ -314,16 +314,19 @@ curl -s localhost:9090/metrics | grep -E '^(grpc_server_handled_total|http_reque
 
 ## Pagination
 
-Expense lists are paged, newest first (`transaction_dt`, then `id`, descending). Pages are cursor-based: pass the
-token from one page to get the next. Tokens are opaque; don't build or parse them. Categories are not paged.
+Lists are paged and cursor-based: pass the token from one page to get the next. Tokens are opaque; don't build or
+parse them. Expenses come newest first (`transaction_dt`, then `id`, descending); categories by name.
 
 |API|Page size|Next page|Last page|
 |:--|:--|:--|:--|
 |GraphQL `expenses(transactionDt, first, after)`|`first`|`after: pageInfo.endCursor`|`hasNextPage: false`, `endCursor: null`|
 |gRPC `ListExpenses`|`page_size`|`page_token: next_page_token`|`next_page_token` empty|
+|GraphQL `categories(first, after)`|`first`|`after: pageInfo.endCursor`|`hasNextPage: false`, `endCursor: null`|
+|gRPC `ListCategories`|`page_size`|`page_token: next_page_token`|`next_page_token` empty|
 
 The page size defaults to 20 and is capped at 50; a negative size or an invalid token is invalid input. Stop when
-there is no next token, not when a page is short.
+there is no next token, not when a page is short. To read every category (e.g. for a selection keyboard), loop with
+`page_size: 50` until `next_page_token` is empty.
 
 ```graphql
 query { expenses(first: 20, after: "MjAyNi0xMC0xN3w5YjJm...") { nodes { id transactionDt amount } pageInfo { hasNextPage endCursor } } }
@@ -333,6 +336,18 @@ query { expenses(first: 20, after: "MjAyNi0xMC0xN3w5YjJm...") { nodes { id trans
 grpcurl -plaintext -H "authorization: Bearer $GRPC_API_KEY" -H "x-telegram-user-id: 123456789" \
   -d '{"pageSize": 20, "pageToken": "MjAyNi0xMC0xN3w5YjJm..."}' localhost:50051 financecore.v1.ExpenseService/ListExpenses
 ```
+
+## Updates
+
+Every update is a **patch**: send only the fields to change. A field that is omitted (or `null` in GraphQL) keeps its
+current value; `""` clears `description` and `lastName`. An update with no fields returns the object unchanged.
+
+|API|Mutation / RPC|How "omitted" is expressed|
+|:--|:--|:--|
+|GraphQL|`updateCategory(id, patch)`, `updateExpense(id, patch)`, `updateUser(patch)`|Leave the input field out, or send `null`|
+|gRPC|`UpdateExpense`, `UpdateUserTelegramContext`|Leave the field unset (`optional` fields and message fields like `transaction_dt`)|
+
+Fields that are sent are validated the same way as on create.
 
 ## Input validation
 
@@ -344,7 +359,7 @@ Both APIs validate input the same way, after trimming surrounding whitespace fro
 |Last name|Optional, at most 100 characters|
 |Expense amount|Greater than 0, at most 2 decimal places, below 1,000,000,000,000|
 |Expense date|From 2000-01-01 to tomorrow (Asia/Jakarta)|
-|Expense description|Optional, at most 500 characters. Never `null` in responses (`""` when there is none). On update, omit it to keep the current one, or send `""` to clear it|
+|Expense description|Optional, at most 500 characters. Never `null` in responses (`""` when there is none). On update, omit it to keep the current one, or send `""` to clear it (see Updates)|
 |Telegram context fields|Optional, at most 100 characters each|
 
 Invalid input returns `INVALID_ARGUMENT` (gRPC) or `BAD_USER_INPUT` (GraphQL) with a message naming the field,

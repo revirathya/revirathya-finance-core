@@ -28,16 +28,9 @@ func (uc *UserTelegramContextUsecase) GetUserTelegramContextByTelegramID(ctx con
 	return uc.utelRepo.GetUserTelegramContextByTelegramID(ctx, telegramChatID)
 }
 
-func (uc *UserTelegramContextUsecase) UpdateUserTelegramContext(ctx context.Context, userID uuid.UUID, conversation *string, state *string, interactionChatID *string, interactionMessageID *string) (*domain.UserTelegramContext, error) {
-	patch := domain.UserTelegramContextPatch{
-		Conversation:         conversation,
-		State:                state,
-		InteractionChatID:    interactionChatID,
-		InteractionMessageID: interactionMessageID,
-	}
+func (uc *UserTelegramContextUsecase) UpdateUserTelegramContext(ctx context.Context, userID uuid.UUID, patch domain.UserTelegramContextPatch) (*domain.UserTelegramContext, error) {
 	if err := patch.Validate(); err != nil {
 		return nil, err
 	}
-
 	return uc.utelRepo.UpdateUserTelegramContext(ctx, userID, patch)
 }

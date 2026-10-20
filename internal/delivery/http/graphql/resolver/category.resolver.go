@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
+	"github.com/revirathya/revirathya-finance-core/internal/domain"
 )
 
 // CreateCategory is the resolver for the createCategory field.
@@ -39,7 +40,9 @@ func (r *mutationResolver) UpdateCategory(ctx context.Context, id uuid.UUID, pat
 		return nil, err
 	}
 
-	result, err := r.usecase.Category.UpdateCategory(ctx, id, userID, patch.CategoryName)
+	result, err := r.usecase.Category.UpdateCategory(ctx, id, userID, domain.CategoryPatch{
+		CategoryName: patch.CategoryName,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -85,24 +88,48 @@ func (r *queryResolver) Category(ctx context.Context, id uuid.UUID) (*model.Cate
 }
 
 // Categories is the resolver for the categories field.
-func (r *queryResolver) Categories(ctx context.Context) ([]*model.Category, error) {
+func (r *queryResolver) Categories(ctx context.Context, first *int, after *string) (*model.CategoryConnection, error) {
+	// Get user from context
 	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	results, err := r.usecase.Category.ListCategories(ctx, userID)
+	// Parse params
+	pageSize := 0
+	if first != nil {
+		pageSize = *first
+	}
+
+	pageToken := ""
+	if after != nil {
+		pageToken = *after
+	}
+
+	// List categories
+	categoryPage, err := r.usecase.Category.ListCategories(ctx, userID, pageSize, pageToken)
 	if err != nil {
 		return nil, err
 	}
 
-	responses := make([]*model.Category, 0, len(results))
-	for _, c := range results {
-		responses = append(responses, &model.Category{
+	// Parse results
+	nodes := make([]*model.Category, 0, len(categoryPage.Categories))
+	for _, c := range categoryPage.Categories {
+		nodes = append(nodes, &model.Category{
 			ID:           c.ID,
 			CategoryName: c.CategoryName,
 		})
 	}
 
-	return responses, nil
+	pageInfo := &model.PageInfo{HasNextPage: categoryPage.NextCursor != nil}
+	if pageInfo.HasNextPage {
+		endCursor := categoryPage.NextCursor.Encode()
+		pageInfo.EndCursor = &endCursor
+	}
+
+	response := &model.CategoryConnection{
+		Nodes:    nodes,
+		PageInfo: pageInfo,
+	}
+	return response, nil
 }

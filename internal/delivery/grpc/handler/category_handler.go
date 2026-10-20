@@ -39,24 +39,31 @@ func toProtoCategory(c *domain.Category) *financecorev1.Category {
 }
 
 func (h *CategoryHandler) ListCategories(ctx context.Context, req *financecorev1.ListCategoriesRequest) (*financecorev1.ListCategoriesResponse, error) {
+	// Get user from context
 	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "list categories", err)
 	}
 
-	categories, err := h.ctgUc.ListCategories(ctx, userID)
+	// List categories
+	categoryPage, err := h.ctgUc.ListCategories(ctx, userID, int(req.PageSize), req.PageToken)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "list categories", err)
 	}
 
-	resp := &financecorev1.ListCategoriesResponse{
-		Categories: make([]*financecorev1.Category, 0, len(categories)),
+	// Parse response
+	response := &financecorev1.ListCategoriesResponse{
+		Categories: make([]*financecorev1.Category, 0, len(categoryPage.Categories)),
 	}
-	for _, category := range categories {
-		resp.Categories = append(resp.Categories, toProtoCategory(&category))
+	for _, category := range categoryPage.Categories {
+		response.Categories = append(response.Categories, toProtoCategory(&category))
 	}
 
-	return resp, nil
+	if categoryPage.NextCursor != nil {
+		response.NextPageToken = categoryPage.NextCursor.Encode()
+	}
+
+	return response, nil
 }
 
 func (h *CategoryHandler) GetCategoryByID(ctx context.Context, req *financecorev1.GetCategoryByIDRequest) (*financecorev1.GetCategoryByIDResponse, error) {

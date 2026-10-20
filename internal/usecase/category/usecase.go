@@ -7,6 +7,7 @@ import (
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	"github.com/revirathya/revirathya-finance-core/internal/utils"
 )
 
 // Usecase: Category
@@ -35,18 +36,50 @@ func (uc *CategoryUsecase) GetCategoryByID(ctx context.Context, id uuid.UUID, us
 	return uc.ctgRepo.GetCategoryByID(ctx, id, userID)
 }
 
-func (uc *CategoryUsecase) ListCategories(ctx context.Context, userID uuid.UUID) ([]domain.Category, error) {
-	return uc.ctgRepo.ListCategories(ctx, userID)
-}
-
-func (uc *CategoryUsecase) UpdateCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID, categoryName string) (*domain.Category, error) {
-	patch := domain.CategoryPatch{
-		CategoryName: categoryName,
-	}
-	if err := patch.Validate(); err != nil {
+func (uc *CategoryUsecase) ListCategories(ctx context.Context, userID uuid.UUID, pageSize int, pageToken string) (*domain.CategoryPage, error) {
+	// Define page size
+	ps, err := utils.SetPageSize(pageSize)
+	if err != nil {
 		return nil, err
 	}
 
+	// Decode token if exists
+	query := domain.CategoryListQuery{
+		Limit: ps + 1,
+	}
+	if pageToken != "" {
+		// Not the first page
+		cursor, err := domain.DecodeCategoryCursor(pageToken)
+		if err != nil {
+			return nil, err
+		}
+		query.After = &cursor
+	}
+
+	// Process
+	categories, err := uc.ctgRepo.ListCategories(ctx, userID, query)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse page result
+	page := &domain.CategoryPage{
+		Categories: categories,
+	}
+	if len(categories) > ps {
+		page.Categories = categories[:ps]
+		last := page.Categories[ps-1]
+		page.NextCursor = &domain.CategoryCursor{
+			CategoryName: last.CategoryName,
+		}
+	}
+	return page, nil
+}
+
+func (uc *CategoryUsecase) UpdateCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.CategoryPatch) (*domain.Category, error) {
+	if err := patch.Validate(); err != nil {
+		return nil, err
+	}
 	return uc.ctgRepo.UpdateCategory(ctx, id, userID, patch)
 }
 

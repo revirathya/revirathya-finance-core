@@ -9,7 +9,7 @@ import (
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
-	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
+	"github.com/revirathya/revirathya-finance-core/internal/utils"
 )
 
 // Usecase: Expense
@@ -50,19 +50,15 @@ func (uc *ExpenseUsecase) ListExpenses(
 	pageToken string,
 ) (*domain.ExpensePage, error) {
 	// Define page size
-	switch {
-	case pageSize < 0:
-		return nil, &errDom.ValidationError{Field: "page_size", Reason: "must not be negative"}
-	case pageSize == 0:
-		pageSize = domain.DefaultPageSize
-	case pageSize > domain.MaxPageSize:
-		pageSize = domain.MaxPageSize
+	ps, err := utils.SetPageSize(pageSize)
+	if err != nil {
+		return nil, err
 	}
 
 	// Decode token if exists
 	query := domain.ExpenseListQuery{
 		TransactionDt: transactionDt,
-		Limit:         pageSize + 1,
+		Limit:         ps + 1,
 	}
 	if pageToken != "" {
 		// Not the first page
@@ -81,9 +77,9 @@ func (uc *ExpenseUsecase) ListExpenses(
 	page := &domain.ExpensePage{
 		Expenses: expenses,
 	}
-	if len(expenses) > pageSize {
-		page.Expenses = expenses[:pageSize]
-		last := page.Expenses[pageSize-1]
+	if len(expenses) > ps {
+		page.Expenses = expenses[:ps]
+		last := page.Expenses[ps-1]
 		page.NextCursor = &domain.ExpenseCursor{
 			TransactionDt: last.TransactionDt,
 			ID:            last.ID,
@@ -93,13 +89,7 @@ func (uc *ExpenseUsecase) ListExpenses(
 	return page, nil
 }
 
-func (uc *ExpenseUsecase) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, categoryID uuid.UUID, transactionDt time.Time, description *string, amount decimal.Decimal) (*domain.Expense, error) {
-	patch := domain.ExpensePatch{
-		CategoryID:    categoryID,
-		TransactionDt: transactionDt,
-		Description:   description,
-		Amount:        amount,
-	}
+func (uc *ExpenseUsecase) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.ExpensePatch) (*domain.Expense, error) {
 	if err := patch.Validate(); err != nil {
 		return nil, err
 	}

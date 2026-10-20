@@ -42,14 +42,9 @@ func (uc *UserUsecase) CreateUser(ctx context.Context, firstName string, lastNam
 	return uc.usrRepo.CreateUser(ctx, form)
 }
 
-func (uc *UserUsecase) UpdateUser(ctx context.Context, id uuid.UUID, firstName string, lastName *string) (*domain.User, error) {
-	patch := domain.UserPatch{
-		FirstName: firstName,
-		LastName:  lastName,
-	}
+func (uc *UserUsecase) UpdateUser(ctx context.Context, id uuid.UUID, patch domain.UserPatch) (*domain.User, error) {
 	if err := patch.Validate(); err != nil {
 		return nil, err
 	}
-
 	return uc.usrRepo.UpdateUser(ctx, id, patch)
 }

@@ -73,14 +73,13 @@ func (h *UserTelegramContextHandler) UpdateUserTelegramContext(ctx context.Conte
 	}
 
 	// Parse input
-	user_telegram_context, err := h.utelUc.UpdateUserTelegramContext(
-		ctx,
-		userID,
-		req.Conversation,
-		req.State,
-		req.InteractionChatId,
-		req.InteractionMessageId,
-	)
+	patch := domain.UserTelegramContextPatch{
+		Conversation:         req.Conversation,
+		State:                req.State,
+		InteractionChatID:    req.InteractionChatId,
+		InteractionMessageID: req.InteractionMessageId,
+	}
+	user_telegram_context, err := h.utelUc.UpdateUserTelegramContext(ctx, userID, patch)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("update user telegram context %s", userID.String()), err)
 	}

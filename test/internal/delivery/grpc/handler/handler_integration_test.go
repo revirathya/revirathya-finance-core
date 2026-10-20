@@ -217,6 +217,39 @@ func TestCategoryHandler(t *testing.T) {
 		}
 	})
 
+	t.Run("list pages by name with page_size / page_token", func(t *testing.T) {
+		carol, carolTG := b.boundUser()
+		for _, n := range []string{"Transport", "Food", "Bills", "Zakat", "Health"} {
+			testutil.NewCategory(t, carol.ID, n)
+		}
+
+		var walked []string
+		token := ""
+		for page := 0; ; page++ {
+			if page > 5 {
+				t.Fatal("pagination did not end (is next_page_token set?)")
+			}
+			resp, err := b.categories.ListCategories(b.as(carolTG), &financecorev1.ListCategoriesRequest{PageSize: 2, PageToken: token})
+			if err != nil {
+				t.Fatalf("list: %v", err)
+			}
+			for _, c := range resp.GetCategories() {
+				walked = append(walked, c.GetCategoryName())
+			}
+			if token = resp.GetNextPageToken(); token == "" {
+				break
+			}
+		}
+		if got := strings.Join(walked, " "); got != "Bills Food Health Transport Zakat" {
+			t.Fatalf("walked %q, want every category once, by name (a missing next_page_token stops after the first page)", got)
+		}
+
+		_, err := b.categories.ListCategories(b.as(carolTG), &financecorev1.ListCategoriesRequest{PageToken: "garbage!"})
+		wantCode(t, err, codes.InvalidArgument, "page_token")
+		_, err = b.categories.ListCategories(b.as(carolTG), &financecorev1.ListCategoriesRequest{PageSize: -1})
+		wantCode(t, err, codes.InvalidArgument, "page_size")
+	})
+
 	t.Run("get returns the caller's category; another user's is NOT_FOUND", func(t *testing.T) {
 		resp, err := b.categories.GetCategoryByID(b.as(aliceTG), &financecorev1.GetCategoryByIDRequest{Id: food.ID.String()})
 		if err != nil || resp.GetCategory().GetId() != food.ID.String() || resp.GetCategory().GetCategoryName() != "Food" {
@@ -286,7 +319,7 @@ func TestExpenseHandler(t *testing.T) {
 		created, _ := b.expenses.CreateExpense(b.as(aliceTG), &financecorev1.CreateExpenseRequest{
 			CategoryId: food, TransactionDt: day(t, "2026-01-15"), Description: str("Lunch"), Amount: amount("10"),
 		})
-		req := &financecorev1.UpdateExpenseRequest{Id: created.GetExpense().GetId(), CategoryId: food, TransactionDt: day(t, "2026-01-16"), Amount: amount("20")}
+		req := &financecorev1.UpdateExpenseRequest{Id: created.GetExpense().GetId(), CategoryId: &food, TransactionDt: day(t, "2026-01-16"), Amount: amount("20")}
 
 		resp, err := b.expenses.UpdateExpense(b.as(aliceTG), req)
 		kept := resp.GetExpense()
@@ -300,6 +333,43 @@ func TestExpenseHandler(t *testing.T) {
 		if err != nil || cleared.GetDescription() != "" {
 			t.Fatalf("update with empty description: %v, %v", cleared, err)
 		}
+	})
+
+	t.Run("update is a patch: each omitted field keeps its value", func(t *testing.T) {
+		bills := testutil.NewCategory(t, alice.ID, "Bills").ID.String()
+		created, err := b.expenses.CreateExpense(b.as(aliceTG), &financecorev1.CreateExpenseRequest{
+			CategoryId: food, TransactionDt: day(t, "2026-01-15"), Description: str("Lunch"), Amount: amount("10"),
+		})
+		if err != nil {
+			t.Fatalf("create: %v", err)
+		}
+		id := created.GetExpense().GetId()
+
+		for _, step := range []struct {
+			name string
+			req  *financecorev1.UpdateExpenseRequest
+			want string
+		}{
+			{"only the amount", &financecorev1.UpdateExpenseRequest{Id: id, Amount: amount("20")}, "2026-01-15 Food Lunch 20"},
+			{"only the category", &financecorev1.UpdateExpenseRequest{Id: id, CategoryId: &bills}, "2026-01-15 Bills Lunch 20"},
+			{"only the date", &financecorev1.UpdateExpenseRequest{Id: id, TransactionDt: day(t, "2026-01-20")}, "2026-01-20 Bills Lunch 20"},
+			{"only the description", &financecorev1.UpdateExpenseRequest{Id: id, Description: str("Dinner")}, "2026-01-20 Bills Dinner 20"},
+			{"nothing", &financecorev1.UpdateExpenseRequest{Id: id}, "2026-01-20 Bills Dinner 20"},
+		} {
+			resp, err := b.expenses.UpdateExpense(b.as(aliceTG), step.req)
+			if err != nil {
+				t.Fatalf("update %s: %v", step.name, err)
+			}
+			e := resp.GetExpense()
+			if got := strings.Join([]string{ymd(e.GetTransactionDt()), e.GetCategoryName(), e.GetDescription(), e.GetAmount().GetValue()}, " "); got != step.want {
+				t.Fatalf("update %s: got %q, want %q", step.name, got, step.want)
+			}
+		}
+
+		_, err = b.expenses.UpdateExpense(b.as(aliceTG), &financecorev1.UpdateExpenseRequest{Id: id, Amount: amount("0")})
+		wantCode(t, err, codes.InvalidArgument, "amount: must be greater than 0")
+		_, err = b.expenses.UpdateExpense(b.as(aliceTG), &financecorev1.UpdateExpenseRequest{Id: id, TransactionDt: &date.Date{Year: 2026, Month: 2, Day: 30}})
+		wantCode(t, err, codes.InvalidArgument, "transaction_dt: must be a valid calendar date")
 	})
 
 	t.Run("another user's expense is NOT_FOUND; deleting twice is NOT_FOUND", func(t *testing.T) {

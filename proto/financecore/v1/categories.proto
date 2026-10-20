@@ -13,10 +13,20 @@ message Category {
   string category_name = 2;
 }
 
-message ListCategoriesRequest {}
+message ListCategoriesRequest {
+  // Max categories to return. default 20, max 50
+  int32 page_size = 1;
+
+  // next_page_token from previous response; empty for the first page
+  string page_token = 2;
+}
 
 message ListCategoriesResponse {
+  // Categories ordered alphabetically
   repeated Category categories = 1;
+
+  // Pagination navigator token
+  string next_page_token = 2;
 }
 
 message GetCategoryByIDRequest {

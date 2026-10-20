@@ -7,7 +7,9 @@ FROM
   app.categories AS c
 WHERE
   c.user_id = sqlc.arg('user_id')
-ORDER BY c.category_name;
+  AND (sqlc.narg('after_name')::TEXT IS NULL OR c.category_name > sqlc.narg('after_name')::TEXT)
+ORDER BY c.category_name
+LIMIT sqlc.arg('row_limit');
 
 -- name: GetCategoryByID :one
 SELECT
@@ -34,7 +36,7 @@ RETURNING *;
 -- name: UpdateCategory :one
 UPDATE app.categories
 SET
-  category_name = sqlc.arg('category_name')
+  category_name = COALESCE(sqlc.narg('category_name')::VARCHAR, category_name)
 WHERE
   id = sqlc.arg('id')
   AND user_id = sqlc.arg('user_id')

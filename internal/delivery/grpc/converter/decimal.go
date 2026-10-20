@@ -22,3 +22,14 @@ func FromProtoDecimal(field string, d *grpcDec.Decimal) (decimal.Decimal, error)
 
 	return v, err
 }
+
+func FromOptionalProtoDecimal(field string, d *grpcDec.Decimal) (*decimal.Decimal, error) {
+	if d == nil {
+		return nil, nil
+	}
+	v, err := FromProtoDecimal(field, d)
+	if err != nil {
+		return nil, err
+	}
+	return &v, nil
+}

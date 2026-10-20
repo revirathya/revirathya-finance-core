@@ -152,31 +152,33 @@ func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.U
 		return nil, status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)
 	}
 
-	uuidCategoryId, err := uuid.Parse(req.CategoryId)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid category_id UUID format: %v", err)
+	var uuidCategoryId *uuid.UUID
+	if req.CategoryId != nil {
+		id, err := uuid.Parse(*req.CategoryId)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid category_id UUID format: %v", err)
+		}
+		uuidCategoryId = &id
 	}
 
-	tmTransactionDt, err := converter.FromProtoDate("transaction_dt", req.GetTransactionDt())
+	tmTransactionDt, err := converter.FromOptionalProtoDate("transaction_dt", req.GetTransactionDt())
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "update expense", err)
 	}
 
-	decAmount, err := converter.FromProtoDecimal("amount", req.GetAmount())
+	decAmount, err := converter.FromOptionalProtoDecimal("amount", req.GetAmount())
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "update expense", err)
 	}
 
 	// Update expense
-	expense, err := h.expUc.UpdateExpense(
-		ctx,
-		uuidId,
-		userID,
-		uuidCategoryId,
-		tmTransactionDt,
-		req.Description,
-		decAmount,
-	)
+	patch := domain.ExpensePatch{
+		CategoryID:    uuidCategoryId,
+		TransactionDt: tmTransactionDt,
+		Description:   req.Description,
+		Amount:        decAmount,
+	}
+	expense, err := h.expUc.UpdateExpense(ctx, uuidId, userID, patch)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("update expense %s", uuidId.String()), err)
 	}

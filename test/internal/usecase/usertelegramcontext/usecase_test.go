@@ -127,7 +127,7 @@ func TestUpdateUserTelegramContext(t *testing.T) {
 		state := "confirmed"
 		chatID := "123"
 		messageID := "456"
-		got, err := uc.UpdateUserTelegramContext(context.Background(), userID, &conversation, &state, &chatID, &messageID)
+		got, err := uc.UpdateUserTelegramContext(context.Background(), userID, domain.UserTelegramContextPatch{Conversation: &conversation, State: &state, InteractionChatID: &chatID, InteractionMessageID: &messageID})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -154,7 +154,7 @@ func TestUpdateUserTelegramContext(t *testing.T) {
 		state := "confirmed"
 		chatID := "123"
 		messageID := "456"
-		if _, err := uc.UpdateUserTelegramContext(context.Background(), userID, &conversation, &state, &chatID, &messageID); err == nil {
+		if _, err := uc.UpdateUserTelegramContext(context.Background(), userID, domain.UserTelegramContextPatch{Conversation: &conversation, State: &state, InteractionChatID: &chatID, InteractionMessageID: &messageID}); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})

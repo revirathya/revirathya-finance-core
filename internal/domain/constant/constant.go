@@ -1,4 +1,4 @@
-package domain
+package constant
 
 const (
 	DefaultPageSize = 20

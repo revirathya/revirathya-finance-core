@@ -24,7 +24,7 @@ type fakeUserRepo struct {
 	gotGoogleSub      string
 	gotCreateForm     domain.UserForm
 	gotUpdateID       uuid.UUID
-	gotUpdateFirst    string
+	gotUpdateFirst    *string
 	gotUpdateLastName *string
 }
 
@@ -153,7 +153,7 @@ func TestUpdateUser(t *testing.T) {
 		repo := &fakeUserRepo{updateResp: want}
 		uc := user.NewUserUsecase(repo)
 
-		got, err := uc.UpdateUser(context.Background(), id, "Avi", &lastName)
+		got, err := uc.UpdateUser(context.Background(), id, domain.UserPatch{FirstName: ptr("Avi"), LastName: &lastName})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -161,21 +161,21 @@ func TestUpdateUser(t *testing.T) {
 		if !reflect.DeepEqual(got, want) {
 			t.Fatalf("got %v, want %v", got, want)
 		}
-		if repo.gotUpdateID != id || repo.gotUpdateFirst != "Avi" || repo.gotUpdateLastName == nil || *repo.gotUpdateLastName != lastName {
-			t.Fatalf("repo received (%v, %q, %v), want (%v, %q, %q)",
+		if repo.gotUpdateID != id || repo.gotUpdateFirst == nil || *repo.gotUpdateFirst != "Avi" || repo.gotUpdateLastName == nil || *repo.gotUpdateLastName != lastName {
+			t.Fatalf("repo received (%v, %v, %v), want (%v, %q, %q)",
 				repo.gotUpdateID, repo.gotUpdateFirst, repo.gotUpdateLastName, id, "Avi", lastName)
 		}
 	})
 
-	t.Run("clears last name with nil", func(t *testing.T) {
+	t.Run("omitted fields reach the repository as nil (keep)", func(t *testing.T) {
 		repo := &fakeUserRepo{updateResp: want}
 		uc := user.NewUserUsecase(repo)
 
-		if _, err := uc.UpdateUser(context.Background(), id, "Avi", nil); err != nil {
+		if _, err := uc.UpdateUser(context.Background(), id, domain.UserPatch{}); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if repo.gotUpdateLastName != nil {
-			t.Fatalf("repo received last_name %v, want nil", *repo.gotUpdateLastName)
+		if repo.gotUpdateFirst != nil || repo.gotUpdateLastName != nil {
+			t.Fatalf("repo received %v %v, want both nil", repo.gotUpdateFirst, repo.gotUpdateLastName)
 		}
 	})
 
@@ -183,8 +183,10 @@ func TestUpdateUser(t *testing.T) {
 		repo := &fakeUserRepo{err: errDom.ErrNotFound}
 		uc := user.NewUserUsecase(repo)
 
-		if _, err := uc.UpdateUser(context.Background(), id, "Avi", &lastName); !errors.Is(err, errDom.ErrNotFound) {
+		if _, err := uc.UpdateUser(context.Background(), id, domain.UserPatch{FirstName: ptr("Avi"), LastName: &lastName}); !errors.Is(err, errDom.ErrNotFound) {
 			t.Fatalf("got %v, want errDom.ErrNotFound", err)
 		}
 	})
 }
+
+func ptr[T any](v T) *T { return &v }

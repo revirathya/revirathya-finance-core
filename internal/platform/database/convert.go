@@ -20,7 +20,7 @@ func ToPgxUUID(val uuid.UUID) pgtype.UUID {
 	}
 }
 
-func ToNullablePgxUUID(val *uuid.UUID) pgtype.UUID {
+func ToOptionalPgxUUID(val *uuid.UUID) pgtype.UUID {
 	res := pgtype.UUID{Valid: val != nil}
 	if res.Valid {
 		res.Bytes = *val
@@ -40,7 +40,7 @@ func ToPgxDate(val time.Time) pgtype.Date {
 	}
 }
 
-func ToNullablePgxDate(val *time.Time) pgtype.Date {
+func ToOptionalPgxDate(val *time.Time) pgtype.Date {
 	res := pgtype.Date{Valid: val != nil}
 	if res.Valid {
 		res.Time = *val
@@ -67,4 +67,13 @@ func ToPgxNumeric(val decimal.Decimal) pgtype.Numeric {
 		Int:   val.Coefficient(),
 		Exp:   val.Exponent(),
 	}
+}
+
+func ToOptionalPgxNumeric(val *decimal.Decimal) pgtype.Numeric {
+	res := pgtype.Numeric{Valid: val != nil}
+	if res.Valid {
+		res.Int = val.Coefficient()
+		res.Exp = val.Exponent()
+	}
+	return res
 }

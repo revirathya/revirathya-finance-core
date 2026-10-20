@@ -229,14 +229,17 @@ client later. Do these first.
   - [x] `Expense` (`CreateExpenseResponse`, `GetExpenseByIDResponse`, `UpdateExpenseResponse`,
     `ListExpensesResponse`).
   - [x] `UserTelegramContext` (`GetUserTelegramContextResponse`, `UpdateUserTelegramContextResponse`).
-- [ ] Optional: category pagination (`categories` / `ListCategories`), the same way as expenses. Skip it if the
-  per-user list stays short; adding it later changes the GraphQL return type.
-- [ ] CRUD conventions on the APIs (client-visible, so settle them before the first consumer):
-  - [ ] Update semantics, one rule for every entity: replace (every field required) or patch (every field optional,
-    omitted = keep; gRPC `google.protobuf.FieldMask update_mask` per [AIP-134](https://google.aip.dev/134), GraphQL
-    nullable input fields). Today it's mixed: every field is required except `description`.
-  - [ ] GraphQL mutation results: return the object directly (as now) or payload types
-    (`createExpense(input): CreateExpensePayload { expense }`), which leave room to add fields later.
+- [x] Category pagination (`categories` / `ListCategories`), by `category_name` (unique per user, so no tiebreaker
+  and no migration: the unique constraint's index matches).
+- [x] CRUD conventions on the APIs (client-visible, so settle them before the first consumer):
+  - [x] Update semantics: **patch** for every entity. Omitted (or `null`) = keep; `""` clears `description` and
+    `lastName`. gRPC uses proto3 `optional` fields (presence) rather than `update_mask`; GraphQL uses nullable input
+    fields. SQL `COALESCE(narg, column)` per column; domain patches have pointer fields; usecases take the patch.
+    - [x] gRPC `UpdateExpense` handler fixed: it required `transaction_dt` and `amount` and turned an omitted
+      `category_id` into a random UUID; it now uses `FromOptionalProtoDate`, `FromOptionalProtoDecimal` and a `nil`
+      category ID.
+  - [x] GraphQL mutation results: return the object directly. Payload types
+    (`createExpense(input): CreateExpensePayload { expense }`) aren't needed yet.
   - Already settled: Create / Update / Get return the object as stored (including derived fields such as
     `category_name`); gRPC wraps it in a one-field `<Rpc>Response` (buf `STANDARD` lint); Delete returns an empty
     `Delete*Response` on gRPC ([AIP-135](https://google.aip.dev/135)) and the deleted `UUID!` on GraphQL (for client
@@ -276,7 +279,7 @@ client later. Do these first.
   - Get never returns `(nil, nil)`: missing, or another user's, is `errDom.ErrNotFound`.
   - List returns an empty slice (not `nil`, not an error) for no results; unbounded lists are paginated.
   - Delete returns only `error`, with `ErrNotFound` for a missing row; `ErrConflict` when it's in use.
-  - One update rule (from the API decision above) applied the same way to every form/patch.
+  - [x] One update rule (patch) applied the same way to every form/patch.
 - [ ] Later: gRPC input errors in one format. The handlers' 8 `uuid.Parse` sites (`id`, `category_id`) build their
   own `status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)`, which leaks the library's error text
   and differs from every other validation message. Add `converter.ParseUUID(field, s)` returning an

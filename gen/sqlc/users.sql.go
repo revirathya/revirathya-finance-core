@@ -125,15 +125,18 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDR
 const updateUser = `-- name: UpdateUser :one
 UPDATE app.users
 SET
-  first_name = $1,
-  last_name = $2
+  first_name = COALESCE($1::VARCHAR, first_name),
+  last_name = (CASE
+    WHEN $2::VARCHAR IS NULL THEN last_name
+    ELSE NULLIF($2::VARCHAR, '')
+  END)
 WHERE
   id = $3
 RETURNING id
 `
 
 type UpdateUserParams struct {
-	FirstName string      `json:"first_name"`
+	FirstName *string     `json:"first_name"`
 	LastName  *string     `json:"last_name"`
 	ID        pgtype.UUID `json:"id"`
 }

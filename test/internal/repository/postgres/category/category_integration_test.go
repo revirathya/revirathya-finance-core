@@ -5,6 +5,7 @@ package category_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -35,7 +36,7 @@ func TestCategoryRepository(t *testing.T) {
 		testutil.NewCategory(t, alice.ID, "Food")
 		testutil.NewCategory(t, bob.ID, "Bills")
 
-		got, err := repo.ListCategories(ctx, alice.ID)
+		got, err := repo.ListCategories(ctx, alice.ID, domain.CategoryListQuery{Limit: 50})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -69,7 +70,7 @@ func TestCategoryRepository(t *testing.T) {
 		testutil.NewCategory(t, alice.ID, "Food")
 		bills := testutil.NewCategory(t, alice.ID, "Bills")
 
-		if _, err := repo.UpdateCategory(ctx, bills.ID, alice.ID, domain.CategoryPatch{CategoryName: "Food"}); !errors.Is(err, errDom.ErrConflict) {
+		if _, err := repo.UpdateCategory(ctx, bills.ID, alice.ID, domain.CategoryPatch{CategoryName: testutil.Ptr("Food")}); !errors.Is(err, errDom.ErrConflict) {
 			t.Fatalf("got %v, want errDom.ErrConflict", err)
 		}
 	})
@@ -81,7 +82,7 @@ func TestCategoryRepository(t *testing.T) {
 		if _, err := repo.GetCategoryByID(ctx, food.ID, alice.ID); err != nil {
 			t.Fatalf("get: %v", err)
 		}
-		renamed, err := repo.UpdateCategory(ctx, food.ID, alice.ID, domain.CategoryPatch{CategoryName: "Groceries"})
+		renamed, err := repo.UpdateCategory(ctx, food.ID, alice.ID, domain.CategoryPatch{CategoryName: testutil.Ptr("Groceries")})
 		if err != nil {
 			t.Fatalf("update: %v", err)
 		}
@@ -103,7 +104,7 @@ func TestCategoryRepository(t *testing.T) {
 		if _, err := repo.GetCategoryByID(ctx, food.ID, bob.ID); !errors.Is(err, errDom.ErrNotFound) {
 			t.Fatalf("get: got %v, want errDom.ErrNotFound", err)
 		}
-		if _, err := repo.UpdateCategory(ctx, food.ID, bob.ID, domain.CategoryPatch{CategoryName: "Hacked"}); !errors.Is(err, errDom.ErrNotFound) {
+		if _, err := repo.UpdateCategory(ctx, food.ID, bob.ID, domain.CategoryPatch{CategoryName: testutil.Ptr("Hacked")}); !errors.Is(err, errDom.ErrNotFound) {
 			t.Fatalf("update: got %v, want errDom.ErrNotFound", err)
 		}
 		if err := repo.DeleteCategory(ctx, food.ID, bob.ID); !errors.Is(err, errDom.ErrNotFound) {
@@ -140,6 +141,21 @@ func TestCategoryRepository(t *testing.T) {
 
 // Backstop for input that skipped Validate(): the database's own limits come back as
 // ErrInvalidInput, not as an unknown (internal) error.
+func TestCategoryRepositoryPatch(t *testing.T) {
+	ctx := context.Background()
+	repo := rCategory.NewCategoryRepositoryImpl(testutil.TestPool)
+
+	t.Run("an update without a name keeps it", func(t *testing.T) {
+		alice := testutil.NewUser(t)
+		food := testutil.NewCategory(t, alice.ID, "Food")
+
+		got, err := repo.UpdateCategory(ctx, food.ID, alice.ID, domain.CategoryPatch{})
+		if err != nil || got.CategoryName != "Food" {
+			t.Fatalf("got %v, %v; want Food unchanged", got, err)
+		}
+	})
+}
+
 func TestCategoryRepositoryLimits(t *testing.T) {
 	ctx := context.Background()
 	repo := rCategory.NewCategoryRepositoryImpl(testutil.TestPool)
@@ -161,9 +177,68 @@ func TestCategoryRepositoryLimits(t *testing.T) {
 		alice := testutil.NewUser(t)
 		food := testutil.NewCategory(t, alice.ID, "Food")
 
-		_, err := repo.UpdateCategory(ctx, food.ID, alice.ID, domain.CategoryPatch{CategoryName: strings.Repeat("a", 101)})
+		_, err := repo.UpdateCategory(ctx, food.ID, alice.ID, domain.CategoryPatch{CategoryName: testutil.Ptr(strings.Repeat("a", 101))})
 		if !errors.Is(err, errDom.ErrInvalidInput) {
 			t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
+		}
+	})
+}
+
+func TestCategoryRepositoryPagination(t *testing.T) {
+	ctx := context.Background()
+	repo := rCategory.NewCategoryRepositoryImpl(testutil.TestPool)
+	alice, bob := testutil.NewUser(t), testutil.NewUser(t)
+	// Mixed case, spaces and non-ASCII: the walk must agree with the database's own ordering, whatever its collation.
+	names := []string{"Transport", "Food", "bills", "Café", "Makan & Minum", "Zakat", "angsuran"}
+	for _, n := range names {
+		testutil.NewCategory(t, alice.ID, n)
+	}
+	testutil.NewCategory(t, bob.ID, "Bob's") // must never appear in alice's pages
+
+	all, err := repo.ListCategories(ctx, alice.ID, domain.CategoryListQuery{Limit: 50})
+	if err != nil || len(all) != len(names) {
+		t.Fatalf("unpaged list: %d categories, %v; want %d", len(all), err, len(names))
+	}
+
+	for _, size := range []int{1, 2, 3, 7} {
+		t.Run(fmt.Sprintf("pages of %d match the unpaged order exactly", size), func(t *testing.T) {
+			var walked []string
+			query := domain.CategoryListQuery{Limit: size + 1}
+			for range 20 {
+				rows, err := repo.ListCategories(ctx, alice.ID, query)
+				if err != nil {
+					t.Fatalf("list: %v", err)
+				}
+				last := len(rows) <= size
+				if !last {
+					rows = rows[:size]
+				}
+				for _, c := range rows {
+					if c.UserID != alice.ID {
+						t.Fatalf("category %q belongs to %v", c.CategoryName, c.UserID)
+					}
+					walked = append(walked, c.CategoryName)
+				}
+				if last {
+					break
+				}
+				query.After = &domain.CategoryCursor{CategoryName: rows[size-1].CategoryName}
+			}
+
+			var want []string
+			for _, c := range all {
+				want = append(want, c.CategoryName)
+			}
+			if strings.Join(walked, "|") != strings.Join(want, "|") {
+				t.Fatalf("walked %v, want %v", walked, want)
+			}
+		})
+	}
+
+	t.Run("a cursor past the last name is an empty page", func(t *testing.T) {
+		rows, err := repo.ListCategories(ctx, alice.ID, domain.CategoryListQuery{After: &domain.CategoryCursor{CategoryName: all[len(all)-1].CategoryName}, Limit: 50})
+		if err != nil || len(rows) != 0 {
+			t.Fatalf("got %d rows, %v; want none", len(rows), err)
 		}
 	})
 }

@@ -46,19 +46,26 @@ func TestCategoryValidate(t *testing.T) {
 	})
 
 	t.Run("patch trims the name in place", func(t *testing.T) {
-		patch := domain.CategoryPatch{CategoryName: "  Food  "}
+		patch := domain.CategoryPatch{CategoryName: ptr("  Food  ")}
 		if err := patch.Validate(); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if patch.CategoryName != "Food" {
-			t.Fatalf("category_name %q, want %q", patch.CategoryName, "Food")
+		if *patch.CategoryName != "Food" {
+			t.Fatalf("category_name %q, want %q", *patch.CategoryName, "Food")
+		}
+	})
+
+	t.Run("patch without a name is valid (keep the current one)", func(t *testing.T) {
+		patch := domain.CategoryPatch{}
+		if err := patch.Validate(); err != nil || patch.CategoryName != nil {
+			t.Fatalf("got %v, %v; want no error and still nil", patch.CategoryName, err)
 		}
 	})
 
 	for _, name := range []string{"", "   ", tooLong100} {
 		form := domain.CategoryForm{CategoryName: name}
 		wantField(t, form.Validate(), "category_name")
-		patch := domain.CategoryPatch{CategoryName: name}
+		patch := domain.CategoryPatch{CategoryName: ptr(name)}
 		wantField(t, patch.Validate(), "category_name")
 	}
 }
@@ -90,7 +97,7 @@ func TestExpenseValidate(t *testing.T) {
 		if err := form.Validate(); err != nil {
 			t.Fatalf("form: unexpected error: %v", err)
 		}
-		patch := domain.ExpensePatch{TransactionDt: validDt, Amount: decimal.RequireFromString("999999999999.99")}
+		patch := domain.ExpensePatch{TransactionDt: ptr(validDt), Amount: ptr(decimal.RequireFromString("999999999999.99"))}
 		if err := patch.Validate(); err != nil {
 			t.Fatalf("patch: unexpected error: %v", err)
 		}
@@ -116,15 +123,36 @@ func TestExpenseValidate(t *testing.T) {
 			wantField(t, form.Validate(), tt.field)
 		})
 		t.Run("patch rejects "+tt.name, func(t *testing.T) {
-			patch := domain.ExpensePatch{TransactionDt: tt.dt, Amount: decimal.RequireFromString(tt.amount), Description: tt.description}
+			patch := domain.ExpensePatch{TransactionDt: ptr(tt.dt), Amount: ptr(decimal.RequireFromString(tt.amount)), Description: tt.description}
 			wantField(t, patch.Validate(), tt.field)
 		})
 	}
 
 	t.Run("description of exactly 500 characters is accepted", func(t *testing.T) {
-		patch := domain.ExpensePatch{TransactionDt: validDt, Amount: validAmount, Description: ptr(strings.Repeat("a", 500))}
+		patch := domain.ExpensePatch{TransactionDt: ptr(validDt), Amount: ptr(validAmount), Description: ptr(strings.Repeat("a", 500))}
 		if err := patch.Validate(); err != nil {
 			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("patch: unset fields are valid and stay unset (keep the current values)", func(t *testing.T) {
+		patch := domain.ExpensePatch{}
+		if err := patch.Validate(); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if patch.CategoryID != nil || patch.TransactionDt != nil || patch.Description != nil || patch.Amount != nil {
+			t.Fatalf("got %+v, want every field still nil", patch)
+		}
+	})
+
+	t.Run("patch: only the set fields are validated", func(t *testing.T) {
+		amountOnly := domain.ExpensePatch{Amount: ptr(decimal.RequireFromString("0"))}
+		wantField(t, amountOnly.Validate(), "amount")
+		dateOnly := domain.ExpensePatch{TransactionDt: ptr(time.Date(1999, 12, 31, 0, 0, 0, 0, time.UTC))}
+		wantField(t, dateOnly.Validate(), "transaction_dt")
+		blank := domain.ExpensePatch{Description: ptr("   ")}
+		if err := blank.Validate(); err != nil || *blank.Description != "" {
+			t.Fatalf("whitespace description: got %q, %v; want \"\" (clears it)", *blank.Description, err)
 		}
 	})
 }
@@ -157,41 +185,48 @@ func TestUserValidate(t *testing.T) {
 		}
 	})
 
-	t.Run("patch trims names in place and keeps a nil last name nil", func(t *testing.T) {
-		patch := domain.UserPatch{FirstName: " Avi "}
+	t.Run("patch trims names in place and keeps unset fields nil", func(t *testing.T) {
+		patch := domain.UserPatch{FirstName: ptr(" Avi ")}
 		if err := patch.Validate(); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if patch.FirstName != "Avi" || patch.LastName != nil {
-			t.Fatalf("got %q %v, want %q and nil", patch.FirstName, patch.LastName, "Avi")
+		if *patch.FirstName != "Avi" || patch.LastName != nil {
+			t.Fatalf("got %q %v, want %q and nil", *patch.FirstName, patch.LastName, "Avi")
 		}
 	})
 
-	t.Run("patch: a last name that is empty after trimming becomes nil (cleared)", func(t *testing.T) {
+	t.Run("patch: an empty patch is valid (keep everything)", func(t *testing.T) {
+		patch := domain.UserPatch{}
+		if err := patch.Validate(); err != nil || patch.FirstName != nil || patch.LastName != nil {
+			t.Fatalf("got %+v, %v; want no error and nothing set", patch, err)
+		}
+	})
+
+	t.Run("patch: a last name that is empty after trimming stays set to \"\" (clears it; nil would mean keep)", func(t *testing.T) {
 		for _, in := range []string{"", "   ", "\t\n"} {
-			patch := domain.UserPatch{FirstName: "Avi", LastName: ptr(in)}
+			patch := domain.UserPatch{LastName: ptr(in)}
 			if err := patch.Validate(); err != nil {
 				t.Fatalf("%q: unexpected error: %v", in, err)
 			}
-			if patch.LastName != nil {
-				t.Fatalf("%q: last name %q, want nil", in, *patch.LastName)
+			if patch.LastName == nil || *patch.LastName != "" {
+				t.Fatalf("%q: last name %v, want a pointer to \"\"", in, patch.LastName)
 			}
 		}
 	})
 
 	t.Run("patch: a non-empty last name is trimmed and kept", func(t *testing.T) {
-		patch := domain.UserPatch{FirstName: "Avi", LastName: ptr("  Leonardi ")}
+		patch := domain.UserPatch{LastName: ptr("  Leonardi ")}
 		if err := patch.Validate(); err != nil || patch.LastName == nil || *patch.LastName != "Leonardi" {
 			t.Fatalf("got %v, %v; want Leonardi", patch.LastName, err)
 		}
 	})
 
-	t.Run("patch rejects missing first name and too long names", func(t *testing.T) {
-		empty := domain.UserPatch{FirstName: ""}
+	t.Run("patch rejects a blank first name and too long names", func(t *testing.T) {
+		empty := domain.UserPatch{FirstName: ptr("  ")}
 		wantField(t, empty.Validate(), "first_name")
-		longFirst := domain.UserPatch{FirstName: tooLong100}
+		longFirst := domain.UserPatch{FirstName: ptr(tooLong100)}
 		wantField(t, longFirst.Validate(), "first_name")
-		longLast := domain.UserPatch{FirstName: "Avi", LastName: ptr(tooLong100)}
+		longLast := domain.UserPatch{LastName: ptr(tooLong100)}
 		wantField(t, longLast.Validate(), "last_name")
 	})
 }

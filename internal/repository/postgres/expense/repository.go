@@ -16,6 +16,7 @@ import (
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	"github.com/revirathya/revirathya-finance-core/internal/domain/constant"
 	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
 )
@@ -91,13 +92,13 @@ func (r *expenseRepositoryImpl) ListExpenses(ctx context.Context, userID uuid.UU
 		afterTransactionDt = &query.After.TransactionDt
 	}
 
-	limit := min(max(query.Limit, 1), domain.MaxPageSize+1)
+	limit := min(max(query.Limit, 1), constant.MaxPageSize+1)
 
 	args := sqlc.ListExpensesParams{
 		UserID:        database.ToPgxUUID(userID),
-		TransactionDt: database.ToNullablePgxDate(query.TransactionDt),
-		AfterID:       database.ToNullablePgxUUID(afterID),
-		AfterDt:       database.ToNullablePgxDate(afterTransactionDt),
+		TransactionDt: database.ToOptionalPgxDate(query.TransactionDt),
+		AfterID:       database.ToOptionalPgxUUID(afterID),
+		AfterDt:       database.ToOptionalPgxDate(afterTransactionDt),
 		RowLimit:      int32(limit),
 	}
 
@@ -123,10 +124,10 @@ func (r *expenseRepositoryImpl) ListExpenses(ctx context.Context, userID uuid.UU
 
 func (r *expenseRepositoryImpl) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.ExpensePatch) (*domain.Expense, error) {
 	args := sqlc.UpdateExpenseParams{
-		CategoryID:    database.ToPgxUUID(patch.CategoryID),
-		TransactionDt: database.ToPgxDate(patch.TransactionDt),
+		CategoryID:    database.ToOptionalPgxUUID(patch.CategoryID),
+		TransactionDt: database.ToOptionalPgxDate(patch.TransactionDt),
 		Description:   patch.Description,
-		Amount:        database.ToPgxNumeric(patch.Amount),
+		Amount:        database.ToOptionalPgxNumeric(patch.Amount),
 		ID:            database.ToPgxUUID(id),
 		UserID:        database.ToPgxUUID(userID),
 	}

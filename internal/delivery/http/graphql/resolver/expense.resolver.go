@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
+	"github.com/revirathya/revirathya-finance-core/internal/domain"
 )
 
 // CreateExpense is the resolver for the createExpense field.
@@ -56,15 +57,12 @@ func (r *mutationResolver) UpdateExpense(ctx context.Context, id uuid.UUID, patc
 	}
 
 	// Parse input
-	expense, err := r.usecase.Expense.UpdateExpense(
-		ctx,
-		id,
-		userID,
-		patch.CategoryID,
-		patch.TransactionDt,
-		patch.Description,
-		patch.Amount,
-	)
+	expense, err := r.usecase.Expense.UpdateExpense(ctx, id, userID, domain.ExpensePatch{
+		CategoryID:    patch.CategoryID,
+		TransactionDt: patch.TransactionDt,
+		Description:   patch.Description,
+		Amount:        patch.Amount,
+	})
 	if err != nil {
 		return nil, err
 	}

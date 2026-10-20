@@ -14,6 +14,7 @@ import (
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	"github.com/revirathya/revirathya-finance-core/internal/domain/constant"
 	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/database"
 )
@@ -80,8 +81,21 @@ func (r *categoryRepositoryImpl) GetCategoryByID(ctx context.Context, id uuid.UU
 	return result, nil
 }
 
-func (r *categoryRepositoryImpl) ListCategories(ctx context.Context, userID uuid.UUID) ([]domain.Category, error) {
-	rows, err := r.query.ListCategories(ctx, database.ToPgxUUID(userID))
+func (r *categoryRepositoryImpl) ListCategories(ctx context.Context, userID uuid.UUID, query domain.CategoryListQuery) ([]domain.Category, error) {
+	var afterName *string
+	if query.After != nil {
+		afterName = &query.After.CategoryName
+	}
+
+	limit := min(max(query.Limit, 1), constant.MaxPageSize+1)
+
+	args := sqlc.ListCategoriesParams{
+		UserID:    database.ToPgxUUID(userID),
+		AfterName: afterName,
+		RowLimit:  int32(limit),
+	}
+
+	rows, err := r.query.ListCategories(ctx, args)
 	if err != nil {
 		return nil, err
 	}

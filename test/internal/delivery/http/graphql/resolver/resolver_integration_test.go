@@ -178,7 +178,7 @@ func TestAuthResolvers(t *testing.T) {
 
 	t.Run("updateUser trims, clears the last name with an empty string, and validates", func(t *testing.T) {
 		token, _ := a.login("Citra", "Dewi")
-		const q = `mutation($in: UpdateUserInput!) { updateUser(input: $in) { firstName lastName } }`
+		const q = `mutation($in: UpdateUserInput!) { updateUser(patch: $in) { firstName lastName } }`
 
 		user := field(a.ok(token, q, map[string]any{"in": map[string]any{"firstName": "  Citra Ayu ", "lastName": ""}}), "updateUser").(map[string]any)
 		if user["firstName"] != "Citra Ayu" || user["lastName"] != nil {
@@ -189,6 +189,21 @@ func TestAuthResolvers(t *testing.T) {
 			t.Fatalf("whitespace-only last name stored as %q, want null", blank)
 		}
 		a.wantCode(token, q, map[string]any{"in": map[string]any{"firstName": "   "}}, "BAD_USER_INPUT", "first_name: is required")
+
+		// Patch: omitted fields keep their value.
+		a.ok(token, q, map[string]any{"in": map[string]any{"firstName": "Citra", "lastName": "Dewi"}})
+		onlyFirst := field(a.ok(token, q, map[string]any{"in": map[string]any{"firstName": "Ayu"}}), "updateUser").(map[string]any)
+		if onlyFirst["firstName"] != "Ayu" || onlyFirst["lastName"] != "Dewi" {
+			t.Fatalf("user %v after a first-name-only update, want last name kept (Dewi)", onlyFirst)
+		}
+		onlyLast := field(a.ok(token, q, map[string]any{"in": map[string]any{"lastName": "Putri"}}), "updateUser").(map[string]any)
+		if onlyLast["firstName"] != "Ayu" || onlyLast["lastName"] != "Putri" {
+			t.Fatalf("user %v after a last-name-only update, want first name kept (Ayu)", onlyLast)
+		}
+		nulls := field(a.ok(token, q, map[string]any{"in": map[string]any{"firstName": nil, "lastName": nil}}), "updateUser").(map[string]any)
+		if nulls["firstName"] != "Ayu" || nulls["lastName"] != "Putri" {
+			t.Fatalf("user %v after an update with explicit nulls, want both kept", nulls)
+		}
 		a.wantCode(token, q, map[string]any{"in": map[string]any{"firstName": strings.Repeat("a", 101)}}, "BAD_USER_INPUT", "first_name: must be at most 100 characters")
 	})
 }
@@ -212,10 +227,44 @@ func TestCategoryResolvers(t *testing.T) {
 	})
 
 	t.Run("list returns only the caller's categories, by name", func(t *testing.T) {
-		list := field(a.ok(alice, `{ categories { categoryName } }`, nil), "categories").([]any)
+		list := field(a.ok(alice, `{ categories { nodes { categoryName } } }`, nil), "categories", "nodes").([]any)
 		if len(list) != 2 || field(list[0], "categoryName") != "Bills" || field(list[1], "categoryName") != "Food" {
 			t.Fatalf("categories %v, want alice's Bills then Food", list)
 		}
+	})
+
+	t.Run("categories pages by name with first/after", func(t *testing.T) {
+		dewi, _ := a.login("Dewi", "")
+		for _, n := range []string{"Transport", "Food", "Bills", "Zakat", "Health"} {
+			a.ok(dewi, create, map[string]any{"n": n})
+		}
+		const list = `query($after: String) { categories(first: 2, after: $after) { nodes { categoryName } pageInfo { hasNextPage endCursor } } }`
+
+		var walked []string
+		var after any
+		for page := 0; ; page++ {
+			if page > 5 {
+				t.Fatal("pagination did not end")
+			}
+			conn := field(a.ok(dewi, list, map[string]any{"after": after}), "categories")
+			for _, n := range field(conn, "nodes").([]any) {
+				walked = append(walked, field(n, "categoryName").(string))
+			}
+			if field(conn, "pageInfo", "hasNextPage") != true {
+				if field(conn, "pageInfo", "endCursor") != nil {
+					t.Fatal("last page has an endCursor")
+				}
+				break
+			}
+			after = field(conn, "pageInfo", "endCursor")
+		}
+		if got := strings.Join(walked, " "); got != "Bills Food Health Transport Zakat" {
+			t.Fatalf("walked %q, want every category once, by name", got)
+		}
+		a.wantCode(dewi, list, map[string]any{"after": "garbage!"}, "BAD_USER_INPUT", "page_token")
+		a.wantCode(dewi, `{ categories(first: -1) { nodes { id } } }`, nil, "BAD_USER_INPUT", "page_size")
+		// A token that decodes to bytes that aren't UTF-8 must be bad input, not a database error.
+		a.wantCode(dewi, list, map[string]any{"after": "__4"}, "BAD_USER_INPUT", "page_token")
 	})
 
 	t.Run("another user's category is NOT_FOUND for get, update and delete", func(t *testing.T) {
@@ -287,6 +336,37 @@ func TestExpenseResolvers(t *testing.T) {
 
 		if kept["description"] != "Lunch" || kept["amount"] != "20" || cleared["description"] != "" {
 			t.Fatalf("kept %v, cleared %v; want Lunch then empty", kept, cleared)
+		}
+	})
+
+	t.Run("update is a patch: each omitted field keeps its value", func(t *testing.T) {
+		bills := category(alice, "Groceries")
+		id := field(a.ok(alice, create, expenseInput("2026-01-15", "10", map[string]any{"description": "Lunch"})), "createExpense", "id")
+		const update = `mutation($id: UUID!, $p: UpdateExpenseInput!) { updateExpense(id: $id, patch: $p) { transactionDt categoryName description amount } }`
+
+		for _, step := range []struct {
+			patch map[string]any
+			want  string
+		}{
+			{map[string]any{"amount": "20"}, "2026-01-15 Food Lunch 20"},
+			{map[string]any{"categoryId": bills}, "2026-01-15 Groceries Lunch 20"},
+			{map[string]any{"transactionDt": "2026-01-20"}, "2026-01-20 Groceries Lunch 20"},
+			{map[string]any{"description": "Dinner"}, "2026-01-20 Groceries Dinner 20"},
+			{map[string]any{}, "2026-01-20 Groceries Dinner 20"},
+		} {
+			e := field(a.ok(alice, update, map[string]any{"id": id, "p": step.patch}), "updateExpense").(map[string]any)
+			if got := strings.Join([]string{e["transactionDt"].(string), e["categoryName"].(string), e["description"].(string), e["amount"].(string)}, " "); got != step.want {
+				t.Fatalf("after patch %v: got %q, want %q", step.patch, got, step.want)
+			}
+		}
+		a.wantCode(alice, update, map[string]any{"id": id, "p": map[string]any{"amount": "0"}}, "BAD_USER_INPUT", "amount: must be greater than 0")
+	})
+
+	t.Run("updateCategory without a name keeps it", func(t *testing.T) {
+		id := category(alice, "Transport")
+		got := field(a.ok(alice, `mutation($id: UUID!) { updateCategory(id: $id, patch: {}) { categoryName } }`, map[string]any{"id": id}), "updateCategory", "categoryName")
+		if got != "Transport" {
+			t.Fatalf("categoryName %v, want Transport unchanged", got)
 		}
 	})
 

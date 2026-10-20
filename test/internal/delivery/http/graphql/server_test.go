@@ -293,7 +293,7 @@ func TestServerErrorHandling(t *testing.T) {
 
 		// Logged in, so the categories resolver runs and calls its usecase, which is
 		// nil here: a real nil-pointer panic inside a resolver.
-		req := queryRequest(t, "{ categories { id } }")
+		req := queryRequest(t, "{ categories { nodes { id } } }")
 		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set(logging.RequestIDHeader, "panic-test-1")
 		rec, resp := do(t, h, req)

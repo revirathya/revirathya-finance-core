@@ -10,6 +10,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	// Internal
+	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
 )
@@ -44,7 +45,7 @@ func TestExpenseValidation(t *testing.T) {
 			repo := &fakeExpenseRepo{}
 			uc := expense.NewExpenseUsecase(repo)
 
-			_, err := uc.UpdateExpense(context.Background(), uuid.New(), uuid.New(), uuid.New(), tt.dt, nil, decimal.RequireFromString(tt.amount))
+			_, err := uc.UpdateExpense(context.Background(), uuid.New(), uuid.New(), domain.ExpensePatch{TransactionDt: &tt.dt, Amount: ptr(decimal.RequireFromString(tt.amount))})
 
 			if !errors.Is(err, errDom.ErrInvalidInput) {
 				t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
@@ -63,7 +64,7 @@ func TestExpenseValidation(t *testing.T) {
 		if _, err := uc.CreateExpense(context.Background(), uuid.New(), uuid.New(), validDt, &description, decimal.RequireFromString("10")); err != nil {
 			t.Fatalf("create: %v", err)
 		}
-		if _, err := uc.UpdateExpense(context.Background(), uuid.New(), uuid.New(), uuid.New(), validDt, &description, decimal.RequireFromString("10")); err != nil {
+		if _, err := uc.UpdateExpense(context.Background(), uuid.New(), uuid.New(), domain.ExpensePatch{Description: &description}); err != nil {
 			t.Fatalf("update: %v", err)
 		}
 		if *repo.gotCreateInput.Description != "Lunch" || *repo.gotUpdatePatch.Description != "Lunch" {

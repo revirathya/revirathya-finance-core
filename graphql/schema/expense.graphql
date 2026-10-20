@@ -21,10 +21,11 @@ input CreateExpenseInput {
 }
 
 input UpdateExpenseInput {
-    transactionDt: Date!
-    categoryId: UUID!
+    "Omit any field to keep its value; description \"\" clears it."
+    transactionDt: Date
+    categoryId: UUID
     description: String
-    amount: Decimal!
+    amount: Decimal
 }
 
 extend type Query {

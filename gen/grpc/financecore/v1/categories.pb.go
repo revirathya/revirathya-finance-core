@@ -77,7 +77,11 @@ func (x *Category) GetCategoryName() string {
 }
 
 type ListCategoriesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Max categories to return. default 20, max 50
+	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// next_page_token from previous response; empty for the first page
+	PageToken     string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -112,9 +116,26 @@ func (*ListCategoriesRequest) Descriptor() ([]byte, []int) {
 	return file_financecore_v1_categories_proto_rawDescGZIP(), []int{1}
 }
 
+func (x *ListCategoriesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListCategoriesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
 type ListCategoriesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Categories    []*Category            `protobuf:"bytes,1,rep,name=categories,proto3" json:"categories,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Categories ordered alphabetically
+	Categories []*Category `protobuf:"bytes,1,rep,name=categories,proto3" json:"categories,omitempty"`
+	// Pagination navigator token
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -154,6 +175,13 @@ func (x *ListCategoriesResponse) GetCategories() []*Category {
 		return x.Categories
 	}
 	return nil
+}
+
+func (x *ListCategoriesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
 }
 
 type GetCategoryByIDRequest struct {
@@ -253,12 +281,16 @@ const file_financecore_v1_categories_proto_rawDesc = "" +
 	"\x1ffinancecore/v1/categories.proto\x12\x0efinancecore.v1\"?\n" +
 	"\bCategory\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
-	"\rcategory_name\x18\x02 \x01(\tR\fcategoryName\"\x17\n" +
-	"\x15ListCategoriesRequest\"R\n" +
+	"\rcategory_name\x18\x02 \x01(\tR\fcategoryName\"S\n" +
+	"\x15ListCategoriesRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\"z\n" +
 	"\x16ListCategoriesResponse\x128\n" +
 	"\n" +
 	"categories\x18\x01 \x03(\v2\x18.financecore.v1.CategoryR\n" +
-	"categories\"(\n" +
+	"categories\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"(\n" +
 	"\x16GetCategoryByIDRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"O\n" +
 	"\x17GetCategoryByIDResponse\x124\n" +
