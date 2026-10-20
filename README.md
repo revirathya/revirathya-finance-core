@@ -159,7 +159,7 @@ Copy `.env.example` to `.env`. Only the required variables must be set; prefer t
 |`DB_USER`|`revirathya`|Postgres user|
 |`DB_NAME`|`finance`|Postgres database name|
 |`GRPC_PORT`|`50051`|gRPC listen port (plain number, no `:`), local mode only|
-|`HTTP_PORT`|`8080`|HTTP listen port for GraphQL (`/graphql`) and health checks (plain number, no `:`), local mode only. Replaces `GQL_PORT`.|
+|`HTTP_PORT`|`8080`|HTTP listen port for GraphQL (`/graphql`) and health checks (plain number, no `:`), local mode only.|
 |`METRICS_PORT`|`9090`|Listen port for Prometheus metrics (`/metrics`), local mode only. Keep it internal.|
 |`ALLOWED_ORIGINS`|`http://localhost,http://127.0.0.1`|Comma-separated CORS origins for GraphQL. Must be full origins including scheme and port, e.g. `http://localhost:3000`|
 |`JWT_TTL`|`24h`|Session token lifetime, as a Go duration (e.g. `30m`, `12h`)|
@@ -178,7 +178,7 @@ effect in Docker mode.
 |:--|:--|:--|
 |`DB_HOST_PORT`|`5532`|Host port for Postgres|
 |`GRPC_HOST_PORT`|`51051`|Host port for gRPC|
-|`HTTP_HOST_PORT`|`8180`|Host port for HTTP (GraphQL, health checks). Replaces `GQL_HOST_PORT`.|
+|`HTTP_HOST_PORT`|`8180`|Host port for HTTP (GraphQL, health checks).|
 |`METRICS_HOST_PORT`|`9900`|Host port for metrics|
 
 ## Migrations
@@ -280,7 +280,8 @@ the server (e.g. Postman's "fetch schema", GraphQL codegen); point them at the c
 |Idle connection|5 minutes without calls|Connection closed (clients reconnect automatically)|
 |Client keepalive pings|At most one every 30 seconds|Connection closed with `GOAWAY` (`too_many_pings`)|
 
-If the Telegram bot enables client keepalive, its ping interval must be at least 30 seconds.
+Clients that enable keepalive must ping at most every 30 seconds (gRPC client option `keepalive.ClientParameters.Time`
+≥ 30s).
 
 ## Database connections
 
@@ -392,6 +393,11 @@ make grpc-list
 make grpc-describe symbol=financecore.v1.CategoryService
 ```
 
+Both target the Docker-mode port by default (`GRPC_ADDR=localhost:51051`); in local mode pass
+`GRPC_ADDR=localhost:50051`. They currently fail, though: the protos import `google/type/*.proto`, which grpcurl can't find under `-import-path proto`.
+Until they're switched to reflection, set `GRPC_ENABLE_REFLECTION=true` and use grpcurl directly, e.g.
+`grpcurl -plaintext localhost:50051 list` and `grpcurl -plaintext localhost:50051 describe financecore.v1.Expense`.
+
 To call RPCs, set `GRPC_ENABLE_REFLECTION=true` and send both metadata entries, e.g. (after
 `set -a; source .env; set +a` to load `.env` into your shell):
 
@@ -402,12 +408,36 @@ grpcurl -plaintext \
   localhost:50051 financecore.v1.CategoryService/ListCategories   # Docker mode: localhost:51051
 ```
 
+### gRPC messages
+
+Each resource has one message (`Category`, `Expense`), and every RPC wraps it in its own response, e.g.
+`CreateExpenseResponse { expense }` and `ListExpensesResponse { expenses, next_page_token }`. Dates and amounts use
+Google's common types:
+
+|Field|Type|JSON form (grpcurl)|
+|:--|:--|:--|
+|`transaction_dt`|`google.type.Date`|`{"year": 2026, "month": 10, "day": 17}`|
+|`amount`|`google.type.Decimal`|`{"value": "12500.50"}`: an exact decimal string, never a float|
+
+A date must be a real calendar date (`2026-02-30` and partial dates with a zero year, month or day are
+`INVALID_ARGUMENT`), and a missing or non-numeric amount is `INVALID_ARGUMENT`; the range rules (date from
+2000-01-01 to tomorrow, amount > 0 with at most 2 decimals) are the same as GraphQL's.
+
+```sh
+grpcurl -plaintext -H "authorization: Bearer $GRPC_API_KEY" -H "x-telegram-user-id: 123456789" \
+  -d '{"categoryId": "9b2f6c1e-4a7d-4c3e-8f1a-2d5e6b7c8a90", "transactionDt": {"year": 2026, "month": 10, "day": 17}, "amount": {"value": "12500.50"}}' \
+  localhost:50051 financecore.v1.ExpenseService/CreateExpense
+```
+
+Go clients import `github.com/revirathya/revirathya-finance-core/gen/grpc/financecore/v1`; the Google types are in
+`google.golang.org/genproto/googleapis/type/date` and `.../type/decimal`.
+
 ## Development
 
 ```sh
 make run               # run the app locally (go run ./cmd)
 make build             # build the binary to bin/financecore
-make proto-generate    # buf: gRPC stubs        -> gen/go
+make proto-generate    # buf: gRPC stubs        -> gen/grpc (googleapis deps pinned in buf.lock)
 make sqlc-generate     # sqlc: query code       -> gen/sqlc  (queries in sqlc/queries)
 make gql-generate      # gqlgen: GraphQL code   -> gen/graphql
 make lint              # golangci-lint (config: .golangci.yaml)

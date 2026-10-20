@@ -38,46 +38,32 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
   migration image.
 
 ### Changed
-- **Breaking (GraphQL):** client-supplied user IDs removed: `expenses(userId:)` is now `expenses(transactionDt:)`,
+- GraphQL: the user comes from the session, never from an argument: `expenses(userId:)` is `expenses(transactionDt:)`,
   `CreateExpenseInput.userId` and `updateExpense`'s `userId` are gone, and `user(id:)` is replaced by `me`.
-- **Breaking (GraphQL):** mutation inputs are required (`CreateExpenseInput!`, `UpdateExpenseInput!`,
-  `UpdateUserInput!`), `UpdateCategoryInput.categoryName` is required, and `deleteExpense` / `deleteCategory`
-  return `UUID!`.
-- **Breaking (GraphQL):** `transactionDt` is the `Date` scalar and `amount` the `Decimal` scalar (were `String`). The
-  JSON is unchanged (strings), but variables must be declared `$dt: Date` / `$amount: Decimal`. An invalid value, or
-  an amount sent as a JSON number, returns `BAD_USER_INPUT`.
-- **Breaking (GraphQL):** identifiers are the `UUID` scalar instead of `ID` (`id`, `userId`, `categoryId`, the `id`
-  arguments and the `delete*` results). The JSON is unchanged, but variables must be declared `$id: UUID!`, and a
-  value that isn't a UUID string (including an integer) returns `BAD_USER_INPUT`. Clients that require `id: ID!`
-  (e.g. Relay's `Node`) must map the scalar.
-- **Breaking (config):** `GQL_PORT` is renamed `HTTP_PORT`, and `GQL_HOST_PORT` is renamed `HTTP_HOST_PORT`; the old
-  names are ignored, so a `.env` that still uses them gets the defaults (`8080`, `8180`).
-- **Breaking (Docker):** compose publishes the app's ports on `127.0.0.1` only; other machines can no longer reach
-  them through the host.
-- **Breaking (GraphQL):** `expenses` is paged and returns `ExpenseConnection!` (`nodes`, `pageInfo { hasNextPage
-  endCursor }`) instead of `[Expense!]!`; new arguments `first` (default 20, max 50) and `after`.
-- **Breaking (gRPC):** `ListExpenses` is paged: new `page_size` (default 20, max 50) and `page_token`, and
-  `next_page_token` in the response. A client that doesn't page gets only the first 20 expenses.
-  `ListExpensesRequest.transaction_dt` is renumbered from 2 to 1.
-- **Breaking (GraphQL):** `Expense.description` is `String!`: it is never `null`, and an expense without one returns
-  `""`. Inputs are unchanged; `updateExpense` keeps the description when it's omitted and clears it with `""`.
-- **Breaking (gRPC):** `description` in expense responses is a plain `string` (was `optional`), so generated clients
-  get `string` instead of `*string`; field numbers are unchanged. Requests keep `optional string description`
-  (omit = keep on update, `""` = clear).
-- **Breaking (database):** `expenses.description` is `NOT NULL DEFAULT ''` (migration
-  `000005_expense_description_not_null`); existing `NULL`s become `''`.
-- **Breaking (gRPC):** `user_id` removed from all request messages; the user comes from the Telegram binding.
-  `UpdateExpenseRequest` fields renumbered.
-- **Breaking:** categories belong to a user; names are unique per user, and an expense can only use its
-  owner's categories.
-- gRPC errors use proper status codes (`INVALID_ARGUMENT`, `NOT_FOUND`, `UNAUTHENTICATED`,
-  `PERMISSION_DENIED`, `ALREADY_EXISTS`); internal error details are logged instead of returned.
+- GraphQL: mutation inputs are required (`CreateExpenseInput!`, `UpdateExpenseInput!`, `UpdateUserInput!`),
+  `UpdateCategoryInput.categoryName` is required, and `deleteExpense` / `deleteCategory` return the deleted `UUID!`.
+- GraphQL scalars: `transactionDt` is `Date` (`YYYY-MM-DD`), `amount` is `Decimal` (a string), and identifiers are
+  `UUID`. All three are JSON strings; variables are declared with the scalar type (`$dt: Date`, `$id: UUID!`). An
+  invalid value, or an amount sent as a JSON number, returns `BAD_USER_INPUT`.
+- GraphQL `expenses` is paged and returns `ExpenseConnection!` (`nodes`, `pageInfo { hasNextPage endCursor }`), with
+  `first` (default 20, max 50) and `after`.
+- gRPC messages: one `Category` and one `Expense` message, wrapped by each RPC's response (`CreateExpenseResponse {
+  expense }`, `ListExpensesResponse { expenses, next_page_token }`, ...). Dates are `google.type.Date` and amounts
+  `google.type.Decimal` (`{"value": "12500.50"}`) instead of strings; an impossible date (e.g. 2026-02-30) or a
+  missing amount returns `INVALID_ARGUMENT` with the field name. Generated Go code is in `gen/grpc`.
+- gRPC `ListExpenses` is paged: `page_size` (default 20, max 50), `page_token`, and `next_page_token` in the response.
+- Expense descriptions are never null: an expense without one has `""` (GraphQL `String!`, gRPC plain `string`;
+  database `NOT NULL DEFAULT ''`, migration `000005_expense_description_not_null`). On update, omitting the
+  description keeps it and `""` clears it.
+- gRPC: `user_id` removed from all request messages; the user comes from the Telegram binding.
+- Categories belong to a user; names are unique per user, and an expense can only use its owner's categories.
+- gRPC errors use proper status codes (`INVALID_ARGUMENT`, `NOT_FOUND`, `UNAUTHENTICATED`, `PERMISSION_DENIED`,
+  `ALREADY_EXISTS`); internal error details are logged instead of returned.
 - GraphQL validation and parse errors are returned as-is; bad input returns `BAD_USER_INPUT`.
-- **Breaking (GraphQL):** introspection is off by default, so tools can no longer download the schema from the
-  server unless `GQL_ENABLE_INTROSPECTION=true`; use the committed `graphql/schema/*.graphql`. Only `POST` with a
-  JSON body is accepted (`GET`, websockets, multipart and persisted queries removed).
-- GraphQL limits: 1 MB request body (`413`), 5000 query tokens, query complexity 200
-  (`COMPLEXITY_LIMIT_EXCEEDED`).
+- GraphQL introspection is off by default (`GQL_ENABLE_INTROSPECTION=true` to enable); the schema is in
+  `graphql/schema/*.graphql`. Only `POST` with a JSON body is accepted (no `GET`, websockets, multipart or persisted
+  queries).
+- GraphQL limits: 1 MB request body (`413`), 5000 query tokens, query complexity 200 (`COMPLEXITY_LIMIT_EXCEEDED`).
 - Logs are structured (`log/slog`), JSON by default; configurable with `LOG_FORMAT` and `LOG_LEVEL`. Startup
   failures are logged and exit with code 1 instead of panicking.
 - Request IDs: `X-Request-ID` (HTTP) and `x-request-id` (gRPC) are accepted when valid, generated otherwise, and
@@ -86,7 +72,7 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
   success, `WARN` for client errors, `ERROR` for server errors. Successful health checks are not logged. Error
   logs carry the same request ID as the request's access log line.
 - GraphQL: a malformed request (e.g. a body that isn't valid JSON) returns `BAD_REQUEST` / "invalid request"
-  instead of `INTERNAL`, and its body is no longer logged.
+  instead of `INTERNAL`, and its body is not logged.
 - Input validation: text fields are trimmed and length-checked (category name, first and last name: 1-100
   characters; description: at most 500; Telegram context fields: at most 100), amounts must be greater than 0
   with at most 2 decimal places and below 10^12, and expense dates must be between 2000-01-01 and tomorrow.
@@ -95,11 +81,13 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
 - gRPC limits: requests over 1 MB return `RESOURCE_EXHAUSTED`; calls without a client deadline time out after
   10 seconds (`DEADLINE_EXCEEDED`); clients may send keepalive pings at most every 30 seconds; idle connections
   close after 5 minutes. Timeouts and cancellations return `DEADLINE_EXCEEDED` / `CANCELED` instead of `INTERNAL`.
-- Database: at most 10 connections per process, and Postgres cancels any statement running over 10 seconds.
-  Pool settings in `DATABASE_URI` (`pool_max_conns`, ...) are now ignored.
-- `ListExpenses` returns newest `transaction_dt` first; `UpdateExpense` can no longer change an expense's owner.
-- `GRPC_PORT` / `GQL_PORT` are plain numbers (`50051`, not `:50051`). New required config: `GRPC_API_KEY`,
-  `GOOGLE_CLIENT_ID`, `JWT_SECRET`, `MIGRATION_VERSION`.
+- Database: at most 10 connections per process, and Postgres cancels any statement running over 10 seconds. The
+  pool is configured in code; `pool_*` parameters in `DATABASE_URI` are ignored.
+- `ListExpenses` returns newest `transaction_dt` first; `UpdateExpense` can't change an expense's owner.
+- Config: ports are plain numbers (`50051`, not `:50051`): `GRPC_PORT`, `HTTP_PORT` (GraphQL and health checks) and
+  `METRICS_PORT`, with Docker host ports `GRPC_HOST_PORT`, `HTTP_HOST_PORT` and `METRICS_HOST_PORT`. Required:
+  `GRPC_API_KEY`, `GOOGLE_CLIENT_ID`, `JWT_SECRET`, `MIGRATION_VERSION`.
+- Docker compose publishes the app's ports on `127.0.0.1` only.
 - Go 1.26; all generated code is committed.
 
 ### Removed

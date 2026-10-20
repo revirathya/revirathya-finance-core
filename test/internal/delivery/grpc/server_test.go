@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	// Generated
-	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
+	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/grpc/financecore/v1"
 
 	// Internal
 	dlvGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"

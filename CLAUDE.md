@@ -47,11 +47,13 @@ make migrate-create name=<name>   # creates migrations/<seq>_<name>.{up,down}.sq
 make migrate-version
 
 # Codegen — run after editing source-of-truth files
-make proto-generate   # buf generate: proto/**/*.proto -> gen/go/**
+make proto-generate   # buf generate: proto/**/*.proto -> gen/grpc/** (deps from buf.lock: buf.build/googleapis/googleapis)
 make sqlc-generate    # sqlc generate: sqlc/queries/*.sql -> gen/sqlc
 make gql-generate     # gqlgen generate: graphql/schema/*.graphql -> gen/graphql + resolver stubs in internal/delivery/http/graphql/resolver
 
-# gRPC dev tools (read local proto files; server reflection is only registered with GRPC_ENABLE_REFLECTION=true)
+# gRPC dev tools (read local proto files; currently fail: grpcurl can't resolve google/type/*.proto from -import-path proto.
+# Use grpcurl with server reflection instead, GRPC_ENABLE_REFLECTION=true. Default GRPC_ADDR is the Docker-mode
+# port localhost:51051; pass GRPC_ADDR=localhost:50051 in local mode)
 make grpc-list
 make grpc-describe symbol=financecore.v1.CategoryService
 ```
@@ -77,7 +79,7 @@ domain entity (category, expense, user, Telegram context, Telegram bind code):
 ```
 proto/, graphql/schema/        source-of-truth API contracts (hand-written)
 sqlc/queries/*.sql             hand-written SQL, source of truth for sqlc
-gen/go, gen/graphql, gen/sqlc  generated code (buf / gqlgen / sqlc), committed — do not hand-edit
+gen/grpc, gen/graphql, gen/sqlc  generated code (buf / gqlgen / sqlc), committed — do not hand-edit
 migrations/                    golang-migrate pairs
 cmd/main.go                    package main: config, logger, DB pool, wiring, run(); `healthcheck` subcommand
 cmd/api/startup.go             RunServers: runs the gRPC, HTTP and metrics servers in an errgroup, graceful shutdown
@@ -94,6 +96,7 @@ internal/delivery/grpc/
   server.go                    Setup: handlers, interceptor chain, health + optional reflection -> ServerLayer
   handler/<entity>_handler.go  implement the generated *ServiceServer interfaces
   error/                       ToStatus: domain error -> gRPC status (import with an alias, e.g. errGrpc)
+  converter/                   google.type.Date <-> time.Time, google.type.Decimal <-> decimal.Decimal (input errors are ValidationErrors)
   interceptor/requestid        x-request-id metadata; must stay first in the chain
   interceptor/accesslog        one log line per call (method, code, duration); right after requestid
   interceptor/recovery         panic recovery; after accesslog (so panics are logged), before auth
@@ -169,7 +172,7 @@ reported as a generic internal error (no raw error leakage to clients).
 
 Note: the gRPC `UserTelegramContextService` proto file is `proto/financecore/v1/user_telegram_contexts.proto`
 but the Go package/handler naming uses `UserTelegramContext` (singular `financecorev1.UserTelegramContext*`) —
-check `gen/go/financecore/v1` for the actual generated symbol names when wiring new RPCs.
+check `gen/grpc/financecore/v1` for the actual generated symbol names when wiring new RPCs.
 
 ## Database
 
@@ -206,13 +209,10 @@ including integration, with `-race` (the same command as `make test-integration`
   `updated_at TIMESTAMPTZ DEFAULT NOW()` columns, plus a `set_updated_at` trigger
   (`BEFORE UPDATE ... FOR EACH ROW EXECUTE FUNCTION app.update_ts_now()`), following the pattern in
   `000001_init_schema.up.sql`.
-- API compatibility with downstream consumers:
-  - gRPC (`proto/`): breaking changes, including renumbering fields, are allowed. Downstream services follow
-    this repo's proto changes. Only keep wire compatibility (keep field numbers, `reserved` removed ones) when
-    the user explicitly asks for it for a given change.
-  - Everything else (GraphQL schema, database schema/migrations, env/config, Docker images): treat breaking
-    changes as risky for downstream consumers. Point out the possible conflict before making or recommending
-    such a change.
+- API compatibility: there are no downstream consumers yet. Breaking changes are allowed everywhere (gRPC, GraphQL,
+  database, config, Docker), including renumbering proto fields. Don't mark changes as breaking or add follow-up
+  items for other services; do document how a new service integrates (README: auth, metadata, limits, pagination,
+  errors). Revisit this rule when the first consumer depends on the API.
 - Adding a new entity/feature touches, in order: migration (+ `sqlc.yaml`) -> sqlc query -> `make sqlc-generate` ->
   domain entity, form/patch with `Validate()`, repo interface -> postgres repo impl in
   `internal/repository/postgres/<entity>/` -> usecase -> (grpc handler and/or graphql resolver) -> wire up in
@@ -238,6 +238,13 @@ including integration, with `-race` (the same command as `make test-integration`
 - Metrics: one registry (`platform/metrics`), passed in, never the Prometheus global. Labels must be bounded
   (route names, codes, method names), never client-supplied values or IDs. `/metrics` lives only on the metrics
   server, never on the public HTTP port.
+- Proto messages: one message per resource (`Category`, `Expense`), and every RPC gets its own request and
+  `<Rpc>Response` (buf `STANDARD` lint: `RPC_REQUEST_RESPONSE_UNIQUE`, `RPC_RESPONSE_STANDARD_NAME`), which wraps the
+  resource (`CreateExpenseResponse { Expense expense = 1; }`). Dates are `google.type.Date` and amounts
+  `google.type.Decimal`, never strings; handlers convert with `delivery/grpc/converter`, whose input errors are
+  `ValidationError`s so `ToStatus` returns `INVALID_ARGUMENT` with a `field: reason` message. A `.proto` using
+  `google.type.*` must import it (`google/type/date.proto`); `go_package` is
+  `.../gen/grpc/financecore/v1;financecorev1` and must match `buf.gen.yaml`'s `out`.
 - GraphQL dates, amounts and IDs use the `Date` / `Decimal` / `UUID` scalars, never `String` or `ID`. A scalar's
   `Unmarshal*` returns `errGql.NewInvalidInputError(...)` so bad input is `BAD_USER_INPUT`, not `INTERNAL`. Resolvers
   get `time.Time` / `decimal.Decimal` / `uuid.UUID` and don't parse them.

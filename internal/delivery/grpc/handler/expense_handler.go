@@ -3,21 +3,21 @@ package handler
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	// Generated
-	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
+	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/grpc/financecore/v1"
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
+	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
 
 	// Internal - gRPC
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/converter"
 	errGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/error"
 )
 
@@ -29,6 +29,18 @@ type ExpenseHandler struct {
 func NewExpenseHandler(expUc *expense.ExpenseUsecase) *ExpenseHandler {
 	return &ExpenseHandler{
 		expUc: expUc,
+	}
+}
+
+func toProtoExpense(e *domain.Expense) *financecorev1.Expense {
+	return &financecorev1.Expense{
+		Id:            e.ID.String(),
+		UserId:        e.UserID.String(),
+		CategoryId:    e.CategoryID.String(),
+		CategoryName:  e.CategoryName,
+		TransactionDt: converter.ToProtoDate(e.TransactionDt),
+		Description:   e.Description,
+		Amount:        converter.ToProtoDecimal(e.Amount),
 	}
 }
 
@@ -45,14 +57,14 @@ func (h *ExpenseHandler) CreateExpense(ctx context.Context, req *financecorev1.C
 		return nil, status.Errorf(codes.InvalidArgument, "invalid category_id UUID format: %v", err)
 	}
 
-	tmTransactionDt, err := time.Parse("2006-01-02", req.TransactionDt)
+	tmTransactionDt, err := converter.FromProtoDate("transaction_dt", req.GetTransactionDt())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid transaction_dt Time format (2006-01-02): %v", err)
+		return nil, errGrpc.ToStatus(ctx, "create expense", err)
 	}
 
-	decAmount, err := decimal.NewFromString(req.Amount)
+	decAmount, err := converter.FromProtoDecimal("amount", req.GetAmount())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid amount Decimal format: %v", err)
+		return nil, errGrpc.ToStatus(ctx, "create expense", err)
 	}
 
 	// Create expense
@@ -67,14 +79,7 @@ func (h *ExpenseHandler) CreateExpense(ctx context.Context, req *financecorev1.C
 		return nil, errGrpc.ToStatus(ctx, "create expense", err)
 	}
 
-	resp := &financecorev1.CreateExpenseResponse{
-		Id:            expense.ID.String(),
-		UserId:        expense.UserID.String(),
-		CategoryId:    expense.CategoryID.String(),
-		TransactionDt: expense.TransactionDt.Format("2006-01-02"),
-		Description:   expense.Description,
-		Amount:        expense.Amount.String(),
-	}
+	resp := &financecorev1.CreateExpenseResponse{Expense: toProtoExpense(expense)}
 	return resp, nil
 }
 
@@ -97,16 +102,7 @@ func (h *ExpenseHandler) GetExpenseByID(ctx context.Context, req *financecorev1.
 		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("get expense %s", uuidId.String()), err)
 	}
 
-	resp := &financecorev1.GetExpenseByIDResponse{
-		Id:            expense.ID.String(),
-		UserId:        expense.UserID.String(),
-		CategoryId:    expense.CategoryID.String(),
-		CategoryName:  expense.CategoryName,
-		TransactionDt: expense.TransactionDt.Format("2006-01-02"),
-		Description:   expense.Description,
-		Amount:        expense.Amount.String(),
-	}
-
+	resp := &financecorev1.GetExpenseByIDResponse{Expense: toProtoExpense(expense)}
 	return resp, nil
 }
 
@@ -118,34 +114,22 @@ func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.Li
 	}
 
 	// Parse input
-	var ntmTransactionDt *time.Time
-	if req.TransactionDt != nil {
-		tmTransactionDt, err := time.Parse("2006-01-02", *req.TransactionDt)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid transaction_dt Time format (2006-01-02): %v", err)
-		}
-		ntmTransactionDt = &tmTransactionDt
+	tmTransactionDt, err := converter.FromOptionalProtoDate("transaction_dt", req.GetTransactionDt())
+	if err != nil {
+		return nil, errGrpc.ToStatus(ctx, "list expenses", err)
 	}
 
 	// List expenses
-	expensePage, err := h.expUc.ListExpenses(ctx, userID, ntmTransactionDt, int(req.PageSize), req.PageToken)
+	expensePage, err := h.expUc.ListExpenses(ctx, userID, tmTransactionDt, int(req.PageSize), req.PageToken)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "list expenses", err)
 	}
 
 	resp := &financecorev1.ListExpensesResponse{
-		Expenses: make([]*financecorev1.ExpenseResponse, 0, len(expensePage.Expenses)),
+		Expenses: make([]*financecorev1.Expense, 0, len(expensePage.Expenses)),
 	}
 	for _, expense := range expensePage.Expenses {
-		resp.Expenses = append(resp.Expenses, &financecorev1.ExpenseResponse{
-			Id:            expense.ID.String(),
-			UserId:        expense.UserID.String(),
-			CategoryId:    expense.CategoryID.String(),
-			CategoryName:  expense.CategoryName,
-			TransactionDt: expense.TransactionDt.Format("2006-01-02"),
-			Description:   expense.Description,
-			Amount:        expense.Amount.String(),
-		})
+		resp.Expenses = append(resp.Expenses, toProtoExpense(&expense))
 	}
 
 	if expensePage.NextCursor != nil {
@@ -173,14 +157,14 @@ func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.U
 		return nil, status.Errorf(codes.InvalidArgument, "invalid category_id UUID format: %v", err)
 	}
 
-	tmTransactionDt, err := time.Parse("2006-01-02", req.TransactionDt)
+	tmTransactionDt, err := converter.FromProtoDate("transaction_dt", req.GetTransactionDt())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid transaction_dt Time format (2006-01-02): %v", err)
+		return nil, errGrpc.ToStatus(ctx, "update expense", err)
 	}
 
-	decAmount, err := decimal.NewFromString(req.Amount)
+	decAmount, err := converter.FromProtoDecimal("amount", req.GetAmount())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid amount Decimal format: %v", err)
+		return nil, errGrpc.ToStatus(ctx, "update expense", err)
 	}
 
 	// Update expense
@@ -197,15 +181,7 @@ func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.U
 		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("update expense %s", uuidId.String()), err)
 	}
 
-	resp := &financecorev1.UpdateExpenseResponse{
-		Id:            expense.ID.String(),
-		UserId:        expense.UserID.String(),
-		CategoryId:    expense.CategoryID.String(),
-		TransactionDt: expense.TransactionDt.Format("2006-01-02"),
-		Description:   expense.Description,
-		Amount:        expense.Amount.String(),
-	}
-
+	resp := &financecorev1.UpdateExpenseResponse{Expense: toProtoExpense(expense)}
 	return resp, nil
 }
 

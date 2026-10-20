@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/genproto/googleapis/type/date"
+	gdecimal "google.golang.org/genproto/googleapis/type/decimal"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -16,7 +18,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	// Generated
-	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1"
+	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/grpc/financecore/v1"
 
 	// Internal
 	dlvGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
@@ -91,6 +93,24 @@ func (b *bot) boundUser() (*domain.User, string) {
 	return user, telegramID
 }
 
+// day builds a google.type.Date from "YYYY-MM-DD".
+func day(t *testing.T, s string) *date.Date {
+	t.Helper()
+	d, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		t.Fatalf("bad date %q: %v", s, err)
+	}
+	return &date.Date{Year: int32(d.Year()), Month: int32(d.Month()), Day: int32(d.Day())} //nolint:gosec // G115: test dates
+}
+
+// amount builds a google.type.Decimal.
+func amount(v string) *gdecimal.Decimal { return &gdecimal.Decimal{Value: v} }
+
+// ymd formats a google.type.Date as "YYYY-MM-DD".
+func ymd(d *date.Date) string {
+	return time.Date(int(d.GetYear()), time.Month(d.GetMonth()), int(d.GetDay()), 0, 0, 0, 0, time.UTC).Format("2006-01-02")
+}
+
 func wantCode(t *testing.T, err error, code codes.Code, message string) {
 	t.Helper()
 	st, _ := status.FromError(err)
@@ -119,7 +139,7 @@ func TestBindTelegramAccount(t *testing.T) {
 			t.Fatalf("got %v, want user %v", resp, user.ID)
 		}
 		ctx, err := b.contexts.GetUserTelegramContext(b.as(telegramID), &financecorev1.GetUserTelegramContextRequest{})
-		if err != nil || ctx.GetTelegramChatId() != telegramID {
+		if err != nil || ctx.GetUserTelegramContext().GetTelegramChatId() != telegramID {
 			t.Fatalf("context after bind: %v, %v; want chat %s", ctx, err, telegramID)
 		}
 	})
@@ -199,7 +219,7 @@ func TestCategoryHandler(t *testing.T) {
 
 	t.Run("get returns the caller's category; another user's is NOT_FOUND", func(t *testing.T) {
 		resp, err := b.categories.GetCategoryByID(b.as(aliceTG), &financecorev1.GetCategoryByIDRequest{Id: food.ID.String()})
-		if err != nil || resp.GetId() != food.ID.String() || resp.GetCategoryName() != "Food" {
+		if err != nil || resp.GetCategory().GetId() != food.ID.String() || resp.GetCategory().GetCategoryName() != "Food" {
 			t.Fatalf("got %v, %v; want Food", resp, err)
 		}
 
@@ -223,18 +243,19 @@ func TestExpenseHandler(t *testing.T) {
 
 	t.Run("create returns the stored expense, with the caller as owner", func(t *testing.T) {
 		resp, err := b.expenses.CreateExpense(b.as(aliceTG), &financecorev1.CreateExpenseRequest{
-			CategoryId: food, TransactionDt: "2026-01-15", Description: str("  Lunch "), Amount: "12500.50",
+			CategoryId: food, TransactionDt: day(t, "2026-01-15"), Description: str("  Lunch "), Amount: amount("12500.50"),
 		})
 		if err != nil {
 			t.Fatalf("create: %v", err)
 		}
-		if resp.GetUserId() != alice.ID.String() || resp.GetCategoryId() != food || resp.GetTransactionDt() != "2026-01-15" ||
-			resp.GetDescription() != "Lunch" || resp.GetAmount() != "12500.5" {
-			t.Fatalf("got %v", resp)
+		e := resp.GetExpense()
+		if e.GetUserId() != alice.ID.String() || e.GetCategoryId() != food || e.GetCategoryName() != "Food" ||
+			ymd(e.GetTransactionDt()) != "2026-01-15" || e.GetDescription() != "Lunch" || e.GetAmount().GetValue() != "12500.5" {
+			t.Fatalf("got %v", e)
 		}
 
-		got, err := b.expenses.GetExpenseByID(b.as(aliceTG), &financecorev1.GetExpenseByIDRequest{Id: resp.GetId()})
-		if err != nil || got.GetCategoryName() != "Food" || got.GetDescription() != "Lunch" {
+		got, err := b.expenses.GetExpenseByID(b.as(aliceTG), &financecorev1.GetExpenseByIDRequest{Id: e.GetId()})
+		if err != nil || got.GetExpense().GetCategoryName() != "Food" || got.GetExpense().GetDescription() != "Lunch" {
 			t.Fatalf("get: %v, %v; want Food / Lunch", got, err)
 		}
 	})
@@ -244,12 +265,17 @@ func TestExpenseHandler(t *testing.T) {
 			req     *financecorev1.CreateExpenseRequest
 			message string
 		}{
-			{&financecorev1.CreateExpenseRequest{CategoryId: "nope", TransactionDt: "2026-01-15", Amount: "1"}, "category_id"},
-			{&financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: "15-01-2026", Amount: "1"}, "transaction_dt"},
-			{&financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: "2026-01-15", Amount: "ten"}, "amount"},
-			{&financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: "2026-01-15", Amount: "0"}, "amount: must be greater than 0"},
-			{&financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: "2026-01-15", Amount: "1.005"}, "amount: at most 2 decimal places"},
-			{&financecorev1.CreateExpenseRequest{CategoryId: bobsFood, TransactionDt: "2026-01-15", Amount: "1"}, ""},
+			{&financecorev1.CreateExpenseRequest{CategoryId: "nope", TransactionDt: day(t, "2026-01-15"), Amount: amount("1")}, "category_id"},
+			{&financecorev1.CreateExpenseRequest{CategoryId: food, Amount: amount("1")}, "transaction_dt: is required"},
+			{&financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: &date.Date{Year: 2026, Month: 2, Day: 30}, Amount: amount("1")}, "transaction_dt: must be a valid calendar date"},
+			{&financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: &date.Date{Year: 2026, Month: 13, Day: 1}, Amount: amount("1")}, "transaction_dt: must be a valid calendar date"},
+			{&financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: &date.Date{Month: 10, Day: 17}, Amount: amount("1")}, "transaction_dt: must be a valid calendar date"},
+			{&financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: day(t, "2026-01-15")}, "amount: is required"},
+			{&financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: day(t, "2026-01-15"), Amount: amount("ten")}, "amount: must be a decimal number"},
+			{&financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: day(t, "1999-12-31"), Amount: amount("1")}, "transaction_dt"},
+			{&financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: day(t, "2026-01-15"), Amount: amount("0")}, "amount: must be greater than 0"},
+			{&financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: day(t, "2026-01-15"), Amount: amount("1.005")}, "amount: at most 2 decimal places"},
+			{&financecorev1.CreateExpenseRequest{CategoryId: bobsFood, TransactionDt: day(t, "2026-01-15"), Amount: amount("1")}, ""},
 		} {
 			_, err := b.expenses.CreateExpense(b.as(aliceTG), tt.req)
 			wantCode(t, err, codes.InvalidArgument, tt.message)
@@ -258,24 +284,27 @@ func TestExpenseHandler(t *testing.T) {
 
 	t.Run("update keeps an omitted description and clears it with an empty string", func(t *testing.T) {
 		created, _ := b.expenses.CreateExpense(b.as(aliceTG), &financecorev1.CreateExpenseRequest{
-			CategoryId: food, TransactionDt: "2026-01-15", Description: str("Lunch"), Amount: "10",
+			CategoryId: food, TransactionDt: day(t, "2026-01-15"), Description: str("Lunch"), Amount: amount("10"),
 		})
-		req := &financecorev1.UpdateExpenseRequest{Id: created.GetId(), CategoryId: food, TransactionDt: "2026-01-16", Amount: "20"}
+		req := &financecorev1.UpdateExpenseRequest{Id: created.GetExpense().GetId(), CategoryId: food, TransactionDt: day(t, "2026-01-16"), Amount: amount("20")}
 
-		kept, err := b.expenses.UpdateExpense(b.as(aliceTG), req)
-		if err != nil || kept.GetDescription() != "Lunch" || kept.GetAmount() != "20" || kept.GetTransactionDt() != "2026-01-16" {
+		resp, err := b.expenses.UpdateExpense(b.as(aliceTG), req)
+		kept := resp.GetExpense()
+		if err != nil || kept.GetDescription() != "Lunch" || kept.GetAmount().GetValue() != "20" || ymd(kept.GetTransactionDt()) != "2026-01-16" ||
+			kept.GetCategoryName() != "Food" {
 			t.Fatalf("update without description: %v, %v", kept, err)
 		}
 		req.Description = str("")
-		cleared, err := b.expenses.UpdateExpense(b.as(aliceTG), req)
+		resp, err = b.expenses.UpdateExpense(b.as(aliceTG), req)
+		cleared := resp.GetExpense()
 		if err != nil || cleared.GetDescription() != "" {
 			t.Fatalf("update with empty description: %v, %v", cleared, err)
 		}
 	})
 
 	t.Run("another user's expense is NOT_FOUND; deleting twice is NOT_FOUND", func(t *testing.T) {
-		created, _ := b.expenses.CreateExpense(b.as(aliceTG), &financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: "2026-01-15", Amount: "10"})
-		id := created.GetId()
+		created, _ := b.expenses.CreateExpense(b.as(aliceTG), &financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: day(t, "2026-01-15"), Amount: amount("10")})
+		id := created.GetExpense().GetId()
 
 		_, err := b.expenses.GetExpenseByID(b.as(bobTG), &financecorev1.GetExpenseByIDRequest{Id: id})
 		wantCode(t, err, codes.NotFound, "")
@@ -293,7 +322,7 @@ func TestExpenseHandler(t *testing.T) {
 		carol, carolTG := b.boundUser()
 		carolsFood := testutil.NewCategory(t, carol.ID, "Food").ID.String()
 		for _, dt := range []string{"2026-02-01", "2026-02-02", "2026-02-02", "2026-02-03", "2026-02-04"} {
-			if _, err := b.expenses.CreateExpense(b.as(carolTG), &financecorev1.CreateExpenseRequest{CategoryId: carolsFood, TransactionDt: dt, Amount: "1"}); err != nil {
+			if _, err := b.expenses.CreateExpense(b.as(carolTG), &financecorev1.CreateExpenseRequest{CategoryId: carolsFood, TransactionDt: day(t, dt), Amount: amount("1")}); err != nil {
 				t.Fatalf("create: %v", err)
 			}
 		}
@@ -314,7 +343,7 @@ func TestExpenseHandler(t *testing.T) {
 					t.Fatalf("expense %v repeated or not carol's", e.GetId())
 				}
 				seen[e.GetId()] = true
-				dates = append(dates, e.GetTransactionDt())
+				dates = append(dates, ymd(e.GetTransactionDt()))
 			}
 			if token = resp.GetNextPageToken(); token == "" {
 				break
@@ -324,7 +353,7 @@ func TestExpenseHandler(t *testing.T) {
 			t.Fatalf("dates %v, want %s", dates, want)
 		}
 
-		filtered, err := b.expenses.ListExpenses(b.as(carolTG), &financecorev1.ListExpensesRequest{TransactionDt: str("2026-02-02")})
+		filtered, err := b.expenses.ListExpenses(b.as(carolTG), &financecorev1.ListExpensesRequest{TransactionDt: day(t, "2026-02-02")})
 		if err != nil || len(filtered.GetExpenses()) != 2 || filtered.GetNextPageToken() != "" {
 			t.Fatalf("filtered: %v, %v; want the 2 expenses on 2026-02-02 and no next page", filtered, err)
 		}
@@ -356,9 +385,7 @@ func TestUserTelegramContextHandler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("get: %v", err)
 		}
-		for _, c := range []*financecorev1.GetUserTelegramContextResponse{got, {
-			Conversation: resp.Conversation, State: resp.State, InteractionChatId: resp.InteractionChatId, InteractionMessageId: resp.InteractionMessageId,
-		}} {
+		for _, c := range []*financecorev1.UserTelegramContext{got.GetUserTelegramContext(), resp.GetUserTelegramContext()} {
 			if c.GetConversation() != "add_expense" || c.GetState() != "ask_category" || c.GetInteractionChatId() != "1" || c.GetInteractionMessageId() != "2" {
 				t.Fatalf("context %v, want conversation kept, state updated, interaction ids kept", c)
 			}
@@ -373,7 +400,7 @@ func TestUserTelegramContextHandler(t *testing.T) {
 	t.Run("the context is the caller's: another bound user sees their own", func(t *testing.T) {
 		_, otherTG := b.boundUser()
 		got, err := b.contexts.GetUserTelegramContext(b.as(otherTG), &financecorev1.GetUserTelegramContextRequest{})
-		if err != nil || got.GetTelegramChatId() != otherTG || got.GetState() != "" {
+		if err != nil || got.GetUserTelegramContext().GetTelegramChatId() != otherTG || got.GetUserTelegramContext().GetState() != "" {
 			t.Fatalf("got %v, %v; want the other user's fresh context", got, err)
 		}
 	})

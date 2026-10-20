@@ -2,7 +2,111 @@ syntax = "proto3";
 
 package financecore.v1;
 
-option go_package = "github.com/revirathya/revirathya-finance-core/gen/go/financecore/v1;financecorev1";
+import "google/type/date.proto";
+import "google/type/decimal.proto";
+
+option go_package = "github.com/revirathya/revirathya-finance-core/gen/grpc/financecore/v1;financecorev1";
+
+// An expense, including the name of its category.
+message Expense {
+  // Expense ID (UUID).
+  string id = 1;
+
+  // ID of the user who owns the expense (UUID).
+  string user_id = 2;
+
+  // Category ID (UUID).
+  string category_id = 3;
+
+  // Category name.
+  string category_name = 4;
+
+  // Transaction date (YYYY-MM-DD).
+  google.type.Date transaction_dt = 5;
+
+  // Free-text note about the expense.
+  string description = 6;
+
+  // Amount as a decimal string, e.g. "12500.50".
+  google.type.Decimal amount = 7;
+}
+
+message CreateExpenseRequest {
+  // Category ID (UUID). Must reference an existing category.
+  string category_id = 1;
+
+  // Transaction date (YYYY-MM-DD).
+  google.type.Date transaction_dt = 2;
+
+  // Free-text note about the expense.
+  optional string description = 3;
+
+  // Amount as a decimal string with up to 2 decimal places, e.g. "12500.50".
+  google.type.Decimal amount = 5;
+}
+
+message CreateExpenseResponse {
+  // Wrapped expense objcet
+  Expense expense = 1;
+}
+
+message ListExpensesRequest {
+  // If set, only returns expenses on this date (YYYY-MM-DD).
+  optional google.type.Date transaction_dt = 1;
+
+  // Max expenses to return. default 20, max 50
+  int32 page_size = 2;
+
+  // next_page_token from previous response; empty for the first page
+  string page_token = 3;
+}
+
+message ListExpensesResponse {
+  // Expenses ordered by transaction_dt, newest first.
+  repeated Expense expenses = 1;
+
+  // Pagination navigator token
+  string next_page_token = 2;
+}
+
+message GetExpenseByIDRequest {
+  // Expense ID to fetch (UUID).
+  string id = 1;
+}
+
+message GetExpenseByIDResponse {
+  // Wrapped expense objcet
+  Expense expense = 1;
+}
+
+message UpdateExpenseRequest {
+  // Expense ID to update (UUID).
+  string id = 1;
+
+  // Category ID (UUID). Must reference an existing category.
+  string category_id = 2;
+
+  // Transaction date (YYYY-MM-DD).
+  google.type.Date transaction_dt = 3;
+
+  // Free-text note about the expense. If omitted, the existing value is kept.
+  optional string description = 4;
+
+  // Amount as a decimal string with up to 2 decimal places, e.g. "12500.50".
+  google.type.Decimal amount = 5;
+}
+
+message UpdateExpenseResponse {
+  // Wrapped expense objcet
+  Expense expense = 1;
+}
+
+message DeleteExpenseRequest {
+  // Expense ID to delete (UUID).
+  string id = 1;
+}
+
+message DeleteExpenseResponse {}
 
 // ExpenseService manages users' expense records.
 //
@@ -11,169 +115,22 @@ option go_package = "github.com/revirathya/revirathya-finance-core/gen/go/financ
 //   - transaction_dt is a date in YYYY-MM-DD format.
 //   - amount is a decimal string with up to 2 decimal places, e.g. "12500.50".
 service ExpenseService {
-    // Creates an expense and returns it.
-    rpc CreateExpense (CreateExpenseRequest) returns (CreateExpenseResponse);
+  // Creates an expense and returns it.
+  rpc CreateExpense(CreateExpenseRequest) returns (CreateExpenseResponse);
 
-    // Returns a single expense by its ID, including its category name.
-    rpc GetExpenseByID (GetExpenseByIDRequest) returns (GetExpenseByIDResponse);
+  // Returns a single expense by its ID, including its category name.
+  rpc GetExpenseByID(GetExpenseByIDRequest) returns (GetExpenseByIDResponse);
 
-    // Returns a user's expenses, newest transaction_dt first, optionally
-    // filtered to a single date.
-    rpc ListExpenses (ListExpensesRequest) returns (ListExpensesResponse);
+  // Returns a user's expenses, newest transaction_dt first, optionally
+  // filtered to a single date.
+  rpc ListExpenses(ListExpensesRequest) returns (ListExpensesResponse);
 
-    // Updates an expense and returns it. All fields except description are
-    // required; if description is omitted, the existing value is kept.
-    // send an empty string to clear it.
-    // The expense's owner (user_id) cannot be changed.
-    rpc UpdateExpense (UpdateExpenseRequest) returns (UpdateExpenseResponse);
+  // Updates an expense and returns it. All fields except description are
+  // required; if description is omitted, the existing value is kept.
+  // send an empty string to clear it.
+  // The expense's owner (user_id) cannot be changed.
+  rpc UpdateExpense(UpdateExpenseRequest) returns (UpdateExpenseResponse);
 
-    // Deletes an expense by its ID.
-    rpc DeleteExpense (DeleteExpenseRequest) returns (DeleteExpenseResponse);
+  // Deletes an expense by its ID.
+  rpc DeleteExpense(DeleteExpenseRequest) returns (DeleteExpenseResponse);
 }
-
-// An expense, including the name of its category.
-message ExpenseResponse {
-    // Expense ID (UUID).
-    string id = 1;
-
-    // ID of the user who owns the expense (UUID).
-    string user_id = 2;
-
-    // Category ID (UUID).
-    string category_id = 3;
-
-    // Category name.
-    string category_name = 4;
-
-    // Transaction date (YYYY-MM-DD).
-    string transaction_dt = 5;
-
-    // Free-text note about the expense.
-    string description = 6;
-
-    // Amount as a decimal string, e.g. "12500.50".
-    string amount = 7;
-}
-
-message CreateExpenseRequest {
-    // Category ID (UUID). Must reference an existing category.
-    string category_id = 1;
-
-    // Transaction date (YYYY-MM-DD).
-    string transaction_dt = 2;
-
-    // Free-text note about the expense.
-    optional string description = 3;
-
-    // Amount as a decimal string with up to 2 decimal places, e.g. "12500.50".
-    string amount = 5;
-}
-
-message CreateExpenseResponse {
-    // Expense ID (UUID), generated by the server.
-    string id = 1;
-
-    // ID of the user who owns the expense (UUID).
-    string user_id = 2;
-
-    // Category ID (UUID).
-    string category_id = 3;
-
-    // Transaction date (YYYY-MM-DD).
-    string transaction_dt = 4;
-
-    // Free-text note about the expense.
-    string description = 5;
-
-    // Amount as a decimal string, e.g. "12500.50".
-    string amount = 6;
-}
-
-message ListExpensesRequest {
-    // If set, only returns expenses on this date (YYYY-MM-DD).
-    optional string transaction_dt = 1;
-
-    // Max expenses to return. default 20, max 50
-    int32 page_size = 2;
-
-    // next_page_token from previous response; empty for the first page
-    string page_token = 3;
-}
-
-message ListExpensesResponse {
-    // Expenses ordered by transaction_dt, newest first.
-    repeated ExpenseResponse expenses = 1;
-    string next_page_token = 2;
-}
-
-message GetExpenseByIDRequest {
-    // Expense ID to fetch (UUID).
-    string id = 1;
-}
-
-message GetExpenseByIDResponse {
-    // Expense ID (UUID).
-    string id = 1;
-
-    // ID of the user who owns the expense (UUID).
-    string user_id = 2;
-
-    // Category ID (UUID).
-    string category_id = 3;
-
-    // Category name.
-    string category_name = 4;
-
-    // Transaction date (YYYY-MM-DD).
-    string transaction_dt = 5;
-
-    // Free-text note about the expense.
-    string description = 6;
-
-    // Amount as a decimal string, e.g. "12500.50".
-    string amount = 7;
-}
-
-message UpdateExpenseRequest {
-    // Expense ID to update (UUID).
-    string id = 1;
-
-    // Category ID (UUID). Must reference an existing category.
-    string category_id = 2;
-
-    // Transaction date (YYYY-MM-DD).
-    string transaction_dt = 3;
-
-    // Free-text note about the expense. If omitted, the existing value is kept.
-    optional string description = 4;
-
-    // Amount as a decimal string with up to 2 decimal places, e.g. "12500.50".
-    string amount = 5;
-}
-
-message UpdateExpenseResponse {
-    // Expense ID (UUID).
-    string id = 1;
-
-    // ID of the user who owns the expense (UUID).
-    string user_id = 2;
-
-    // Category ID (UUID).
-    string category_id = 3;
-
-    // Transaction date (YYYY-MM-DD).
-    string transaction_dt = 4;
-
-    // Free-text note about the expense.
-    string description = 5;
-
-    // Amount as a decimal string, e.g. "12500.50".
-    string amount = 6;
-}
-
-message DeleteExpenseRequest {
-    // Expense ID to delete (UUID).
-    string id = 1;
-}
-
-message DeleteExpenseResponse {}
