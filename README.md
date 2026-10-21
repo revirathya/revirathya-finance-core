@@ -486,11 +486,30 @@ make build             # build the binary to bin/financecore
 make proto-generate    # buf: gRPC stubs        -> gen/grpc (googleapis deps pinned in buf.lock)
 make sqlc-generate     # sqlc: query code       -> gen/sqlc  (queries in sqlc/queries)
 make gql-generate      # gqlgen: GraphQL code   -> gen/graphql
+make generate          # all three codegens
+make hooks             # once per clone: use the repo's git hooks (.githooks)
 make lint              # golangci-lint (config: .golangci.yaml)
 make check             # vet + lint + test + proto-lint
 ```
 
 All generated code lives in `gen/` and is committed; CI fails if it's out of date.
+
+### Git hooks and commit messages
+
+Run `make hooks` once after cloning. It points git at `.githooks/`:
+
+- **pre-commit**: `gofmt` and `go vet` when Go files are staged; when a source-of-truth file is staged (`proto/`,
+  `graphql/schema/`, `sqlc/queries/`, `migrations/`, codegen config), it runs `make generate` and fails if `gen/`
+  changed, until you stage the regenerated code. Needs the codegen tools; `SKIP_CODEGEN=1 git commit …` skips that
+  part (CI still checks it).
+- **commit-msg**: every commit message starts with a [Conventional Commits](https://www.conventionalcommits.org/)
+  type: `type(scope): summary`, e.g. `feat(expense): add request_id` or `fix: handle nil description`. Types: `feat`,
+  `fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `build`, `perf`, `revert`; `!` after the type marks a breaking
+  change.
+
+PRs are squash-merged and CI checks the PR title against the same format, since it becomes the commit on `main`.
+Merging into `main` needs a PR, an approval from a code owner (`.github/CODEOWNERS`: `@revirathya/finance-core`),
+and squash merge.
 
 ### Adding an entity
 
@@ -527,6 +546,17 @@ applies `migrations/` and provides `testutil.TestPool`. They never touch your de
 
 To get editor support in integration test files, add the tag to gopls (e.g. `.vscode/settings.json`):
 `"gopls": { "buildFlags": ["-tags=integration"] }`.
+
+## Further docs
+
+- [Architecture decision records](docs/adr/README.md): why the main design choices were made.
+- [Production readiness](docs/production-readiness.md): what's done and what's planned.
+- [Rate limiting spec](docs/rate-limiting.md), [Postman Google login](docs/postman-google-login.md).
+- [Security policy](SECURITY.md): how to report a vulnerability.
+
+## License
+
+[Apache License 2.0](LICENSE). Copyright notice in [NOTICE](NOTICE); keep it when redistributing.
 
 ## Changelog
 

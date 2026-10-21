@@ -36,6 +36,8 @@ make test-integration      # everything: unit + integration (-race -tags=integra
 make vet                   # go vet ./...
 make lint                  # golangci-lint run ./... (config: .golangci.yaml; lints integration tests too)
 make check                 # vet + lint + test + proto-lint
+make generate              # proto-generate + sqlc-generate + gql-generate
+make hooks                 # git config core.hooksPath .githooks (pre-commit: gofmt/vet/codegen drift; commit-msg: conventional commits)
 
 # Single test
 go test ./test/internal/usecase/category/... -run TestCreateCategory -v
@@ -232,6 +234,11 @@ including integration, with `-race` (the same command as `make test-integration`
   every GraphQL type, field, argument and input field a `"description"`. State what the type doesn't: formats,
   limits, ordering, patch/pagination behaviour, and each RPC's error codes. Keep them in sync when behaviour changes,
   then regenerate (`make proto-generate`, `make gql-generate`); `make grpc-describe` and the dev playground show them.
+- Significant decisions are recorded as ADRs in `docs/adr/` (`NNNN-short-title.md`, listed in `docs/adr/README.md`).
+  A decision that changes gets a new record that supersedes the old one; accepted records aren't rewritten. ADR 0007
+  (no compatibility guarantees yet) must be superseded when the first consumer depends on the API.
+- Commit messages and PR titles follow Conventional Commits (`feat(scope): …`, `fix: …`, `chore: …`; the commit-msg hook
+  and CI's `pr-title` job enforce it). PRs are squash-merged into `main`.
 - Code must pass `make lint` (CI runs golangci-lint). Silence a finding only with a targeted
   `//nolint:<linter> // <reason>` on that line, never by disabling the linter.
 - Logging: use `log/slog`'s `*Context` methods (`slog.InfoContext`, `slog.ErrorContext`, ...) wherever a request

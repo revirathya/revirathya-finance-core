@@ -296,14 +296,25 @@ client later. Do these first.
 - [x] gRPC input errors in one format: the handlers parse UUIDs with `converter.ParseUUID` / `ParseOptionalUUID`, so a
   malformed ID is `INVALID_ARGUMENT` with exactly `id: must be a UUID` (or `category_id: …`) instead of the
   library's error text.
-- [ ] `LICENSE`
-- [ ] `CODEOWNERS`
-- [ ] `SECURITY.md`
-- [ ] PR template.
-- [ ] Dependabot or Renovate.
-- [ ] Conventional commits with an automated CHANGELOG and releases.
-- [ ] `make generate` (all three codegens) and a pre-commit hook. (`make lint` exists.)
-- [ ] `docs/` with ADRs, such as "why both gRPC and GraphQL" or "money stored as numeric".
+- [x] `LICENSE`: Apache License 2.0, with the copyright notice in `NOTICE`.
+- [x] `CODEOWNERS`: `* @revirathya/finance-core` (team with access to the repo).
+- [x] `SECURITY.md` (reports through GitHub private vulnerability reporting).
+  - [ ] Enable private vulnerability reporting: repository Settings → Security → Private vulnerability reporting.
+- [x] PR template (`.github/pull_request_template.md`).
+- Dependabot or Renovate: not wanted for now.
+- [x] Conventional commits: every commit (`.githooks/commit-msg`) and PR title (CI `pr-title`,
+  `amannn/action-semantic-pull-request`) starts with a type. An automated CHANGELOG and releases can follow later;
+  the CHANGELOG stays hand-written for now.
+- [x] `make generate` (all three codegens), `make hooks`, and a pre-commit hook (`gofmt`, `go vet`, codegen drift).
+- [x] ADRs in [`docs/adr/`](adr/README.md): two APIs, exact decimals, keyset pagination, patch updates, idempotent
+  creates, layering, and the temporary compatibility rule.
+- [ ] Branch protection on `main` (ruleset "main"): PR required, squash only, code owner review, no force push or
+  deletion.
+  - [x] Required status checks: `test`, `migration-test`, `codegen`.
+  - [ ] Add `pr-title` to the required checks (it appears in the picker once it has run on a PR).
+  - [x] Bypass for organization and repository admins, pull requests only: with one team member, the required
+    code-owner approval can't come from someone other than the author.
+  - [x] Repository settings: squash commit title "Pull request title"; merge and rebase commits disabled.
 
 ### Docker
 - [x] Version-tagged images instead of `:latest` (`VERSION`, `MIGRATION_VERSION`).

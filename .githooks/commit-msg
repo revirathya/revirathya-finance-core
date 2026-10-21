@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# Messages git writes itself (revert, merge, fixup/squash) are allowed as they are
+head -1 "$1" | grep -qE '^(Merge |Revert "|fixup! |squash! )' && exit 0
+
+pattern='^(feat|fix|docs|refactor|test|chore|ci|build|perf|revert)(\([a-z0-9-]+\))?!?: .+'
+if ! head -1 "$1" | grep -qE "$pattern"; then
+  echo "Commit message must start with a type, e.g. 'feat(expense): add request_id' or 'fix: handle nil description'."
+  echo "Types: feat fix docs refactor test chore ci build perf revert; '!' after the type marks a breaking change."
+  exit 1
+fi
