@@ -135,7 +135,7 @@ func (q *Queries) GetExpenseByID(ctx context.Context, arg GetExpenseByIDParams) 
 	return i, err
 }
 
-const getExpenseIDbyRequestID = `-- name: GetExpenseIDbyRequestID :one
+const getExpenseIDByRequestID = `-- name: GetExpenseIDByRequestID :one
 SELECT id
 FROM
   app.expenses
@@ -144,13 +144,13 @@ WHERE
   AND request_id = $2
 `
 
-type GetExpenseIDbyRequestIDParams struct {
+type GetExpenseIDByRequestIDParams struct {
 	UserID    pgtype.UUID `json:"user_id"`
 	RequestID pgtype.UUID `json:"request_id"`
 }
 
-func (q *Queries) GetExpenseIDbyRequestID(ctx context.Context, arg GetExpenseIDbyRequestIDParams) (pgtype.UUID, error) {
-	row := q.db.QueryRow(ctx, getExpenseIDbyRequestID, arg.UserID, arg.RequestID)
+func (q *Queries) GetExpenseIDByRequestID(ctx context.Context, arg GetExpenseIDByRequestIDParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, getExpenseIDByRequestID, arg.UserID, arg.RequestID)
 	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
