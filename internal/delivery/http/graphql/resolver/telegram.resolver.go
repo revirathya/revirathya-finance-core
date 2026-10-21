@@ -9,10 +9,7 @@ import (
 	"context"
 	"time"
 
-	// Generated
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
-
-	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
 )
 
