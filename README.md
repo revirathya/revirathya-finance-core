@@ -205,8 +205,13 @@ A checklist for a new client. Each point links to the section with the details.
 |**Tracing**|Send `x-request-id` to correlate with this service's logs ([request IDs](#request-ids))|Send `X-Request-ID` ([request IDs](#request-ids))|
 |**Health**|`grpc.health.v1.Health/Check` ([health checks](#health-checks))|`GET /healthz`, `GET /readyz`|
 
-Retries: reads and updates are safe to retry. A retried `createExpense` / `CreateExpense` can create a duplicate;
-an idempotency key is planned for when the first client that retries is built.
+Retries: reads, updates and deletes are safe to retry (a retried delete that already succeeded returns `NOT_FOUND`).
+For creating expenses, send a UUID generated **once per user
+action** and reused on every retry: `request_id` on gRPC `CreateExpense`, `requestId` on GraphQL `createExpense`. A
+retry with the same key returns the expense the first call created instead of creating another; reusing a key for a
+different expense is `INVALID_ARGUMENT` / `BAD_USER_INPUT` (`request_id: was already used for a different expense`).
+Keys are per user. Derive the key from something stable (e.g. `uuid.NewSHA1(namespace, chatID + ":" + messageID)`
+for a Telegram message) so it survives a client restart.
 
 ## Authentication
 

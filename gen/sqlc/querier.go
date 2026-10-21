@@ -21,6 +21,7 @@ type Querier interface {
 	DeleteExpense(ctx context.Context, arg DeleteExpenseParams) (int64, error)
 	GetCategoryByID(ctx context.Context, arg GetCategoryByIDParams) (GetCategoryByIDRow, error)
 	GetExpenseByID(ctx context.Context, arg GetExpenseByIDParams) (GetExpenseByIDRow, error)
+	GetExpenseIDbyRequestID(ctx context.Context, arg GetExpenseIDbyRequestIDParams) (pgtype.UUID, error)
 	GetUserByGoogleSub(ctx context.Context, googleSub *string) (GetUserByGoogleSubRow, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error)
 	GetUserTelegramContext(ctx context.Context, userID pgtype.UUID) (GetUserTelegramContextRow, error)

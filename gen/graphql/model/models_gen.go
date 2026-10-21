@@ -47,6 +47,8 @@ type CreateExpenseInput struct {
 	Description *string `json:"description,omitempty"`
 	// Greater than 0, at most 2 decimal places, below 1,000,000,000,000.
 	Amount decimal.Decimal `json:"amount"`
+	// Optional UUID; retrying with the same request_id returns the expense the first call created instead of creating another; reusing it for a different expense is BAD_USER_INPUT.
+	RequestID *uuid.UUID `json:"requestId,omitempty"`
 }
 
 // An expense owned by the signed-in user.

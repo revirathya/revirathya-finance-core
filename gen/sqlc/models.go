@@ -25,6 +25,7 @@ type AppExpense struct {
 	Amount        pgtype.Numeric     `json:"amount"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	RequestID     pgtype.UUID        `json:"request_id"`
 }
 
 type AppTelegramBindCode struct {

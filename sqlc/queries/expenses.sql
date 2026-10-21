@@ -4,16 +4,29 @@ INSERT INTO app.expenses (
   category_id,
   transaction_dt,
   description,
-  amount
+  amount,
+  request_id
 )
 VALUES (
   sqlc.arg('user_id'),
   sqlc.arg('category_id'),
   sqlc.arg('transaction_dt'),
   COALESCE(sqlc.narg('description')::TEXT, ''),
-  sqlc.arg('amount')
+  sqlc.arg('amount'),
+  sqlc.narg('request_id')::UUID
 )
+ON CONFLICT (user_id, request_id)
+  WHERE request_id IS NOT NULL
+  DO NOTHING
 RETURNING *;
+
+-- name: GetExpenseIDByRequestID :one
+SELECT id
+FROM
+  app.expenses
+WHERE
+  user_id = sqlc.arg('user_id')
+  AND request_id = sqlc.arg('request_id');
 
 -- name: GetExpenseByID :one
 SELECT

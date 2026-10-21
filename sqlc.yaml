@@ -8,6 +8,7 @@ sql:
       - "migrations/000004_categories_per_user.up.sql"
       - "migrations/000005_expense_description_not_null.up.sql"
       - "migrations/000006_expense_pagination_index.up.sql"
+      - "migrations/000007_expense_request_id.up.sql"
     queries: "sqlc/queries"
     gen:
       go:

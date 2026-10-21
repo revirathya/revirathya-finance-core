@@ -44,6 +44,9 @@ message CreateExpenseRequest {
 
   // Amount: greater than 0, at most 2 decimal places, below 1,000,000,000,000.
   google.type.Decimal amount = 5;
+
+  // Optional UUID; retrying with the same request_id returns the expense the first call created instead of creating another; reusing it for a different expense is INVALID_ARGUMENT.
+  optional string request_id = 6;
 }
 
 // Response for CreateExpense.

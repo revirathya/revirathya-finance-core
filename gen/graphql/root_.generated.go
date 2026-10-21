@@ -621,6 +621,9 @@ input CreateExpenseInput {
 
     "Greater than 0, at most 2 decimal places, below 1,000,000,000,000."
     amount: Decimal!
+
+    "Optional UUID; retrying with the same request_id returns the expense the first call created instead of creating another; reusing it for a different expense is BAD_USER_INPUT."
+    requestId: UUID
 }
 
 "Patch: omitted (or null) fields keep their current value. Fields that are sent follow the same rules as on create."

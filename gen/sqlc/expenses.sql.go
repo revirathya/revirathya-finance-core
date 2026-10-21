@@ -17,16 +17,21 @@ INSERT INTO app.expenses (
   category_id,
   transaction_dt,
   description,
-  amount
+  amount,
+  request_id
 )
 VALUES (
   $1,
   $2,
   $3,
   COALESCE($4::TEXT, ''),
-  $5
+  $5,
+  $6::UUID
 )
-RETURNING id, user_id, category_id, transaction_dt, description, amount, created_at, updated_at
+ON CONFLICT (user_id, request_id)
+  WHERE request_id IS NOT NULL
+  DO NOTHING
+RETURNING id, user_id, category_id, transaction_dt, description, amount, created_at, updated_at, request_id
 `
 
 type CreateExpenseParams struct {
@@ -35,6 +40,7 @@ type CreateExpenseParams struct {
 	TransactionDt pgtype.Date    `json:"transaction_dt"`
 	Description   *string        `json:"description"`
 	Amount        pgtype.Numeric `json:"amount"`
+	RequestID     pgtype.UUID    `json:"request_id"`
 }
 
 func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (AppExpense, error) {
@@ -44,6 +50,7 @@ func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (A
 		arg.TransactionDt,
 		arg.Description,
 		arg.Amount,
+		arg.RequestID,
 	)
 	var i AppExpense
 	err := row.Scan(
@@ -55,6 +62,7 @@ func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (A
 		&i.Amount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RequestID,
 	)
 	return i, err
 }
@@ -125,6 +133,27 @@ func (q *Queries) GetExpenseByID(ctx context.Context, arg GetExpenseByIDParams) 
 		&i.Amount,
 	)
 	return i, err
+}
+
+const getExpenseIDbyRequestID = `-- name: GetExpenseIDbyRequestID :one
+SELECT id
+FROM
+  app.expenses
+WHERE
+  user_id = $1
+  AND request_id = $2
+`
+
+type GetExpenseIDbyRequestIDParams struct {
+	UserID    pgtype.UUID `json:"user_id"`
+	RequestID pgtype.UUID `json:"request_id"`
+}
+
+func (q *Queries) GetExpenseIDbyRequestID(ctx context.Context, arg GetExpenseIDbyRequestIDParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, getExpenseIDbyRequestID, arg.UserID, arg.RequestID)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const listExpenses = `-- name: ListExpenses :many
@@ -215,7 +244,7 @@ SET
 WHERE
   id = $5
   AND user_id = $6
-RETURNING id, user_id, category_id, transaction_dt, description, amount, created_at, updated_at
+RETURNING id, user_id, category_id, transaction_dt, description, amount, created_at, updated_at, request_id
 `
 
 type UpdateExpenseParams struct {
@@ -246,6 +275,7 @@ func (q *Queries) UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (A
 		&i.Amount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RequestID,
 	)
 	return i, err
 }

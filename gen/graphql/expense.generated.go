@@ -267,7 +267,7 @@ func (ec *executionContext) unmarshalInputCreateExpenseInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"transactionDt", "categoryId", "description", "amount"}
+	fieldsInOrder := [...]string{"transactionDt", "categoryId", "description", "amount", "requestId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -302,6 +302,13 @@ func (ec *executionContext) unmarshalInputCreateExpenseInput(ctx context.Context
 				return it, err
 			}
 			it.Amount = data
+		case "requestId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("requestId"))
+			data, err := ec.unmarshalOUUID2ᚖgithubᚗcomᚋgoogleᚋuuidᚐUUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RequestID = data
 		}
 	}
 	return it, nil

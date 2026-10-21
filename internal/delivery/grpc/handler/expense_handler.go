@@ -63,12 +63,18 @@ func (h *ExpenseHandler) CreateExpense(ctx context.Context, req *financecorev1.C
 		return nil, errGrpc.ToStatus(ctx, "create expense", err)
 	}
 
+	requestID, err := converter.ParseOptionalUUID("request_id", req.RequestId)
+	if err != nil {
+		return nil, errGrpc.ToStatus(ctx, "create expense", err)
+	}
+
 	// Create expense
 	form := domain.ExpenseForm{
 		CategoryID:    categoryID,
 		TransactionDt: transactionDt,
 		Description:   req.Description,
 		Amount:        amount,
+		RequestID:     requestID,
 	}
 	expense, err := h.expense.CreateExpense(ctx, userID, form)
 	if err != nil {
@@ -98,8 +104,8 @@ func (h *ExpenseHandler) GetExpenseByID(ctx context.Context, req *financecorev1.
 		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("get expense %s", id.String()), err)
 	}
 
-	resp := &financecorev1.GetExpenseByIDResponse{Expense: toProtoExpense(expense)}
-	return resp, nil
+	response := &financecorev1.GetExpenseByIDResponse{Expense: toProtoExpense(expense)}
+	return response, nil
 }
 
 func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.ListExpensesRequest) (*financecorev1.ListExpensesResponse, error) {
