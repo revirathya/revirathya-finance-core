@@ -487,6 +487,27 @@ make check             # vet + lint + test + proto-lint
 
 All generated code lives in `gen/` and is committed; CI fails if it's out of date.
 
+### Adding an entity
+
+Every entity is a vertical slice through the same layers. In order:
+
+1. **Migration**: `make migrate-create name=<name>`, with `created_at` / `updated_at` and the `set_updated_at`
+   trigger; add the `.up.sql` to `sqlc.yaml`.
+2. **SQL**: queries in `sqlc/queries/<entity>.sql` (lists use keyset pagination), then `make sqlc-generate`.
+3. **Domain** (`internal/domain/<entity>.go`): the entity, a `Form` and a `Patch` (pointer fields) with `Validate()`,
+   the repository interface, cursor and page types for lists; add the interface to `domain.Repository`.
+4. **Repository** (`internal/repository/postgres/<entity>/`): implement the interface, map Postgres errors to
+   domain errors, read the row back after writes that have derived fields; add it to `BootstrapRepository`.
+5. **Usecase** (`internal/usecase/<entity>/`): validate, call the repository, build pages; add it to `usecase.Usecase`.
+6. **APIs**, as needed: the proto messages and RPCs (`make proto-generate`) plus a handler registered in
+   `internal/delivery/grpc/server.go`; the GraphQL schema (`make gql-generate`) plus resolvers. Document every field,
+   argument and error code in the contract.
+7. **Tests**: domain `Validate()`, usecase with a hand-written fake repository, repository integration, and the
+   end-to-end tests for each API.
+8. **Docs**: README (API behaviour, the integration table if needed), CHANGELOG.
+
+CLAUDE.md's *Conventions* section has the rules each step follows (patch updates, pagination, error mapping, scalars).
+
 ### Tests
 
 ```sh

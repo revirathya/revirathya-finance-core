@@ -7,7 +7,7 @@ import (
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
-	"github.com/revirathya/revirathya-finance-core/internal/utils"
+	"github.com/revirathya/revirathya-finance-core/internal/domain/pagination"
 )
 
 // Usecase: Category
@@ -38,7 +38,7 @@ func (uc *CategoryUsecase) GetCategoryByID(ctx context.Context, id uuid.UUID, us
 
 func (uc *CategoryUsecase) ListCategories(ctx context.Context, userID uuid.UUID, pageSize int, pageToken string) (*domain.CategoryPage, error) {
 	// Define page size
-	ps, err := utils.SetPageSize(pageSize)
+	ps, err := pagination.SetPageSize(pageSize)
 	if err != nil {
 		return nil, err
 	}

@@ -21,7 +21,7 @@ func (r *mutationResolver) CreateCategory(ctx context.Context, input model.Creat
 		return nil, err
 	}
 
-	result, err := r.usecase.Category.CreateCategory(ctx, userID, input.CategoryName)
+	result, err := r.category.CreateCategory(ctx, userID, input.CategoryName)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func (r *mutationResolver) UpdateCategory(ctx context.Context, id uuid.UUID, pat
 		return nil, err
 	}
 
-	result, err := r.usecase.Category.UpdateCategory(ctx, id, userID, domain.CategoryPatch{
+	result, err := r.category.UpdateCategory(ctx, id, userID, domain.CategoryPatch{
 		CategoryName: patch.CategoryName,
 	})
 	if err != nil {
@@ -61,7 +61,7 @@ func (r *mutationResolver) DeleteCategory(ctx context.Context, id uuid.UUID) (uu
 		return uuid.Nil, err
 	}
 
-	if err = r.usecase.Category.DeleteCategory(ctx, id, userID); err != nil {
+	if err = r.category.DeleteCategory(ctx, id, userID); err != nil {
 		return uuid.Nil, err
 	}
 
@@ -75,7 +75,7 @@ func (r *queryResolver) Category(ctx context.Context, id uuid.UUID) (*model.Cate
 		return nil, err
 	}
 
-	result, err := r.usecase.Category.GetCategoryByID(ctx, id, userID)
+	result, err := r.category.GetCategoryByID(ctx, id, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func (r *queryResolver) Categories(ctx context.Context, first *int, after *strin
 	}
 
 	// List categories
-	categoryPage, err := r.usecase.Category.ListCategories(ctx, userID, pageSize, pageToken)
+	categoryPage, err := r.category.ListCategories(ctx, userID, pageSize, pageToken)
 	if err != nil {
 		return nil, err
 	}

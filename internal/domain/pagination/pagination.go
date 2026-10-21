@@ -1,4 +1,4 @@
-package utils
+package pagination
 
 import (
 	"github.com/revirathya/revirathya-finance-core/internal/domain/constant"

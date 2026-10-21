@@ -24,7 +24,7 @@ type Expense struct {
 	Amount        decimal.Decimal
 }
 
-// Form & Patch
+// Form
 type ExpenseForm struct {
 	UserID        uuid.UUID
 	CategoryID    uuid.UUID
@@ -56,6 +56,7 @@ func (f *ExpenseForm) Validate() error {
 	return nil
 }
 
+// Patch
 type ExpensePatch struct {
 	CategoryID    *uuid.UUID
 	TransactionDt *time.Time

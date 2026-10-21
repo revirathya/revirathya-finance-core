@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -14,7 +13,6 @@ import (
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
-	"github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
 
 	// Internal - gRPC
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/converter"
@@ -23,12 +21,12 @@ import (
 
 type ExpenseHandler struct {
 	financecorev1.UnimplementedExpenseServiceServer
-	expUc *expense.ExpenseUsecase
+	expense expenseUsecase
 }
 
-func NewExpenseHandler(expUc *expense.ExpenseUsecase) *ExpenseHandler {
+func NewExpenseHandler(expense expenseUsecase) *ExpenseHandler {
 	return &ExpenseHandler{
-		expUc: expUc,
+		expense: expense,
 	}
 }
 
@@ -52,28 +50,28 @@ func (h *ExpenseHandler) CreateExpense(ctx context.Context, req *financecorev1.C
 	}
 
 	// Parse input
-	uuidCategoryId, err := uuid.Parse(req.CategoryId)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid category_id UUID format: %v", err)
-	}
-
-	tmTransactionDt, err := converter.FromProtoDate("transaction_dt", req.GetTransactionDt())
+	categoryID, err := converter.ParseUUID("category_id", req.GetCategoryId())
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "create expense", err)
 	}
 
-	decAmount, err := converter.FromProtoDecimal("amount", req.GetAmount())
+	transactionDt, err := converter.FromProtoDate("transaction_dt", req.GetTransactionDt())
+	if err != nil {
+		return nil, errGrpc.ToStatus(ctx, "create expense", err)
+	}
+
+	amount, err := converter.FromProtoDecimal("amount", req.GetAmount())
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "create expense", err)
 	}
 
 	// Create expense
-	expense, err := h.expUc.CreateExpense(ctx,
+	expense, err := h.expense.CreateExpense(ctx,
 		userID,
-		uuidCategoryId,
-		tmTransactionDt,
+		categoryID,
+		transactionDt,
 		req.Description,
-		decAmount,
+		amount,
 	)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "create expense", err)
@@ -91,15 +89,15 @@ func (h *ExpenseHandler) GetExpenseByID(ctx context.Context, req *financecorev1.
 	}
 
 	// Parse input
-	uuidId, err := uuid.Parse(req.Id)
+	id, err := converter.ParseUUID("id", req.GetId())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)
+		return nil, errGrpc.ToStatus(ctx, "get expense by id", err)
 	}
 
 	// Get expense by ID
-	expense, err := h.expUc.GetExpenseByID(ctx, uuidId, userID)
+	expense, err := h.expense.GetExpenseByID(ctx, id, userID)
 	if err != nil {
-		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("get expense %s", uuidId.String()), err)
+		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("get expense %s", id.String()), err)
 	}
 
 	resp := &financecorev1.GetExpenseByIDResponse{Expense: toProtoExpense(expense)}
@@ -120,7 +118,7 @@ func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.Li
 	}
 
 	// List expenses
-	expensePage, err := h.expUc.ListExpenses(ctx, userID, tmTransactionDt, int(req.PageSize), req.PageToken)
+	expensePage, err := h.expense.ListExpenses(ctx, userID, tmTransactionDt, int(req.PageSize), req.PageToken)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "list expenses", err)
 	}
@@ -147,40 +145,36 @@ func (h *ExpenseHandler) UpdateExpense(ctx context.Context, req *financecorev1.U
 	}
 
 	// Parse input
-	uuidId, err := uuid.Parse(req.Id)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)
-	}
-
-	var uuidCategoryId *uuid.UUID
-	if req.CategoryId != nil {
-		id, err := uuid.Parse(*req.CategoryId)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "invalid category_id UUID format: %v", err)
-		}
-		uuidCategoryId = &id
-	}
-
-	tmTransactionDt, err := converter.FromOptionalProtoDate("transaction_dt", req.GetTransactionDt())
+	id, err := converter.ParseUUID("id", req.GetId())
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "update expense", err)
 	}
 
-	decAmount, err := converter.FromOptionalProtoDecimal("amount", req.GetAmount())
+	categoryID, err := converter.ParseOptionalUUID("category_id", req.CategoryId)
+	if err != nil {
+		return nil, errGrpc.ToStatus(ctx, "update expense", err)
+	}
+
+	transactionDt, err := converter.FromOptionalProtoDate("transaction_dt", req.GetTransactionDt())
+	if err != nil {
+		return nil, errGrpc.ToStatus(ctx, "update expense", err)
+	}
+
+	amount, err := converter.FromOptionalProtoDecimal("amount", req.GetAmount())
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "update expense", err)
 	}
 
 	// Update expense
 	patch := domain.ExpensePatch{
-		CategoryID:    uuidCategoryId,
-		TransactionDt: tmTransactionDt,
+		CategoryID:    categoryID,
+		TransactionDt: transactionDt,
 		Description:   req.Description,
-		Amount:        decAmount,
+		Amount:        amount,
 	}
-	expense, err := h.expUc.UpdateExpense(ctx, uuidId, userID, patch)
+	expense, err := h.expense.UpdateExpense(ctx, id, userID, patch)
 	if err != nil {
-		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("update expense %s", uuidId.String()), err)
+		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("update expense %s", id.String()), err)
 	}
 
 	resp := &financecorev1.UpdateExpenseResponse{Expense: toProtoExpense(expense)}
@@ -195,14 +189,14 @@ func (h *ExpenseHandler) DeleteExpense(ctx context.Context, req *financecorev1.D
 	}
 
 	// Parse input
-	uuidId, err := uuid.Parse(req.Id)
+	id, err := converter.ParseUUID("id", req.GetId())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)
 	}
 
 	// Delete expense
-	if err := h.expUc.DeleteExpense(ctx, uuidId, userID); err != nil {
-		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("delete expense %s", uuidId.String()), err)
+	if err := h.expense.DeleteExpense(ctx, id, userID); err != nil {
+		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("delete expense %s", id.String()), err)
 	}
 
 	return &financecorev1.DeleteExpenseResponse{}, nil

@@ -1,4 +1,4 @@
-package utils_test
+package pagination_test
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain/constant"
 	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
-	"github.com/revirathya/revirathya-finance-core/internal/utils"
+	"github.com/revirathya/revirathya-finance-core/internal/domain/pagination"
 )
 
 func TestSetPageSize(t *testing.T) {
@@ -18,14 +18,14 @@ func TestSetPageSize(t *testing.T) {
 		{constant.MaxPageSize + 1, constant.MaxPageSize},
 		{1_000_000, constant.MaxPageSize},
 	} {
-		got, err := utils.SetPageSize(tt.in)
+		got, err := pagination.SetPageSize(tt.in)
 		if err != nil || got != tt.want {
 			t.Fatalf("SetPageSize(%d) = %d, %v; want %d", tt.in, got, err, tt.want)
 		}
 	}
 
 	t.Run("negative is a ValidationError for page_size", func(t *testing.T) {
-		_, err := utils.SetPageSize(-1)
+		_, err := pagination.SetPageSize(-1)
 		var vErr *errDom.ValidationError
 		if !errors.As(err, &vErr) || vErr.Field != "page_size" || vErr.Reason == "" {
 			t.Fatalf("got %#v, want a ValidationError for page_size", err)

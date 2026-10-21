@@ -3,7 +3,6 @@ package usecase
 import (
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
-	"github.com/revirathya/revirathya-finance-core/internal/repository"
 
 	// Usecase
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/auth"
@@ -24,13 +23,13 @@ type Usecase struct {
 	UserTelegramContext *usertelegramcontext.UserTelegramContextUsecase
 }
 
-func BootstrapUsecase(gVeri domain.GoogleVerifier, repo repository.Repository) Usecase {
+func BootstrapUsecase(gVeri domain.GoogleVerifier, repo domain.Repository) Usecase {
 	return Usecase{
-		Auth:                auth.NewAuthUsecase(gVeri, repo.User),
-		Category:            category.NewCategoryUsecase(repo.Category),
-		Expense:             expense.NewExpenseUsecase(repo.Expense),
-		TelegramBindCode:    telegrambindcode.NewTelegramBindCodeUsecase(repo.TelegramBindCode),
-		User:                user.NewUserUsecase(repo.User),
-		UserTelegramContext: usertelegramcontext.NewUserTelegramContextUsecase(repo.UserTelegramContext),
+		Auth:                auth.NewAuthUsecase(gVeri, repo.User()),
+		Category:            category.NewCategoryUsecase(repo.Category()),
+		Expense:             expense.NewExpenseUsecase(repo.Expense()),
+		TelegramBindCode:    telegrambindcode.NewTelegramBindCodeUsecase(repo.TelegramBindCode()),
+		User:                user.NewUserUsecase(repo.User()),
+		UserTelegramContext: usertelegramcontext.NewUserTelegramContextUsecase(repo.UserTelegramContext()),
 	}
 }

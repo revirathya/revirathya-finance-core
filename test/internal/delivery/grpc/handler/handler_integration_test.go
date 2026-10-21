@@ -262,7 +262,7 @@ func TestCategoryHandler(t *testing.T) {
 
 	t.Run("a malformed ID is INVALID_ARGUMENT", func(t *testing.T) {
 		_, err := b.categories.GetCategoryByID(b.as(aliceTG), &financecorev1.GetCategoryByIDRequest{Id: "nope"})
-		wantCode(t, err, codes.InvalidArgument, "")
+		wantCode(t, err, codes.InvalidArgument, "id: must be a UUID")
 	})
 }
 
@@ -298,7 +298,7 @@ func TestExpenseHandler(t *testing.T) {
 			req     *financecorev1.CreateExpenseRequest
 			message string
 		}{
-			{&financecorev1.CreateExpenseRequest{CategoryId: "nope", TransactionDt: day(t, "2026-01-15"), Amount: amount("1")}, "category_id"},
+			{&financecorev1.CreateExpenseRequest{CategoryId: "nope", TransactionDt: day(t, "2026-01-15"), Amount: amount("1")}, "category_id: must be a UUID"},
 			{&financecorev1.CreateExpenseRequest{CategoryId: food, Amount: amount("1")}, "transaction_dt: is required"},
 			{&financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: &date.Date{Year: 2026, Month: 2, Day: 30}, Amount: amount("1")}, "transaction_dt: must be a valid calendar date"},
 			{&financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: &date.Date{Year: 2026, Month: 13, Day: 1}, Amount: amount("1")}, "transaction_dt: must be a valid calendar date"},
@@ -370,6 +370,33 @@ func TestExpenseHandler(t *testing.T) {
 		wantCode(t, err, codes.InvalidArgument, "amount: must be greater than 0")
 		_, err = b.expenses.UpdateExpense(b.as(aliceTG), &financecorev1.UpdateExpenseRequest{Id: id, TransactionDt: &date.Date{Year: 2026, Month: 2, Day: 30}})
 		wantCode(t, err, codes.InvalidArgument, "transaction_dt: must be a valid calendar date")
+	})
+
+	t.Run("a malformed UUID is INVALID_ARGUMENT naming the field, on every RPC", func(t *testing.T) {
+		bad := "nope"
+		for name, call := range map[string]func() error{
+			"GetExpenseByID": func() error {
+				_, err := b.expenses.GetExpenseByID(b.as(aliceTG), &financecorev1.GetExpenseByIDRequest{Id: bad})
+				return err
+			},
+			"UpdateExpense id": func() error {
+				_, err := b.expenses.UpdateExpense(b.as(aliceTG), &financecorev1.UpdateExpenseRequest{Id: bad})
+				return err
+			},
+			"DeleteExpense": func() error {
+				_, err := b.expenses.DeleteExpense(b.as(aliceTG), &financecorev1.DeleteExpenseRequest{Id: bad})
+				return err
+			},
+		} {
+			t.Run(name, func(t *testing.T) { wantCode(t, call(), codes.InvalidArgument, "id: must be a UUID") })
+		}
+
+		created, err := b.expenses.CreateExpense(b.as(aliceTG), &financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: day(t, "2026-01-15"), Amount: amount("1")})
+		if err != nil {
+			t.Fatalf("create: %v", err)
+		}
+		_, err = b.expenses.UpdateExpense(b.as(aliceTG), &financecorev1.UpdateExpenseRequest{Id: created.GetExpense().GetId(), CategoryId: &bad})
+		wantCode(t, err, codes.InvalidArgument, "category_id: must be a UUID")
 	})
 
 	t.Run("another user's expense is NOT_FOUND; deleting twice is NOT_FOUND", func(t *testing.T) {

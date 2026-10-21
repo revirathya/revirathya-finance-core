@@ -24,7 +24,7 @@ func (r *mutationResolver) CreateExpense(ctx context.Context, input model.Create
 	}
 
 	// Create expense
-	expense, err := r.usecase.Expense.CreateExpense(
+	expense, err := r.expense.CreateExpense(
 		ctx,
 		userID,
 		input.CategoryID,
@@ -57,7 +57,7 @@ func (r *mutationResolver) UpdateExpense(ctx context.Context, id uuid.UUID, patc
 	}
 
 	// Parse input
-	expense, err := r.usecase.Expense.UpdateExpense(ctx, id, userID, domain.ExpensePatch{
+	expense, err := r.expense.UpdateExpense(ctx, id, userID, domain.ExpensePatch{
 		CategoryID:    patch.CategoryID,
 		TransactionDt: patch.TransactionDt,
 		Description:   patch.Description,
@@ -88,7 +88,7 @@ func (r *mutationResolver) DeleteExpense(ctx context.Context, id uuid.UUID) (uui
 	}
 
 	// Delete expense
-	if err = r.usecase.Expense.DeleteExpense(ctx, id, userID); err != nil {
+	if err = r.expense.DeleteExpense(ctx, id, userID); err != nil {
 		return uuid.Nil, err
 	}
 	return id, nil
@@ -103,7 +103,7 @@ func (r *queryResolver) Expense(ctx context.Context, id uuid.UUID) (*model.Expen
 	}
 
 	// Get expense by ID
-	expense, err := r.usecase.Expense.GetExpenseByID(ctx, id, userID)
+	expense, err := r.expense.GetExpenseByID(ctx, id, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func (r *queryResolver) Expenses(ctx context.Context, transactionDt *time.Time, 
 		pageToken = *after
 	}
 
-	expensePage, err := r.usecase.Expense.ListExpenses(ctx, userID, transactionDt, pageSize, pageToken)
+	expensePage, err := r.expense.ListExpenses(ctx, userID, transactionDt, pageSize, pageToken)
 	if err != nil {
 		return nil, err
 	}

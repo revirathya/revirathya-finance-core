@@ -2,6 +2,7 @@ package converter_test
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -121,4 +122,38 @@ func TestDecimal(t *testing.T) {
 			wantValidation(t, err, "amount", "must be a decimal number")
 		})
 	}
+}
+
+func TestUUID(t *testing.T) {
+	const s = "9b2f6c1e-4a7d-4c3e-8f1a-2d5e6b7c8a90"
+
+	t.Run("ParseUUID parses lowercase and uppercase", func(t *testing.T) {
+		for _, in := range []string{s, strings.ToUpper(s)} {
+			got, err := converter.ParseUUID("id", in)
+			if err != nil || got.String() != s {
+				t.Fatalf("ParseUUID(%q) = %v, %v; want %s", in, got, err, s)
+			}
+		}
+	})
+
+	for _, in := range []string{"", "nope", "9b2f6c1e-4a7d-4c3e-8f1a", s + "0"} {
+		t.Run("ParseUUID rejects "+strconv.Quote(in), func(t *testing.T) {
+			_, err := converter.ParseUUID("category_id", in)
+			wantValidation(t, err, "category_id", "must be a UUID")
+		})
+	}
+
+	t.Run("ParseOptionalUUID: nil is not set; a value is parsed and validated", func(t *testing.T) {
+		if got, err := converter.ParseOptionalUUID("category_id", nil); got != nil || err != nil {
+			t.Fatalf("nil: got %v, %v; want nil, nil", got, err)
+		}
+		in := s
+		got, err := converter.ParseOptionalUUID("category_id", &in)
+		if err != nil || got == nil || got.String() != s {
+			t.Fatalf("got %v, %v; want %s", got, err, s)
+		}
+		bad := "nope"
+		_, err = converter.ParseOptionalUUID("category_id", &bad)
+		wantValidation(t, err, "category_id", "must be a UUID")
+	})
 }

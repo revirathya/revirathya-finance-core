@@ -9,7 +9,7 @@ import (
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
-	"github.com/revirathya/revirathya-finance-core/internal/utils"
+	"github.com/revirathya/revirathya-finance-core/internal/domain/pagination"
 )
 
 // Usecase: Expense
@@ -50,7 +50,7 @@ func (uc *ExpenseUsecase) ListExpenses(
 	pageToken string,
 ) (*domain.ExpensePage, error) {
 	// Define page size
-	ps, err := utils.SetPageSize(pageSize)
+	ps, err := pagination.SetPageSize(pageSize)
 	if err != nil {
 		return nil, err
 	}
