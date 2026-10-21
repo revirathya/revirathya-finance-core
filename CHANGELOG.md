@@ -59,6 +59,8 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
 - Categories are paged by name: GraphQL `categories(first, after)` returns `CategoryConnection!` (`nodes`, `pageInfo`);
   gRPC `ListCategories` takes `page_size` / `page_token` and returns `next_page_token`. Default 20, max 50.
 - gRPC `ListExpenses` is paged: `page_size` (default 20, max 50), `page_token`, and `next_page_token` in the response.
+- GraphQL create mutations take `form:` instead of `input:` (`createCategory(form: …)`, `createExpense(form: …)`),
+  matching `patch:` on updates.
 - Updates are patches: `updateCategory`, `updateExpense`, `updateUser` and gRPC `UpdateExpense` /
   `UpdateUserTelegramContext` change only the fields that are sent; omitted (or `null`) fields keep their value, and
   `""` clears `description` / `lastName`. GraphQL update inputs are all nullable; `updateUser` takes `patch:`.

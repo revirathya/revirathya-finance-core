@@ -4,30 +4,27 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	// Generated
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/grpc/financecore/v1"
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
-	"github.com/revirathya/revirathya-finance-core/internal/usecase/category"
+	"github.com/revirathya/revirathya-finance-core/internal/domain/pagination"
 
 	// Internal - gRPC
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/converter"
 	errGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/error"
 )
 
 type CategoryHandler struct {
 	financecorev1.UnimplementedCategoryServiceServer
-	ctgUc *category.CategoryUsecase
+	category categoryUsecase
 }
 
-func NewCategoryHandler(ctgUc *category.CategoryUsecase) *CategoryHandler {
+func NewCategoryHandler(ctgUc categoryUsecase) *CategoryHandler {
 	return &CategoryHandler{
-		ctgUc: ctgUc,
+		category: ctgUc,
 	}
 }
 
@@ -46,7 +43,12 @@ func (h *CategoryHandler) ListCategories(ctx context.Context, req *financecorev1
 	}
 
 	// List categories
-	categoryPage, err := h.ctgUc.ListCategories(ctx, userID, int(req.PageSize), req.PageToken)
+	pageReq := pagination.Request{
+		Size:  int(req.PageSize),
+		Token: req.PageToken,
+	}
+
+	categoryPage, err := h.category.ListCategories(ctx, userID, pageReq)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "list categories", err)
 	}
@@ -67,9 +69,9 @@ func (h *CategoryHandler) ListCategories(ctx context.Context, req *financecorev1
 }
 
 func (h *CategoryHandler) GetCategoryByID(ctx context.Context, req *financecorev1.GetCategoryByIDRequest) (*financecorev1.GetCategoryByIDResponse, error) {
-	uuidId, err := uuid.Parse(req.Id)
+	id, err := converter.ParseUUID("id", req.GetId())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)
+		return nil, errGrpc.ToStatus(ctx, "get category by id", err)
 	}
 
 	userID, err := auth.UserIDFrom(ctx)
@@ -77,9 +79,9 @@ func (h *CategoryHandler) GetCategoryByID(ctx context.Context, req *financecorev
 		return nil, errGrpc.ToStatus(ctx, "get category by id", err)
 	}
 
-	category, err := h.ctgUc.GetCategoryByID(ctx, uuidId, userID)
+	category, err := h.category.GetCategoryByID(ctx, id, userID)
 	if err != nil {
-		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("get category by id %s", uuidId.String()), err)
+		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("get category by id %s", id.String()), err)
 	}
 
 	response := &financecorev1.GetCategoryByIDResponse{Category: toProtoCategory(category)}

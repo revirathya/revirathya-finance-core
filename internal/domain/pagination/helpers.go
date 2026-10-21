@@ -1,4 +1,4 @@
-package utils
+package pagination
 
 import (
 	"github.com/revirathya/revirathya-finance-core/internal/domain/constant"
@@ -17,4 +17,11 @@ func SetPageSize(pageSize int) (int, error) {
 	}
 
 	return ps, nil
+}
+
+func Cut[T any](rows []T, size int) (page []T, last T, more bool) {
+	if len(rows) <= size {
+		return rows, last, false
+	}
+	return rows[:size], rows[size-1], true
 }

@@ -16,7 +16,7 @@ import (
 
 // LoginWithGoogle is the resolver for the loginWithGoogle field.
 func (r *mutationResolver) LoginWithGoogle(ctx context.Context, idToken string) (*model.AuthPayload, error) {
-	user, err := r.usecase.Auth.LoginWithGoogle(ctx, idToken)
+	user, err := r.auth.LoginWithGoogle(ctx, idToken)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, patch model.UpdateUse
 		return nil, err
 	}
 
-	user, err := r.usecase.User.UpdateUser(ctx, userID, domain.UserPatch{
+	user, err := r.user.UpdateUser(ctx, userID, domain.UserPatch{
 		FirstName: patch.FirstName,
 		LastName:  patch.LastName,
 	})
@@ -72,7 +72,7 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 		return nil, err
 	}
 
-	user, err := r.usecase.User.GetUserByID(ctx, userID)
+	user, err := r.user.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}

@@ -13,10 +13,11 @@ import (
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	"github.com/revirathya/revirathya-finance-core/internal/domain/pagination"
 )
 
 // CreateExpense is the resolver for the createExpense field.
-func (r *mutationResolver) CreateExpense(ctx context.Context, input model.CreateExpenseInput) (*model.Expense, error) {
+func (r *mutationResolver) CreateExpense(ctx context.Context, form model.CreateExpenseInput) (*model.Expense, error) {
 	// Get user from context
 	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
@@ -24,18 +25,17 @@ func (r *mutationResolver) CreateExpense(ctx context.Context, input model.Create
 	}
 
 	// Create expense
-	expense, err := r.usecase.Expense.CreateExpense(
-		ctx,
-		userID,
-		input.CategoryID,
-		input.TransactionDt,
-		input.Description,
-		input.Amount,
-	)
+	expense, err := r.expense.CreateExpense(ctx, userID, domain.ExpenseForm{
+		CategoryID:    form.CategoryID,
+		TransactionDt: form.TransactionDt,
+		Description:   form.Description,
+		Amount:        form.Amount,
+	})
 	if err != nil {
 		return nil, err
 	}
 
+	// Parse response
 	response := &model.Expense{
 		ID:            expense.ID,
 		UserID:        expense.UserID,
@@ -56,8 +56,8 @@ func (r *mutationResolver) UpdateExpense(ctx context.Context, id uuid.UUID, patc
 		return nil, err
 	}
 
-	// Parse input
-	expense, err := r.usecase.Expense.UpdateExpense(ctx, id, userID, domain.ExpensePatch{
+	// Update expense
+	expense, err := r.expense.UpdateExpense(ctx, id, userID, domain.ExpensePatch{
 		CategoryID:    patch.CategoryID,
 		TransactionDt: patch.TransactionDt,
 		Description:   patch.Description,
@@ -88,7 +88,7 @@ func (r *mutationResolver) DeleteExpense(ctx context.Context, id uuid.UUID) (uui
 	}
 
 	// Delete expense
-	if err = r.usecase.Expense.DeleteExpense(ctx, id, userID); err != nil {
+	if err = r.expense.DeleteExpense(ctx, id, userID); err != nil {
 		return uuid.Nil, err
 	}
 	return id, nil
@@ -103,7 +103,7 @@ func (r *queryResolver) Expense(ctx context.Context, id uuid.UUID) (*model.Expen
 	}
 
 	// Get expense by ID
-	expense, err := r.usecase.Expense.GetExpenseByID(ctx, id, userID)
+	expense, err := r.expense.GetExpenseByID(ctx, id, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -128,18 +128,17 @@ func (r *queryResolver) Expenses(ctx context.Context, transactionDt *time.Time, 
 		return nil, err
 	}
 
-	// List expenses
-	pageSize := 0
-	if first != nil {
-		pageSize = *first
+	// List Expenses
+	filter := domain.ExpenseFilter{
+		TransactionDt: transactionDt,
 	}
 
-	pageToken := ""
-	if after != nil {
-		pageToken = *after
+	pageReq := pagination.Request{
+		Size:  derefOr(first, 0),
+		Token: derefOr(after, ""),
 	}
 
-	expensePage, err := r.usecase.Expense.ListExpenses(ctx, userID, transactionDt, pageSize, pageToken)
+	expensePage, err := r.expense.ListExpenses(ctx, userID, filter, pageReq)
 	if err != nil {
 		return nil, err
 	}

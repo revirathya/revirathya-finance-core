@@ -20,7 +20,7 @@ func (r *mutationResolver) CreateTelegramBindCode(ctx context.Context) (*model.T
 		return nil, err
 	}
 
-	code, expiresAt, err := r.usecase.TelegramBindCode.CreateBindCode(ctx, userID)
+	code, expiresAt, err := r.telegramBindCode.CreateBindCode(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -39,11 +39,11 @@ func (r *mutationResolver) UnbindTelegram(ctx context.Context) (*model.User, err
 		return nil, err
 	}
 
-	if err := r.usecase.TelegramBindCode.UnbindTelegram(ctx, userID); err != nil {
+	if err := r.telegramBindCode.UnbindTelegram(ctx, userID); err != nil {
 		return nil, err
 	}
 
-	user, err := r.usecase.User.GetUserByID(ctx, userID)
+	user, err := r.user.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}

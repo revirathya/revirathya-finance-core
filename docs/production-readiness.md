@@ -100,8 +100,11 @@ Last reviewed: 2026-10-19
     categories.
   - [x] Phase 6: authorization sweep. No client-supplied user IDs remain in GraphQL or gRPC; every query filters
     by the caller's `user_id`, and other users' records return `NOT_FOUND`.
-  - Later, if the API is ever reached over an untrusted network or by more services: mTLS instead of the shared
-    API key.
+  - [ ] Before a second gRPC client: per-service credentials instead of the single shared `GRPC_API_KEY` (an API key or
+    client certificate per calling service, so each can be identified, limited and revoked on its own; mTLS once
+    the network isn't trusted). Other services will call this API (microservices), so the current "one key + a
+    Telegram ID" model only fits the bot. Also decide how a service-to-service call names its user, since not every
+    caller will have a Telegram ID.
 - [ ] **TLS** on both listeners, or terminated by a trusted proxy or mesh, with that decision documented.
 - [x] **GraphQL hardening.** The server is built with `handler.New` instead of `handler.NewDefaultServer`. Its
   tests against the production handler were removed in the restructuring; see **Tests** below.
@@ -239,7 +242,7 @@ client later. Do these first.
       `category_id` into a random UUID; it now uses `FromOptionalProtoDate`, `FromOptionalProtoDecimal` and a `nil`
       category ID.
   - [x] GraphQL mutation results: return the object directly. Payload types
-    (`createExpense(input): CreateExpensePayload { expense }`) aren't needed yet.
+    (`createExpense(form): CreateExpensePayload { expense }`) aren't needed yet.
   - Already settled: Create / Update / Get return the object as stored (including derived fields such as
     `category_name`); gRPC wraps it in a one-field `<Rpc>Response` (buf `STANDARD` lint); Delete returns an empty
     `Delete*Response` on gRPC ([AIP-135](https://google.aip.dev/135)) and the deleted `UUID!` on GraphQL (for client
@@ -270,22 +273,28 @@ client later. Do these first.
 - [ ] When the first client that retries is built: idempotency key on `CreateExpense` (`request_id` per
   [AIP-155](https://google.aip.dev/155), `requestId` in GraphQL), so retries don't create duplicate expenses. It's an
   optional field, so adding it later breaks no one.
-- [ ] Later, once there are clients: rate limiting, per client or per user (today only Telegram binding is
-  limited).
-- [ ] Later: normalize CRUD in the repositories and usecases (internal only, so no client impact; the end-to-end
-  tests cover the behaviour):
+- [ ] Rate limiting on writes: 15 per user per minute, shared by gRPC and GraphQL, single instance. Full spec in
+  [rate-limiting.md](rate-limiting.md). (Today only Telegram binding is limited.)
+- [x] Normalize CRUD in the repositories and usecases (internal only, so no client impact; the end-to-end tests cover
+  the behaviour). The behaviour rules below already hold; what's left is consistency:
+  - [x] The owner is always an argument, never part of a form (`CreateExpense(ctx, userID, form)`; `ExpenseForm`
+    has no `UserID`).
+  - [x] Usecase creates take a form, like updates take a patch (`CreateCategory(ctx, userID, form)`,
+    `CreateExpense(ctx, userID, form)`); GraphQL create arguments are named `form`, updates `patch`.
+  - [x] `errors.AsType[*pgconn.PgError]` everywhere.
+  - [x] Removed the unused `UserUsecase.CreateUser` / `GetUserByGoogleSub` (`AuthUsecase` uses the repository).
+  - [x] Receiver `uc` in every usecase; repository fields named after their entity (`uc.expense`, `uc.category`).
+  - [x] Shared page request: every list usecase takes `pagination.Request` and cuts with `pagination.Cut`
+    (`ListExpenses(ctx, userID, domain.ExpenseFilter, pagination.Request)`, `ListCategories(ctx, userID,
+    pagination.Request)`).
   - Create / Update return the stored object, read back after the write when it has derived fields.
   - Get never returns `(nil, nil)`: missing, or another user's, is `errDom.ErrNotFound`.
   - List returns an empty slice (not `nil`, not an error) for no results; unbounded lists are paginated.
   - Delete returns only `error`, with `ErrNotFound` for a missing row; `ErrConflict` when it's in use.
   - [x] One update rule (patch) applied the same way to every form/patch.
-- [ ] Later: gRPC input errors in one format. The handlers' 8 `uuid.Parse` sites (`id`, `category_id`) build their
-  own `status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)`, which leaks the library's error text
-  and differs from every other validation message. Add `converter.ParseUUID(field, s)` returning an
-  `errDom.ValidationError` (`id: must be a UUID`) and pass it to `errGrpc.ToStatus`, like the date and decimal
-  converters and the GraphQL `UUID` scalar.
-
-### Repo hygiene
+- [x] gRPC input errors in one format: the handlers parse UUIDs with `converter.ParseUUID` / `ParseOptionalUUID`, so a
+  malformed ID is `INVALID_ARGUMENT` with exactly `id: must be a UUID` (or `category_id: …`) instead of the
+  library's error text.
 - [ ] `LICENSE`
 - [ ] `CODEOWNERS`
 - [ ] `SECURITY.md`
@@ -360,14 +369,34 @@ files into client repos by hand.
 ## 6. Suggested order
 
 Done so far: bug fixes, auth, health checks, error mapping, timeouts and limits, logging, recovery, GraphQL
-hardening, input validation, CI with lint and drift checks, metrics, pagination, scalars, delivery tests.
+hardening, input validation, CI with lint and drift checks, metrics, pagination, scalars, delivery tests,
+breaking API cleanups (typed proto dates/amounts, shared messages, category pagination, patch updates),
+integration docs (contract comments, `APP_ENV`, playground, "Integrating a new service"), and the usecase layer
+no longer depending on `internal/repository` (`domain.Repository`), gRPC input errors in one format
+(`converter.ParseUUID`), CRUD normalized across repositories and usecases (owner as argument, forms and patches,
+`pagination.Request` / `Cut`), and consumer-side usecase interfaces in both APIs.
 
-1. **Breaking cleanups while there are no consumers** (section 3): proto `Date` / `Money`, shared `Category` /
-   `Expense` messages, and category pagination if wanted.
-2. **Integration docs** (section 3): proto field comments with error codes, GraphQL descriptions, `APP_ENV` and the
-   playground, the "Integrating a new service" README section.
-3. **When the first client is built:** the idempotency key, then per-user rate limiting.
-4. **When the deploy target is chosen:** TLS, secrets, migrations as a separate job, `govulncheck`, Trivy, and the
-   runbook (deploy steps, migration rollback).
-5. **When the first consumer depends on the API:** `buf breaking`, written evolution rules, and revisiting the
-   CLAUDE.md compatibility rule.
+Next, in this order:
+
+1. ~~`converter.ParseUUID`~~ (done).
+2. ~~Normalize CRUD~~ (done).
+3. **Idempotency key** on `CreateExpense` (section 3, API design).
+4. **Repo hygiene** (section 3): `LICENSE`, `CODEOWNERS`, `SECURITY.md`, PR template, Dependabot, `make generate`
+   and a pre-commit hook, ADRs.
+5. **OpenTelemetry tracing** (section 3, Observability).
+6. **Rate limiting on writes**, per [rate-limiting.md](rate-limiting.md).
+7. **Trivy** image scanning (section 3, Docker).
+
+Optional, as more entities are added: generic paging types (`domain.Page[T]`, one cursor helper) instead of a
+`*Cursor` / `*ListQuery` / `*Page` per entity.
+
+Waiting on outside decisions:
+
+- **Before a second gRPC client:** per-service credentials (section 2, Security).
+- **If a read replica is added:** route read-only queries (lists, gets) to it, and keep writes, and reads that must
+  see a write just made (Create / Update read back), on the primary. The single pool in `platform/database` becomes
+  a primary pool plus a replica pool.
+- **When the deploy target is chosen:** TLS, secrets, migrations as a separate job, `govulncheck`, the runbook
+  (deploy steps, migration rollback), and shared rate-limit counters if there will be several instances.
+- **When the first consumer depends on the API:** `buf breaking`, written evolution rules, and revisiting the
+  CLAUDE.md compatibility rule.

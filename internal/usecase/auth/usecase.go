@@ -11,20 +11,20 @@ import (
 )
 
 type AuthUsecase struct {
-	gVeri   domain.GoogleVerifier
-	usrRepo domain.UserRepository
+	gVeri domain.GoogleVerifier
+	user  domain.UserRepository
 }
 
-func NewAuthUsecase(gVeri domain.GoogleVerifier, usrRepo domain.UserRepository) *AuthUsecase {
+func NewAuthUsecase(gVeri domain.GoogleVerifier, user domain.UserRepository) *AuthUsecase {
 	return &AuthUsecase{
-		gVeri:   gVeri,
-		usrRepo: usrRepo,
+		gVeri: gVeri,
+		user:  user,
 	}
 }
 
-func (u *AuthUsecase) LoginWithGoogle(ctx context.Context, idToken string) (*domain.User, error) {
+func (uc *AuthUsecase) LoginWithGoogle(ctx context.Context, idToken string) (*domain.User, error) {
 	// Verify User
-	userGoog, err := u.gVeri.VerifyIdentity(ctx, idToken)
+	userGoog, err := uc.gVeri.VerifyIdentity(ctx, idToken)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func (u *AuthUsecase) LoginWithGoogle(ctx context.Context, idToken string) (*dom
 	}
 
 	// Check User
-	user, err := u.usrRepo.GetUserByGoogleSub(ctx, userGoog.Subject)
+	user, err := uc.user.GetUserByGoogleSub(ctx, userGoog.Subject)
 	if err != nil {
 		if !errors.Is(err, errDom.ErrNotFound) {
 			return nil, err
@@ -60,11 +60,11 @@ func (u *AuthUsecase) LoginWithGoogle(ctx context.Context, idToken string) (*dom
 			if err = form.Validate(); err != nil {
 				return nil, err
 			}
-			user, err = u.usrRepo.CreateUser(ctx, form)
+			user, err = uc.user.CreateUser(ctx, form)
 			if err != nil {
 				if errors.Is(err, errDom.ErrConflict) {
 					// Handle register race-condition (fetch if already created by other ops)
-					user, err = u.usrRepo.GetUserByGoogleSub(ctx, userGoog.Subject)
+					user, err = uc.user.GetUserByGoogleSub(ctx, userGoog.Subject)
 					if err != nil {
 						if errors.Is(err, errDom.ErrNotFound) {
 							return nil, errDom.ErrConflict

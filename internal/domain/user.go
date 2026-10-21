@@ -7,7 +7,7 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/domain/validation"
 )
 
-// Entity: User
+// Entity
 type User struct {
 	ID             uuid.UUID
 	FirstName      string
@@ -16,6 +16,7 @@ type User struct {
 	TelegramChatID *string
 }
 
+// Form
 type UserForm struct {
 	FirstName string
 	LastName  *string
@@ -57,6 +58,7 @@ func (f *UserForm) Validate() error {
 	return nil
 }
 
+// Patch
 type UserPatch struct {
 	FirstName *string
 	LastName  *string
@@ -84,7 +86,7 @@ func (p *UserPatch) Validate() error {
 	return nil
 }
 
-// Repository: User
+// Repository
 type UserRepository interface {
 	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
 	GetUserByGoogleSub(ctx context.Context, googleSub string) (*User, error)

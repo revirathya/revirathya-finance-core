@@ -39,7 +39,7 @@ extend type Query {
 
 extend type Mutation {
     "Creates a category and returns it."
-    createCategory(input: CreateCategoryInput!): Category
+    createCategory(form: CreateCategoryInput!): Category
 
     "Renames a category (patch) and returns it. Another user's category is `NOT_FOUND`."
     updateCategory(id: UUID!, patch: UpdateCategoryInput!): Category

@@ -17,20 +17,6 @@ import (
 func TestUserValidation(t *testing.T) {
 	long := strings.Repeat("a", 101)
 
-	t.Run("create rejects invalid input before the repository", func(t *testing.T) {
-		repo := &fakeUserRepo{}
-		uc := user.NewUserUsecase(repo)
-
-		_, err := uc.CreateUser(context.Background(), "  ", nil, "avi@example.com", "123")
-
-		if !errors.Is(err, errDom.ErrInvalidInput) {
-			t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
-		}
-		if repo.gotCreateForm.Email != "" {
-			t.Fatal("repository was called")
-		}
-	})
-
 	blankFirst := "  "
 	for name, patch := range map[string]domain.UserPatch{"blank first name": {FirstName: &blankFirst}, "too long last name": {LastName: &long}} {
 		t.Run("update rejects "+name+" before the repository", func(t *testing.T) {

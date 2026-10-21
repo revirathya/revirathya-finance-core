@@ -14,8 +14,6 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/ratelimit"
-	"github.com/revirathya/revirathya-finance-core/internal/usecase/telegrambindcode"
-	"github.com/revirathya/revirathya-finance-core/internal/usecase/usertelegramcontext"
 
 	// Internal - gRPC
 	errGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/error"
@@ -23,16 +21,16 @@ import (
 
 type UserTelegramContextHandler struct {
 	financecorev1.UnimplementedUserTelegramContextServiceServer
-	tbcUc       *telegrambindcode.TelegramBindCodeUsecase
-	utelUc      *usertelegramcontext.UserTelegramContextUsecase
-	bindLimiter *ratelimit.Limiter
+	telegramBindCode    telegramBindCodeUsecase
+	userTelegramContext userTelegramContextUsecase
+	bindLimiter         *ratelimit.Limiter
 }
 
-func NewUserTelegramContextHandler(tbcUc *telegrambindcode.TelegramBindCodeUsecase, utelUc *usertelegramcontext.UserTelegramContextUsecase, bindLimiter *ratelimit.Limiter) *UserTelegramContextHandler {
+func NewUserTelegramContextHandler(telegramBindCode telegramBindCodeUsecase, userTelegramContext userTelegramContextUsecase, bindLimiter *ratelimit.Limiter) *UserTelegramContextHandler {
 	return &UserTelegramContextHandler{
-		tbcUc:       tbcUc,
-		utelUc:      utelUc,
-		bindLimiter: bindLimiter,
+		telegramBindCode:    telegramBindCode,
+		userTelegramContext: userTelegramContext,
+		bindLimiter:         bindLimiter,
 	}
 }
 
@@ -56,7 +54,7 @@ func (h *UserTelegramContextHandler) GetUserTelegramContext(ctx context.Context,
 	}
 
 	// Parse input
-	user_telegram_context, err := h.utelUc.GetUserTelegramContext(ctx, userID)
+	user_telegram_context, err := h.userTelegramContext.GetUserTelegramContext(ctx, userID)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("get user telegram context %s", userID.String()), err)
 	}
@@ -79,7 +77,7 @@ func (h *UserTelegramContextHandler) UpdateUserTelegramContext(ctx context.Conte
 		InteractionChatID:    req.InteractionChatId,
 		InteractionMessageID: req.InteractionMessageId,
 	}
-	user_telegram_context, err := h.utelUc.UpdateUserTelegramContext(ctx, userID, patch)
+	user_telegram_context, err := h.userTelegramContext.UpdateUserTelegramContext(ctx, userID, patch)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, fmt.Sprintf("update user telegram context %s", userID.String()), err)
 	}
@@ -98,7 +96,7 @@ func (h *UserTelegramContextHandler) BindTelegramAccount(ctx context.Context, re
 		return nil, status.Error(codes.ResourceExhausted, "too many bind attempts, try again later")
 	}
 
-	user, err := h.tbcUc.BindTelegram(ctx, req.Code, telegramID)
+	user, err := h.telegramBindCode.BindTelegram(ctx, req.Code, telegramID)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "bind telegram account", err)
 	}

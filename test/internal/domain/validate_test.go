@@ -72,7 +72,7 @@ func TestCategoryValidate(t *testing.T) {
 
 func TestExpenseValidate(t *testing.T) {
 	t.Run("valid form is accepted and the description trimmed", func(t *testing.T) {
-		form := domain.ExpenseForm{UserID: uuid.New(), CategoryID: uuid.New(), TransactionDt: validDt, Amount: validAmount, Description: ptr("  Lunch  ")}
+		form := domain.ExpenseForm{CategoryID: uuid.New(), TransactionDt: validDt, Amount: validAmount, Description: ptr("  Lunch  ")}
 		if err := form.Validate(); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

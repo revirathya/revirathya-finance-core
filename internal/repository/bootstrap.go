@@ -15,20 +15,36 @@ import (
 )
 
 // Bootstraping Postgres repositories
-type Repository struct {
-	Category            domain.CategoryRepository
-	Expense             domain.ExpenseRepository
-	TelegramBindCode    domain.TelegramBindCodeRepository
-	User                domain.UserRepository
-	UserTelegramContext domain.UserTelegramContextRepository
+type repositoryImpl struct {
+	repoCategory            domain.CategoryRepository
+	repoExpense             domain.ExpenseRepository
+	repoTelegramBindCode    domain.TelegramBindCodeRepository
+	repoUser                domain.UserRepository
+	repoUserTelegramContext domain.UserTelegramContextRepository
 }
 
-func BootstrapRepository(pool *pgxpool.Pool) Repository {
-	return Repository{
-		Category:            category.NewCategoryRepositoryImpl(pool),
-		Expense:             expense.NewExpenseRepositoryImpl(pool),
-		TelegramBindCode:    telegrambindcode.NewTelegramBindCodeRepositoryImpl(pool),
-		User:                user.NewUserRepositoryImpl(pool),
-		UserTelegramContext: usertelegramcontext.NewUserTelegramContextRepositoryImpl(pool),
+func BootstrapRepository(pool *pgxpool.Pool) domain.Repository {
+	return &repositoryImpl{
+		repoCategory:            category.NewCategoryRepositoryImpl(pool),
+		repoExpense:             expense.NewExpenseRepositoryImpl(pool),
+		repoTelegramBindCode:    telegrambindcode.NewTelegramBindCodeRepositoryImpl(pool),
+		repoUser:                user.NewUserRepositoryImpl(pool),
+		repoUserTelegramContext: usertelegramcontext.NewUserTelegramContextRepositoryImpl(pool),
 	}
+}
+
+func (r *repositoryImpl) Category() domain.CategoryRepository {
+	return r.repoCategory
+}
+func (r *repositoryImpl) Expense() domain.ExpenseRepository {
+	return r.repoExpense
+}
+func (r *repositoryImpl) TelegramBindCode() domain.TelegramBindCodeRepository {
+	return r.repoTelegramBindCode
+}
+func (r *repositoryImpl) User() domain.UserRepository {
+	return r.repoUser
+}
+func (r *repositoryImpl) UserTelegramContext() domain.UserTelegramContextRepository {
+	return r.repoUserTelegramContext
 }

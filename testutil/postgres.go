@@ -116,8 +116,7 @@ func NewCategory(t *testing.T, userID uuid.UUID, name string) *domain.Category {
 func NewExpense(t *testing.T, userID, categoryID uuid.UUID, date, amount string) *domain.Expense {
 	t.Helper()
 
-	expense, err := rExpense.NewExpenseRepositoryImpl(TestPool).CreateExpense(context.Background(), domain.ExpenseForm{
-		UserID:        userID,
+	expense, err := rExpense.NewExpenseRepositoryImpl(TestPool).CreateExpense(context.Background(), userID, domain.ExpenseForm{
 		CategoryID:    categoryID,
 		TransactionDt: Day(t, date),
 		Amount:        decimal.RequireFromString(amount),

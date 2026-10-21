@@ -69,7 +69,7 @@ extend type Query {
 
 extend type Mutation {
     "Creates an expense and returns it as stored."
-    createExpense(input: CreateExpenseInput!): Expense
+    createExpense(form: CreateExpenseInput!): Expense
 
     "Updates an expense (patch) and returns it as stored. Another user's expense is `NOT_FOUND`."
     updateExpense(id: UUID!, patch: UpdateExpenseInput!): Expense

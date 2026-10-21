@@ -2,91 +2,75 @@ package expense
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
-	"github.com/revirathya/revirathya-finance-core/internal/utils"
+	"github.com/revirathya/revirathya-finance-core/internal/domain/pagination"
 )
 
 // Usecase: Expense
 type ExpenseUsecase struct {
-	expRepo domain.ExpenseRepository
+	expense domain.ExpenseRepository
 }
 
-func NewExpenseUsecase(expRepo domain.ExpenseRepository) *ExpenseUsecase {
+func NewExpenseUsecase(expense domain.ExpenseRepository) *ExpenseUsecase {
 	return &ExpenseUsecase{
-		expRepo: expRepo,
+		expense: expense,
 	}
 }
 
-func (uc *ExpenseUsecase) CreateExpense(ctx context.Context, userID uuid.UUID, categoryID uuid.UUID, transactionDt time.Time, description *string, amount decimal.Decimal) (*domain.Expense, error) {
-	form := domain.ExpenseForm{
-		UserID:        userID,
-		CategoryID:    categoryID,
-		TransactionDt: transactionDt,
-		Description:   description,
-		Amount:        amount,
-	}
+func (uc *ExpenseUsecase) CreateExpense(ctx context.Context, userID uuid.UUID, form domain.ExpenseForm) (*domain.Expense, error) {
 	if err := form.Validate(); err != nil {
 		return nil, err
 	}
-
-	return uc.expRepo.CreateExpense(ctx, form)
+	return uc.expense.CreateExpense(ctx, userID, form)
 }
 
 func (uc *ExpenseUsecase) GetExpenseByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Expense, error) {
-	return uc.expRepo.GetExpenseByID(ctx, id, userID)
+	return uc.expense.GetExpenseByID(ctx, id, userID)
 }
 
-func (uc *ExpenseUsecase) ListExpenses(
-	ctx context.Context,
-	userID uuid.UUID,
-	transactionDt *time.Time,
-	pageSize int,
-	pageToken string,
-) (*domain.ExpensePage, error) {
+func (uc *ExpenseUsecase) ListExpenses(ctx context.Context, userID uuid.UUID, filter domain.ExpenseFilter, pageReq pagination.Request) (*domain.ExpensePage, error) {
 	// Define page size
-	ps, err := utils.SetPageSize(pageSize)
+	size, err := pageReq.NormalizedSize()
 	if err != nil {
 		return nil, err
 	}
 
 	// Decode token if exists
 	query := domain.ExpenseListQuery{
-		TransactionDt: transactionDt,
-		Limit:         ps + 1,
+		TransactionDt: filter.TransactionDt,
+		Limit:         size + 1,
 	}
-	if pageToken != "" {
+	if pageReq.Token != "" {
 		// Not the first page
-		cursor, err := domain.DecodeExpenseCursor(pageToken)
+		cursor, err := domain.DecodeExpenseCursor(pageReq.Token)
 		if err != nil {
 			return nil, err
 		}
 		query.After = &cursor
 	}
 
-	expenses, err := uc.expRepo.ListExpenses(ctx, userID, query)
+	// List expenses
+	expenses, err := uc.expense.ListExpenses(ctx, userID, query)
 	if err != nil {
 		return nil, err
 	}
 
-	page := &domain.ExpensePage{
-		Expenses: expenses,
+	// Parse response
+	items, last, more := pagination.Cut(expenses, size)
+	response := &domain.ExpensePage{
+		Expenses: items,
 	}
-	if len(expenses) > ps {
-		page.Expenses = expenses[:ps]
-		last := page.Expenses[ps-1]
-		page.NextCursor = &domain.ExpenseCursor{
+	if more {
+		response.NextCursor = &domain.ExpenseCursor{
 			TransactionDt: last.TransactionDt,
 			ID:            last.ID,
 		}
 	}
-
-	return page, nil
+	return response, nil
 }
 
 func (uc *ExpenseUsecase) UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.ExpensePatch) (*domain.Expense, error) {
@@ -94,9 +78,9 @@ func (uc *ExpenseUsecase) UpdateExpense(ctx context.Context, id uuid.UUID, userI
 		return nil, err
 	}
 
-	return uc.expRepo.UpdateExpense(ctx, id, userID, patch)
+	return uc.expense.UpdateExpense(ctx, id, userID, patch)
 }
 
 func (uc *ExpenseUsecase) DeleteExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
-	return uc.expRepo.DeleteExpense(ctx, id, userID)
+	return uc.expense.DeleteExpense(ctx, id, userID)
 }

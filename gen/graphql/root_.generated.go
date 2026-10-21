@@ -64,8 +64,8 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CreateCategory         func(childComplexity int, input model.CreateCategoryInput) int
-		CreateExpense          func(childComplexity int, input model.CreateExpenseInput) int
+		CreateCategory         func(childComplexity int, form model.CreateCategoryInput) int
+		CreateExpense          func(childComplexity int, form model.CreateExpenseInput) int
 		CreateTelegramBindCode func(childComplexity int) int
 		DeleteCategory         func(childComplexity int, id uuid.UUID) int
 		DeleteExpense          func(childComplexity int, id uuid.UUID) int
@@ -230,7 +230,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Mutation.CreateCategory(childComplexity, args["input"].(model.CreateCategoryInput)), true
+		return e.ComplexityRoot.Mutation.CreateCategory(childComplexity, args["form"].(model.CreateCategoryInput)), true
 	case "Mutation.createExpense":
 		if e.ComplexityRoot.Mutation.CreateExpense == nil {
 			break
@@ -241,7 +241,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Mutation.CreateExpense(childComplexity, args["input"].(model.CreateExpenseInput)), true
+		return e.ComplexityRoot.Mutation.CreateExpense(childComplexity, args["form"].(model.CreateExpenseInput)), true
 	case "Mutation.createTelegramBindCode":
 		if e.ComplexityRoot.Mutation.CreateTelegramBindCode == nil {
 			break
@@ -571,7 +571,7 @@ extend type Query {
 
 extend type Mutation {
     "Creates a category and returns it."
-    createCategory(input: CreateCategoryInput!): Category
+    createCategory(form: CreateCategoryInput!): Category
 
     "Renames a category (patch) and returns it. Another user's category is ` + "`" + `NOT_FOUND` + "`" + `."
     updateCategory(id: UUID!, patch: UpdateCategoryInput!): Category
@@ -651,7 +651,7 @@ extend type Query {
 
 extend type Mutation {
     "Creates an expense and returns it as stored."
-    createExpense(input: CreateExpenseInput!): Expense
+    createExpense(form: CreateExpenseInput!): Expense
 
     "Updates an expense (patch) and returns it as stored. Another user's expense is ` + "`" + `NOT_FOUND` + "`" + `."
     updateExpense(id: UUID!, patch: UpdateExpenseInput!): Expense

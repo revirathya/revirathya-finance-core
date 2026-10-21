@@ -11,6 +11,7 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/domain/constant"
 	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
+	"github.com/revirathya/revirathya-finance-core/internal/domain/pagination"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/category"
 )
 
@@ -66,7 +67,7 @@ func TestCreateCategory(t *testing.T) {
 		repo := &fakeCategoryRepo{createResp: want}
 		uc := category.NewCategoryUsecase(repo)
 
-		got, err := uc.CreateCategory(context.Background(), userID, "Food")
+		got, err := uc.CreateCategory(context.Background(), userID, domain.CategoryForm{CategoryName: "Food"})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -84,7 +85,7 @@ func TestCreateCategory(t *testing.T) {
 		repo := &fakeCategoryRepo{err: errors.New("db down")}
 		uc := category.NewCategoryUsecase(repo)
 
-		if _, err := uc.CreateCategory(context.Background(), userID, "Food"); err == nil {
+		if _, err := uc.CreateCategory(context.Background(), userID, domain.CategoryForm{CategoryName: "Food"}); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})
@@ -133,7 +134,7 @@ func TestListCategories(t *testing.T) {
 		repo := &fakeCategoryRepo{categories: names("Bills", "Food")}
 		uc := category.NewCategoryUsecase(repo)
 
-		page, err := uc.ListCategories(context.Background(), userID, 10, "")
+		page, err := uc.ListCategories(context.Background(), userID, pagination.Request{Size: 10, Token: ""})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -153,7 +154,7 @@ func TestListCategories(t *testing.T) {
 			{1_000_000, constant.MaxPageSize + 1},
 		} {
 			repo := &fakeCategoryRepo{}
-			if _, err := category.NewCategoryUsecase(repo).ListCategories(context.Background(), userID, tt.in, ""); err != nil {
+			if _, err := category.NewCategoryUsecase(repo).ListCategories(context.Background(), userID, pagination.Request{Size: tt.in, Token: ""}); err != nil {
 				t.Fatalf("page size %d: %v", tt.in, err)
 			}
 			if repo.gotListQuery.Limit != tt.wantLimit {
@@ -165,7 +166,7 @@ func TestListCategories(t *testing.T) {
 	t.Run("an extra row means a next page whose cursor is the last returned name", func(t *testing.T) {
 		repo := &fakeCategoryRepo{categories: names("Bills", "Food", "Transport")}
 
-		page, err := category.NewCategoryUsecase(repo).ListCategories(context.Background(), userID, 2, "")
+		page, err := category.NewCategoryUsecase(repo).ListCategories(context.Background(), userID, pagination.Request{Size: 2, Token: ""})
 
 		if err != nil || len(page.Categories) != 2 || page.NextCursor == nil || page.NextCursor.CategoryName != "Food" {
 			t.Fatalf("got %+v, %v; want Bills, Food and a cursor at Food", page, err)
@@ -179,7 +180,7 @@ func TestListCategories(t *testing.T) {
 		}
 		for _, tt := range []struct{ in, want int }{{0, constant.DefaultPageSize}, {1_000_000, constant.MaxPageSize}} {
 			rows := names(many[:tt.want+1]...) // what the repository returns for limit want+1
-			page, err := category.NewCategoryUsecase(&fakeCategoryRepo{categories: rows}).ListCategories(context.Background(), userID, tt.in, "")
+			page, err := category.NewCategoryUsecase(&fakeCategoryRepo{categories: rows}).ListCategories(context.Background(), userID, pagination.Request{Size: tt.in, Token: ""})
 			if err != nil || len(page.Categories) != tt.want || page.NextCursor == nil || page.NextCursor.CategoryName != rows[tt.want-1].CategoryName {
 				t.Fatalf("page size %d: got %d categories, cursor %v, %v; want %d and a cursor at the last one", tt.in, len(page.Categories), page.NextCursor, err, tt.want)
 			}
@@ -187,7 +188,7 @@ func TestListCategories(t *testing.T) {
 	})
 
 	t.Run("exactly page size rows is the last page", func(t *testing.T) {
-		page, err := category.NewCategoryUsecase(&fakeCategoryRepo{categories: names("Bills", "Food")}).ListCategories(context.Background(), userID, 2, "")
+		page, err := category.NewCategoryUsecase(&fakeCategoryRepo{categories: names("Bills", "Food")}).ListCategories(context.Background(), userID, pagination.Request{Size: 2, Token: ""})
 		if err != nil || page.NextCursor != nil {
 			t.Fatalf("got cursor %v, %v; want no next page", page.NextCursor, err)
 		}
@@ -197,7 +198,7 @@ func TestListCategories(t *testing.T) {
 		repo := &fakeCategoryRepo{}
 		token := domain.CategoryCursor{CategoryName: "Food"}.Encode()
 
-		if _, err := category.NewCategoryUsecase(repo).ListCategories(context.Background(), userID, 0, token); err != nil {
+		if _, err := category.NewCategoryUsecase(repo).ListCategories(context.Background(), userID, pagination.Request{Size: 0, Token: token}); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if repo.gotListQuery.After == nil || repo.gotListQuery.After.CategoryName != "Food" {
@@ -208,11 +209,11 @@ func TestListCategories(t *testing.T) {
 	t.Run("invalid input is a ValidationError naming the field, before the repository", func(t *testing.T) {
 		for field, call := range map[string]func(uc *category.CategoryUsecase) error{
 			"page_size": func(uc *category.CategoryUsecase) error {
-				_, err := uc.ListCategories(context.Background(), userID, -1, "")
+				_, err := uc.ListCategories(context.Background(), userID, pagination.Request{Size: -1, Token: ""})
 				return err
 			},
 			"page_token": func(uc *category.CategoryUsecase) error {
-				_, err := uc.ListCategories(context.Background(), userID, 0, "garbage!")
+				_, err := uc.ListCategories(context.Background(), userID, pagination.Request{Size: 0, Token: "garbage!"})
 				return err
 			},
 		} {
@@ -230,7 +231,7 @@ func TestListCategories(t *testing.T) {
 	})
 
 	t.Run("propagates repo error", func(t *testing.T) {
-		if _, err := category.NewCategoryUsecase(&fakeCategoryRepo{err: errors.New("db down")}).ListCategories(context.Background(), userID, 0, ""); err == nil {
+		if _, err := category.NewCategoryUsecase(&fakeCategoryRepo{err: errors.New("db down")}).ListCategories(context.Background(), userID, pagination.Request{Size: 0, Token: ""}); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})

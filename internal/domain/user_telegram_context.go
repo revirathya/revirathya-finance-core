@@ -18,6 +18,7 @@ type UserTelegramContext struct {
 	InteractionMessageID *string
 }
 
+// Patch
 type UserTelegramContextPatch struct {
 	Conversation         *string
 	State                *string

@@ -83,19 +83,25 @@ cmd/main.go                    package main: config, logger, DB pool, wiring, ru
 cmd/api/startup.go             RunServers: runs the gRPC, HTTP and metrics servers in an errgroup, graceful shutdown
 cmd/sub/healthcheck.go         RunHealthcheck(port): `financecore healthcheck` (calls /readyz on HTTP_PORT; used by Docker)
 internal/domain                entities, forms/patches with Validate(), repository interfaces (no framework deps)
+                               bootstrap.go: domain.Repository, the bundle of every repository interface
 internal/domain/error          domain errors + ValidationError; always import as errDom
 internal/domain/validation     per-field validation helpers (ValidateString/Date/Decimal) used by Validate()
 internal/domain/constant       DefaultPageSize / MaxPageSize
+internal/domain/pagination     Request{Size, Token} + NormalizedSize (< 0 invalid, 0 -> default, cap at max),
+                               Cut[T](rows, size) -> page, last, more
 internal/usecase/<entity>      business logic; depends only on domain interfaces, not on pgx/gRPC/gqlgen
-internal/usecase/bootstrap.go  usecase.Usecase{Auth, Category, Expense, ...} + BootstrapUsecase
+internal/usecase/bootstrap.go  usecase.Usecase{Auth, Category, Expense, ...} + BootstrapUsecase(verifier, domain.Repository);
+                               depends only on domain interfaces, never on internal/repository (no pgx in usecase's imports)
 internal/repository/
   postgres/<entity>/repository.go  implements domain.<Entity>Repository with gen/sqlc Queries + pgxpool
-  bootstrap.go                     repository.Repository{...} + BootstrapRepository(pool)
+  bootstrap.go                     BootstrapRepository(pool) -> domain.Repository (the Postgres implementations)
 internal/delivery/grpc/
   server.go                    Setup: handlers, interceptor chain, health + optional reflection -> ServerLayer
   handler/<entity>_handler.go  implement the generated *ServiceServer interfaces
+  handler/usecases.go          the usecase interfaces the handlers consume (only the methods they call)
   error/                       ToStatus: domain error -> gRPC status (import with an alias, e.g. errGrpc)
-  converter/                   google.type.Date <-> time.Time, google.type.Decimal <-> decimal.Decimal (input errors are ValidationErrors)
+  converter/                   google.type.Date <-> time.Time, google.type.Decimal <-> decimal.Decimal, ParseUUID /
+                               ParseOptionalUUID (input errors are ValidationErrors)
   interceptor/requestid        x-request-id metadata; must stay first in the chain
   interceptor/accesslog        one log line per call (method, code, duration); right after requestid
   interceptor/recovery         panic recovery; after accesslog (so panics are logged), before auth
@@ -110,7 +116,8 @@ internal/delivery/http/
   middleware/recorder.go       StatusRecorder: shared status capture (first status wins) for accesslog and metrics
   middleware/<name>/           HTTP-wide middleware: requestid, accesslog, metricscollector (records into platform/metrics)
   graphql/setup.go             RegisterHandler: gqlgen handler + limits on the ServerLayer's mux at /graphql
-  graphql/resolver/            gqlgen resolvers (*.resolver.go regenerated; resolver.go is hand-maintained DI)
+  graphql/resolver/            gqlgen resolvers (*.resolver.go regenerated; resolver.go is hand-maintained DI;
+                               usecases.go: the usecase interfaces the resolvers consume)
   graphql/scalar/              gqlgen function-based scalars (gqlgen.yml models): Date <-> time.Time,
                                Decimal <-> decimal.Decimal, UUID <-> uuid.UUID
   graphql/error/error.go       ErrorPresenter: domain error -> GraphQL error code (import as errGql)
@@ -123,7 +130,6 @@ internal/platform/google       Google ID-token verifier (implements domain.Googl
 internal/platform/ratelimit    in-memory fixed-window limiter (per process)
 internal/platform/metrics      Prometheus registry + collectors (gRPC, HTTP, GraphQL errors, pool); ObserveHTTP, GraphQLError
 internal/platform/logging      slog setup (LOG_FORMAT json/text, LOG_LEVEL), request ID in context, EnsureRequestID
-internal/utils                 SetPageSize: page-size rules shared by every list usecase (< 0 invalid, 0 -> default, cap at max)
 internal/config                env-based config loading (.env via godotenv, falls back to OS env); APP_ENV (dev|prod, default prod)
                                sets the defaults of GRPC_ENABLE_REFLECTION / GQL_ENABLE_INTROSPECTION, explicit values win
 infra/docker/                  Dockerfile, migration.Dockerfile, docker-compose.yaml
@@ -218,7 +224,7 @@ including integration, with `-race` (the same command as `make test-integration`
 - Adding a new entity/feature touches, in order: migration (+ `sqlc.yaml`) -> sqlc query -> `make sqlc-generate` ->
   domain entity, form/patch with `Validate()`, repo interface -> postgres repo impl in
   `internal/repository/postgres/<entity>/` -> usecase -> (grpc handler and/or graphql resolver) -> wire up in
-  `internal/repository/bootstrap.go`, `internal/usecase/bootstrap.go`, `internal/delivery/grpc/server.go` and
+  `internal/domain/bootstrap.go` (`domain.Repository`), `internal/repository/bootstrap.go`, `internal/usecase/bootstrap.go`, `internal/delivery/grpc/server.go` and
   `internal/delivery/http/graphql/setup.go`.
 - API docs live in the contracts: every proto service, RPC, message and field has a comment directly above it, and
   every GraphQL type, field, argument and input field a `"description"`. State what the type doesn't: formats,
@@ -229,13 +235,23 @@ including integration, with `-race` (the same command as `make test-integration`
 - Logging: use `log/slog`'s `*Context` methods (`slog.InfoContext`, `slog.ErrorContext`, ...) wherever a request
   context exists, so the request ID is attached. Never log secrets, tokens, `Authorization` headers, full DSNs, the
   config struct, or raw request bodies. `cmd/main.go` returns errors from `run()` instead of panicking.
-- Usecases take and return `internal/domain` types only; they must not import pgx, gqlgen, or gRPC generated
-  packages.
+- Usecase structs name their dependencies after the entity, not `xxxRepo` (`uc.expense.CreateExpense(...)`), with
+  receiver `uc`. Usecases take and return `internal/domain` types only; they must not import pgx, gqlgen, gRPC generated packages,
+  or `internal/repository` (including in `usecase/bootstrap.go`, which takes `domain.Repository`). Check with
+  `go list -deps ./internal/usecase/... | grep -E 'jackc/pgx|internal/repository'` (should print nothing).
 - Usecase tests use hand-written fakes implementing the domain repository interface (see
   `test/internal/usecase/category/usecase_test.go`) rather than mocking frameworks.
 - GraphQL resolver files under `internal/delivery/http/graphql/resolver/` are regenerated by `gqlgen generate` except
-  `resolver.go`, which is the manually maintained dependency-injection root (`NewResolver(tokens, usecase)`).
-  New usecases are added to `usecase.Usecase` and reached through it.
+  `resolver.go` (the dependency-injection root) and `usecases.go`; resolver bodies survive regeneration.
+- Delivery depends on usecases through consumer-side interfaces: `delivery/grpc/handler/usecases.go` and
+  `delivery/http/graphql/resolver/usecases.go` each declare only the methods that layer calls (gRPC's category
+  interface has just the two reads). `NewResolver(tokenManager, usecase.Usecase)` and `dlvGrpc.Setup` unpack
+  `usecase.Usecase` into those interface-typed fields; resolvers call `r.expense.CreateExpense(...)`, never the bundle.
+  A new usecase method a handler or resolver needs is added to that layer's interface.
+- Ownership is always an explicit argument taken from the principal, never a form field:
+  `CreateExpense(ctx, userID, form)`, `UpdateExpense(ctx, id, userID, patch)`, `DeleteExpense(ctx, id, userID)`.
+  Usecase creates take a domain form (`domain.ExpenseForm`) the way updates take a patch; the handler or resolver
+  builds it. GraphQL create mutations take `form:`, updates `patch:`.
 - Updates are patches: omitted = keep, `""` clears clearable text (`description`, `last_name`). Domain patches
   (`*Patch`) have pointer fields and `Validate()` checks only the set ones; usecases take the patch struct; SQL uses
   `COALESCE(sqlc.narg('x')::TYPE, x)` per column (`CASE ... NULLIF(..., '')` where `""` must store `NULL`). gRPC
@@ -245,9 +261,11 @@ including integration, with `-race` (the same command as `make test-integration`
   unique tiebreaker (`ORDER BY transaction_dt DESC, id DESC`; categories need none, `category_name` is unique per
   user), a comparison against the cursor, an index matching the order, `LIMIT page size + 1` to detect a next page,
   and an opaque base64url cursor (`domain.ExpenseCursor`, `domain.CategoryCursor`). Decoding a cursor validates it
-  completely (a text cursor must be valid UTF-8, or Postgres rejects the parameter as an internal error). Page size:
-  `constant.DefaultPageSize` / `constant.MaxPageSize`, normalized by `utils.SetPageSize`; the usecase fetches
-  `size + 1` and cuts the page with the **normalized** size, never the raw request value. GraphQL returns `nodes` + `pageInfo`; gRPC follows AIP-158
+  completely (a text cursor must be valid UTF-8, or Postgres rejects the parameter as an internal error). List usecases
+  take `(ctx, userID, [filter,] pagination.Request)` (`domain.ExpenseFilter` holds the filters; lists without
+  filters, like `ListCategories`, take none), normalize the
+  size with `NormalizedSize` (`constant.DefaultPageSize` / `constant.MaxPageSize`), fetch `size + 1` and cut the page
+  with `pagination.Cut(rows, size)`, which also returns the last row for the next cursor. GraphQL returns `nodes` + `pageInfo`; gRPC follows AIP-158
   (`page_size`, `page_token`, `next_page_token`).
 - Metrics: one registry (`platform/metrics`), passed in, never the Prometheus global. Labels must be bounded
   (route names, codes, method names), never client-supplied values or IDs. `/metrics` lives only on the metrics

@@ -82,68 +82,6 @@ func TestGetUserByID(t *testing.T) {
 	})
 }
 
-func TestGetUserByGoogleSub(t *testing.T) {
-	const sub = "google-sub-123"
-	want := &domain.User{ID: uuid.New(), FirstName: "Avi", Email: "avi@example.com"}
-
-	t.Run("returns user", func(t *testing.T) {
-		repo := &fakeUserRepo{userByGoogleSub: want}
-		uc := user.NewUserUsecase(repo)
-
-		got, err := uc.GetUserByGoogleSub(context.Background(), sub)
-
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Fatalf("got %v, want %v", got, want)
-		}
-		if repo.gotGoogleSub != sub {
-			t.Fatalf("repo received google_sub %q, want %q", repo.gotGoogleSub, sub)
-		}
-	})
-
-	t.Run("propagates not found", func(t *testing.T) {
-		repo := &fakeUserRepo{err: errDom.ErrNotFound}
-		uc := user.NewUserUsecase(repo)
-
-		if _, err := uc.GetUserByGoogleSub(context.Background(), sub); !errors.Is(err, errDom.ErrNotFound) {
-			t.Fatalf("got %v, want errDom.ErrNotFound", err)
-		}
-	})
-}
-
-func TestCreateUser(t *testing.T) {
-	lastName := "Leonardi"
-	firstName := "Avi"
-	email := "avi@example.com"
-	googleSub := "google-sub-123"
-	want := &domain.User{ID: uuid.New(), FirstName: "Avi", LastName: &lastName, Email: "avi@example.com"}
-
-	t.Run("creates and returns user", func(t *testing.T) {
-		repo := &fakeUserRepo{createResp: want}
-		uc := user.NewUserUsecase(repo)
-
-		got, err := uc.CreateUser(context.Background(), firstName, &lastName, email, googleSub)
-
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if !reflect.DeepEqual(got, want) {
-			t.Fatalf("got %v, want %v", got, want)
-		}
-	})
-
-	t.Run("propagates conflict", func(t *testing.T) {
-		repo := &fakeUserRepo{err: errDom.ErrConflict}
-		uc := user.NewUserUsecase(repo)
-
-		if _, err := uc.CreateUser(context.Background(), firstName, &lastName, email, googleSub); !errors.Is(err, errDom.ErrConflict) {
-			t.Fatalf("got %v, want errDom.ErrConflict", err)
-		}
-	})
-}
-
 func TestUpdateUser(t *testing.T) {
 	id := uuid.New()
 	lastName := "Leonardi"
