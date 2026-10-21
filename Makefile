@@ -10,7 +10,8 @@ GRPC_PROTOS := -proto financecore/v1/categories.proto -proto financecore/v1/expe
 	migrate-up migrate-down migrate-force migrate-create migrate-version \
 	sqlc-generate proto-generate proto-lint \
 	grpc-list grpc-describe \
-	gql-init gql-generate
+	gql-init gql-generate \
+	generate hooks
 
 run:
 	go run ./cmd
@@ -100,3 +101,9 @@ grpc-list:
 grpc-describe:
 	buf build -o $(PROTOSET)
 	grpcurl -protoset $(PROTOSET) describe $(symbol)
+
+# -- Global
+generate: proto-generate sqlc-generate gql-generate
+
+hooks:
+	git config core.hooksPath .githooks
