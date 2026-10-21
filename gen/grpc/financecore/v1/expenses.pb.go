@@ -133,7 +133,9 @@ type CreateExpenseRequest struct {
 	// Free-text note, at most 500 characters, trimmed. Unset means none ("").
 	Description *string `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	// Amount: greater than 0, at most 2 decimal places, below 1,000,000,000,000.
-	Amount        *decimal.Decimal `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
+	Amount *decimal.Decimal `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
+	// Optional UUID; retrying with the same request_id returns the expense the first call created instead of creating another; reusing it for a different expense is INVALID_ARGUMENT.
+	RequestId     *string `protobuf:"bytes,6,opt,name=request_id,json=requestId,proto3,oneof" json:"request_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -194,6 +196,13 @@ func (x *CreateExpenseRequest) GetAmount() *decimal.Decimal {
 		return x.Amount
 	}
 	return nil
+}
+
+func (x *CreateExpenseRequest) GetRequestId() string {
+	if x != nil && x.RequestId != nil {
+		return *x.RequestId
+	}
+	return ""
 }
 
 // Response for CreateExpense.
@@ -678,14 +687,17 @@ const file_financecore_v1_expenses_proto_rawDesc = "" +
 	"\rcategory_name\x18\x04 \x01(\tR\fcategoryName\x128\n" +
 	"\x0etransaction_dt\x18\x05 \x01(\v2\x11.google.type.DateR\rtransactionDt\x12 \n" +
 	"\vdescription\x18\x06 \x01(\tR\vdescription\x12,\n" +
-	"\x06amount\x18\a \x01(\v2\x14.google.type.DecimalR\x06amount\"\xd6\x01\n" +
+	"\x06amount\x18\a \x01(\v2\x14.google.type.DecimalR\x06amount\"\x89\x02\n" +
 	"\x14CreateExpenseRequest\x12\x1f\n" +
 	"\vcategory_id\x18\x01 \x01(\tR\n" +
 	"categoryId\x128\n" +
 	"\x0etransaction_dt\x18\x02 \x01(\v2\x11.google.type.DateR\rtransactionDt\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tH\x00R\vdescription\x88\x01\x01\x12,\n" +
-	"\x06amount\x18\x05 \x01(\v2\x14.google.type.DecimalR\x06amountB\x0e\n" +
-	"\f_description\"J\n" +
+	"\x06amount\x18\x05 \x01(\v2\x14.google.type.DecimalR\x06amount\x12\"\n" +
+	"\n" +
+	"request_id\x18\x06 \x01(\tH\x01R\trequestId\x88\x01\x01B\x0e\n" +
+	"\f_descriptionB\r\n" +
+	"\v_request_id\"J\n" +
 	"\x15CreateExpenseResponse\x121\n" +
 	"\aexpense\x18\x01 \x01(\v2\x17.financecore.v1.ExpenseR\aexpense\"\xa3\x01\n" +
 	"\x13ListExpensesRequest\x12=\n" +

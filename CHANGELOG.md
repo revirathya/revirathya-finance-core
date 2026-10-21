@@ -9,6 +9,9 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
 ## [Unreleased]
 
 ### Added
+- Idempotent expense creation: an optional `request_id` (gRPC) / `requestId` (GraphQL) UUID on create. Retrying with
+  the same key returns the expense the first call created; reusing it for a different expense is `INVALID_ARGUMENT` /
+  `BAD_USER_INPUT`. Keys are per user.
 - `APP_ENV` (`dev` / `prod`, default `prod`). In `dev`, gRPC reflection and GraphQL introspection default to on and
   `GET /playground` serves GraphiQL; explicit `GRPC_ENABLE_REFLECTION` / `GQL_ENABLE_INTROSPECTION` still win.
 - API documentation in the contracts: doc comments on every proto service, RPC, message and field (with error

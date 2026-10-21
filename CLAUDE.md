@@ -190,7 +190,9 @@ Single schema `app` (not `public`). Migrations live in `migrations/` as sequenti
 `users.google_sub` and unique emails, `000003_add_telegram_bind` adds `telegram_bind_codes`, and
 `000004_categories_per_user` makes categories per user, with a composite foreign key
 `expenses (category_id, user_id) -> categories (id, user_id)` so an expense can only use its owner's categories.
-`000006_expense_pagination_index` replaces the `(user_id, transaction_dt DESC)` index with
+`000007_expense_request_id` adds `expenses.request_id` (optional idempotency key, unique per user via a partial
+index `WHERE request_id IS NOT NULL`; `CreateExpense` uses `ON CONFLICT ... DO NOTHING` and returns the existing
+expense, and the usecase rejects a reused key whose payload differs). `000006_expense_pagination_index` replaces the `(user_id, transaction_dt DESC)` index with
 `(user_id, transaction_dt DESC, id DESC)` for keyset pagination. `000005_expense_description_not_null` makes `expenses.description` `NOT NULL DEFAULT ''`: `nil` input means
 "not sent" (create stores `''`, update keeps the value via `COALESCE`), `""` clears it.
 There is no seed data.

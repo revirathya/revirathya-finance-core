@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/genproto/googleapis/type/date"
 	gdecimal "google.golang.org/genproto/googleapis/type/decimal"
 	"google.golang.org/grpc"
@@ -291,6 +292,28 @@ func TestExpenseHandler(t *testing.T) {
 		if err != nil || got.GetExpense().GetCategoryName() != "Food" || got.GetExpense().GetDescription() != "Lunch" {
 			t.Fatalf("get: %v, %v; want Food / Lunch", got, err)
 		}
+	})
+
+	t.Run("a retried create with the same request_id returns the first expense", func(t *testing.T) {
+		key := uuid.NewString()
+		req := &financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: day(t, "2026-01-15"), Amount: amount("10"), RequestId: &key}
+
+		first, err := b.expenses.CreateExpense(b.as(aliceTG), req) // no description: the common case
+		if err != nil {
+			t.Fatalf("first: %v", err)
+		}
+		retry, err := b.expenses.CreateExpense(b.as(aliceTG), req)
+		if err != nil || retry.GetExpense().GetId() != first.GetExpense().GetId() {
+			t.Fatalf("retry: %v, %v; want the first expense %s", retry, err, first.GetExpense().GetId())
+		}
+
+		other := &financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: day(t, "2026-01-15"), Amount: amount("99"), RequestId: &key}
+		_, err = b.expenses.CreateExpense(b.as(aliceTG), other)
+		wantCode(t, err, codes.InvalidArgument, "request_id: was already used for a different expense")
+
+		bad := "not-a-uuid"
+		_, err = b.expenses.CreateExpense(b.as(aliceTG), &financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: day(t, "2026-01-15"), Amount: amount("10"), RequestId: &bad})
+		wantCode(t, err, codes.InvalidArgument, "request_id: must be a UUID")
 	})
 
 	t.Run("create rejects bad input with INVALID_ARGUMENT and the field", func(t *testing.T) {

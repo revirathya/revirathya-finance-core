@@ -38,9 +38,25 @@ func (r *expenseRepositoryImpl) CreateExpense(ctx context.Context, userID uuid.U
 		TransactionDt: database.ToPgxDate(form.TransactionDt),
 		Description:   form.Description,
 		Amount:        database.ToPgxNumeric(form.Amount),
+		RequestID:     database.ToOptionalPgxUUID(form.RequestID),
 	}
 
 	row, err := r.query.CreateExpense(ctx, args)
+
+	// Double request ID
+	if errors.Is(err, pgx.ErrNoRows) && form.RequestID != nil {
+		riArgs := sqlc.GetExpenseIDByRequestIDParams{
+			UserID:    database.ToPgxUUID(userID),
+			RequestID: database.ToPgxUUID(*form.RequestID),
+		}
+		id, err := r.query.GetExpenseIDByRequestID(ctx, riArgs)
+		if err != nil {
+			return nil, err
+		}
+		return r.GetExpenseByID(ctx, database.FromPgxUUID(id), userID)
+	}
+
+	// Creation faiure
 	if err != nil {
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			switch pgErr.Code {

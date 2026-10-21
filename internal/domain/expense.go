@@ -30,6 +30,7 @@ type ExpenseForm struct {
 	TransactionDt time.Time
 	Description   *string
 	Amount        decimal.Decimal
+	RequestID     *uuid.UUID
 }
 
 func (f *ExpenseForm) Validate() error {

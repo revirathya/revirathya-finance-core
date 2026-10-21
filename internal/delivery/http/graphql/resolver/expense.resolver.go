@@ -30,6 +30,7 @@ func (r *mutationResolver) CreateExpense(ctx context.Context, form model.CreateE
 		TransactionDt: form.TransactionDt,
 		Description:   form.Description,
 		Amount:        form.Amount,
+		RequestID:     form.RequestID,
 	})
 	if err != nil {
 		return nil, err

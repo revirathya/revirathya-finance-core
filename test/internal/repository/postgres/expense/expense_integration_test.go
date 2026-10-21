@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -460,4 +461,129 @@ func TestExpenseRepositoryPatch(t *testing.T) {
 			t.Fatalf("update %s: got %+v, want only that field changed", step.name, got)
 		}
 	}
+}
+
+func TestExpenseRepositoryRequestID(t *testing.T) {
+	ctx := context.Background()
+	repo := rExpense.NewExpenseRepositoryImpl(testutil.TestPool)
+	count := func(t *testing.T, userID uuid.UUID) int {
+		t.Helper()
+		var n int
+		if err := testutil.TestPool.QueryRow(ctx, "SELECT count(*) FROM app.expenses WHERE user_id = $1", userID).Scan(&n); err != nil {
+			t.Fatalf("count: %v", err)
+		}
+		return n
+	}
+	newForm := func(t *testing.T, categoryID uuid.UUID, requestID *uuid.UUID, amount string) domain.ExpenseForm {
+		return domain.ExpenseForm{CategoryID: categoryID, TransactionDt: testutil.Day(t, "2026-01-15"),
+			Amount: decimal.RequireFromString(amount), RequestID: requestID}
+	}
+
+	t.Run("the same request_id twice stores one expense and returns it both times", func(t *testing.T) {
+		alice := testutil.NewUser(t)
+		food := testutil.NewCategory(t, alice.ID, "Food")
+		key := uuid.New()
+
+		first, err := repo.CreateExpense(ctx, alice.ID, newForm(t, food.ID, &key, "10"))
+		if err != nil {
+			t.Fatalf("first: %v", err)
+		}
+		second, err := repo.CreateExpense(ctx, alice.ID, newForm(t, food.ID, &key, "10"))
+		if err != nil {
+			t.Fatalf("retry: %v", err)
+		}
+
+		if second.ID != first.ID || second.CategoryName != "Food" {
+			t.Fatalf("retry returned %v (%q), want the first expense %v", second.ID, second.CategoryName, first.ID)
+		}
+		if n := count(t, alice.ID); n != 1 {
+			t.Fatalf("%d rows, want 1", n)
+		}
+	})
+
+	t.Run("a replay returns the stored expense even if the retry's payload differs (the usecase rejects that)", func(t *testing.T) {
+		alice := testutil.NewUser(t)
+		food := testutil.NewCategory(t, alice.ID, "Food")
+		key := uuid.New()
+		first, _ := repo.CreateExpense(ctx, alice.ID, newForm(t, food.ID, &key, "10"))
+
+		got, err := repo.CreateExpense(ctx, alice.ID, newForm(t, food.ID, &key, "99"))
+		if err != nil || got.ID != first.ID || !got.Amount.Equal(decimal.RequireFromString("10")) {
+			t.Fatalf("got %+v, %v; want the first expense, amount 10", got, err)
+		}
+	})
+
+	t.Run("concurrent retries with the same request_id create exactly one expense", func(t *testing.T) {
+		alice := testutil.NewUser(t)
+		food := testutil.NewCategory(t, alice.ID, "Food")
+		key := uuid.New()
+
+		const n = 8
+		ids := make(chan uuid.UUID, n)
+		errs := make(chan error, n)
+		var wg sync.WaitGroup
+		for range n {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				e, err := repo.CreateExpense(ctx, alice.ID, newForm(t, food.ID, &key, "10"))
+				if err != nil {
+					errs <- err
+					return
+				}
+				ids <- e.ID
+			}()
+		}
+		wg.Wait()
+		close(ids)
+		close(errs)
+
+		for err := range errs {
+			t.Fatalf("a concurrent create failed: %v", err)
+		}
+		seen := map[uuid.UUID]bool{}
+		for id := range ids {
+			seen[id] = true
+		}
+		if len(seen) != 1 || count(t, alice.ID) != 1 {
+			t.Fatalf("%d distinct IDs, %d rows; want 1 and 1", len(seen), count(t, alice.ID))
+		}
+	})
+
+	t.Run("the same request_id from two users creates two expenses", func(t *testing.T) {
+		alice, bob := testutil.NewUser(t), testutil.NewUser(t)
+		key := uuid.New()
+
+		a, errA := repo.CreateExpense(ctx, alice.ID, newForm(t, testutil.NewCategory(t, alice.ID, "Food").ID, &key, "10"))
+		b, errB := repo.CreateExpense(ctx, bob.ID, newForm(t, testutil.NewCategory(t, bob.ID, "Food").ID, &key, "10"))
+		if errA != nil || errB != nil || a.ID == b.ID || a.UserID != alice.ID || b.UserID != bob.ID {
+			t.Fatalf("got %v (%v) and %v (%v); want two separate expenses, one per user", a, errA, b, errB)
+		}
+	})
+
+	t.Run("without a request_id every create is a new expense", func(t *testing.T) {
+		alice := testutil.NewUser(t)
+		food := testutil.NewCategory(t, alice.ID, "Food")
+
+		a, _ := repo.CreateExpense(ctx, alice.ID, newForm(t, food.ID, nil, "10"))
+		b, _ := repo.CreateExpense(ctx, alice.ID, newForm(t, food.ID, nil, "10"))
+		if a.ID == b.ID || count(t, alice.ID) != 2 {
+			t.Fatalf("got the same expense twice, or %d rows; want 2 separate rows", count(t, alice.ID))
+		}
+	})
+
+	t.Run("deleting the expense frees its request_id", func(t *testing.T) {
+		alice := testutil.NewUser(t)
+		food := testutil.NewCategory(t, alice.ID, "Food")
+		key := uuid.New()
+		first, _ := repo.CreateExpense(ctx, alice.ID, newForm(t, food.ID, &key, "10"))
+		if err := repo.DeleteExpense(ctx, first.ID, alice.ID); err != nil {
+			t.Fatalf("delete: %v", err)
+		}
+
+		again, err := repo.CreateExpense(ctx, alice.ID, newForm(t, food.ID, &key, "10"))
+		if err != nil || again.ID == first.ID {
+			t.Fatalf("got %v, %v; want a new expense", again, err)
+		}
+	})
 }

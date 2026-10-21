@@ -270,9 +270,10 @@ client later. Do these first.
   that changes.
 - [x] GraphQL custom scalars `Date` and `Decimal` instead of `String` for `transactionDt` and `amount`, and `UUID`
   instead of `ID` for identifiers (`internal/delivery/http/graphql/scalar`, function-based, mapped in `gqlgen.yml`).
-- [ ] When the first client that retries is built: idempotency key on `CreateExpense` (`request_id` per
-  [AIP-155](https://google.aip.dev/155), `requestId` in GraphQL), so retries don't create duplicate expenses. It's an
-  optional field, so adding it later breaks no one.
+- [x] Idempotency key on `CreateExpense` (`request_id` per [AIP-155](https://google.aip.dev/155), `requestId` in
+  GraphQL): migration `000007_expense_request_id`, unique per user; a retry returns the first expense, and a reused
+  key with a different payload is `INVALID_ARGUMENT` / `BAD_USER_INPUT`. Known edge cases: a key is freed when its
+  expense is deleted, and a retry after the expense was updated no longer matches (so it's rejected).
 - [ ] Rate limiting on writes: 15 per user per minute, shared by gRPC and GraphQL, single instance. Full spec in
   [rate-limiting.md](rate-limiting.md). (Today only Telegram binding is limited.)
 - [x] Normalize CRUD in the repositories and usecases (internal only, so no client impact; the end-to-end tests cover
@@ -380,7 +381,7 @@ Next, in this order:
 
 1. ~~`converter.ParseUUID`~~ (done).
 2. ~~Normalize CRUD~~ (done).
-3. **Idempotency key** on `CreateExpense` (section 3, API design).
+3. ~~Idempotency key~~ (done).
 4. **Repo hygiene** (section 3): `LICENSE`, `CODEOWNERS`, `SECURITY.md`, PR template, Dependabot, `make generate`
    and a pre-commit hook, ADRs.
 5. **OpenTelemetry tracing** (section 3, Observability).

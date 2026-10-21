@@ -318,6 +318,21 @@ func TestExpenseResolvers(t *testing.T) {
 		}
 	})
 
+	t.Run("a retried create with the same requestId returns the first expense", func(t *testing.T) {
+		key := uuid.NewString()
+		in := expenseInput("2026-01-15", "10", map[string]any{"requestId": key}) // no description: the common case
+
+		first := field(a.ok(alice, create, in), "createExpense", "id")
+		retry := field(a.ok(alice, create, in), "createExpense", "id")
+		if first == nil || retry != first {
+			t.Fatalf("retry returned %v, want the first expense %v", retry, first)
+		}
+
+		a.wantCode(alice, create, expenseInput("2026-01-15", "99", map[string]any{"requestId": key}),
+			"BAD_USER_INPUT", "request_id: was already used for a different expense")
+		a.wantCode(alice, create, expenseInput("2026-01-15", "10", map[string]any{"requestId": "not-a-uuid"}), "BAD_USER_INPUT", "")
+	})
+
 	t.Run("create validates through the usecase and reports the field", func(t *testing.T) {
 		a.wantCode(alice, create, expenseInput("2026-01-15", "0", nil), "BAD_USER_INPUT", "amount: must be greater than 0")
 		a.wantCode(alice, create, expenseInput("1999-12-31", "1", nil), "BAD_USER_INPUT", "transaction_dt")

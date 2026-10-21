@@ -7,6 +7,7 @@ import (
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
 	"github.com/revirathya/revirathya-finance-core/internal/domain/pagination"
 )
 
@@ -25,7 +26,16 @@ func (uc *ExpenseUsecase) CreateExpense(ctx context.Context, userID uuid.UUID, f
 	if err := form.Validate(); err != nil {
 		return nil, err
 	}
-	return uc.expense.CreateExpense(ctx, userID, form)
+
+	expense, err := uc.expense.CreateExpense(ctx, userID, form)
+	if err != nil {
+		return nil, err
+	}
+
+	if form.RequestID != nil && !sameExpense(form, *expense) {
+		return nil, &errDom.ValidationError{Field: "request_id", Reason: "was already used for a different expense"}
+	}
+	return expense, nil
 }
 
 func (uc *ExpenseUsecase) GetExpenseByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Expense, error) {
