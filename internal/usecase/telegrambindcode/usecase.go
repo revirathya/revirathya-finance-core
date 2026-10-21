@@ -13,16 +13,16 @@ import (
 )
 
 type TelegramBindCodeUsecase struct {
-	tbcRepo domain.TelegramBindCodeRepository
+	telegramBindCode domain.TelegramBindCodeRepository
 }
 
-func NewTelegramBindCodeUsecase(tbcRepo domain.TelegramBindCodeRepository) *TelegramBindCodeUsecase {
+func NewTelegramBindCodeUsecase(telegramBindCode domain.TelegramBindCodeRepository) *TelegramBindCodeUsecase {
 	return &TelegramBindCodeUsecase{
-		tbcRepo: tbcRepo,
+		telegramBindCode: telegramBindCode,
 	}
 }
 
-func (u *TelegramBindCodeUsecase) CreateBindCode(ctx context.Context, userID uuid.UUID) (string, time.Time, error) {
+func (uc *TelegramBindCodeUsecase) CreateBindCode(ctx context.Context, userID uuid.UUID) (string, time.Time, error) {
 	// Generate code
 	code, err := auth.GenBindCode()
 	if err != nil {
@@ -34,13 +34,13 @@ func (u *TelegramBindCodeUsecase) CreateBindCode(ctx context.Context, userID uui
 	expiresAt := time.Now().Add(10 * time.Minute)
 
 	// Save bind code
-	if err := u.tbcRepo.CreateBindCode(ctx, userID, codeHash, expiresAt); err != nil {
+	if err := uc.telegramBindCode.CreateBindCode(ctx, userID, codeHash, expiresAt); err != nil {
 		return "", time.Time{}, err
 	}
 	return code, expiresAt, nil
 }
 
-func (u *TelegramBindCodeUsecase) BindTelegram(ctx context.Context, code string, telegramID string) (*domain.User, error) {
+func (uc *TelegramBindCodeUsecase) BindTelegram(ctx context.Context, code string, telegramID string) (*domain.User, error) {
 	// Validate code pattern
 	if matched := auth.ValidateCode(code); (!matched) || (telegramID == "") {
 		return nil, errDom.ErrInvalidInput
@@ -48,7 +48,7 @@ func (u *TelegramBindCodeUsecase) BindTelegram(ctx context.Context, code string,
 
 	// Bind code
 	codeHash := auth.HashCode(code)
-	user, err := u.tbcRepo.BindCode(ctx, codeHash, telegramID)
+	user, err := uc.telegramBindCode.BindCode(ctx, codeHash, telegramID)
 	if err != nil {
 		if errors.Is(err, errDom.ErrNotFound) {
 			return nil, errDom.ErrInvalidInput
@@ -59,6 +59,6 @@ func (u *TelegramBindCodeUsecase) BindTelegram(ctx context.Context, code string,
 	return user, nil
 }
 
-func (u *TelegramBindCodeUsecase) UnbindTelegram(ctx context.Context, userID uuid.UUID) error {
-	return u.tbcRepo.UnbindTelegram(ctx, userID)
+func (uc *TelegramBindCodeUsecase) UnbindTelegram(ctx context.Context, userID uuid.UUID) error {
+	return uc.telegramBindCode.UnbindTelegram(ctx, userID)
 }

@@ -388,7 +388,14 @@ func TestExpenseHandler(t *testing.T) {
 				return err
 			},
 		} {
-			t.Run(name, func(t *testing.T) { wantCode(t, call(), codes.InvalidArgument, "id: must be a UUID") })
+			t.Run(name, func(t *testing.T) {
+				err := call()
+				wantCode(t, err, codes.InvalidArgument, "")
+				// The exact message: no handler-specific wrapper around the field error.
+				if msg := status.Convert(err).Message(); msg != "id: must be a UUID" {
+					t.Fatalf("message %q, want exactly %q", msg, "id: must be a UUID")
+				}
+			})
 		}
 
 		created, err := b.expenses.CreateExpense(b.as(aliceTG), &financecorev1.CreateExpenseRequest{CategoryId: food, TransactionDt: day(t, "2026-01-15"), Amount: amount("1")})

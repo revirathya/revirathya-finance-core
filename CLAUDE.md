@@ -87,7 +87,8 @@ internal/domain                entities, forms/patches with Validate(), reposito
 internal/domain/error          domain errors + ValidationError; always import as errDom
 internal/domain/validation     per-field validation helpers (ValidateString/Date/Decimal) used by Validate()
 internal/domain/constant       DefaultPageSize / MaxPageSize
-internal/domain/pagination     SetPageSize: page-size rules shared by every list usecase (< 0 invalid, 0 -> default, cap at max)
+internal/domain/pagination     Request{Size, Token} + NormalizedSize (< 0 invalid, 0 -> default, cap at max),
+                               Cut[T](rows, size) -> page, last, more
 internal/usecase/<entity>      business logic; depends only on domain interfaces, not on pgx/gRPC/gqlgen
 internal/usecase/bootstrap.go  usecase.Usecase{Auth, Category, Expense, ...} + BootstrapUsecase(verifier, domain.Repository);
                                depends only on domain interfaces, never on internal/repository (no pgx in usecase's imports)
@@ -234,7 +235,8 @@ including integration, with `-race` (the same command as `make test-integration`
 - Logging: use `log/slog`'s `*Context` methods (`slog.InfoContext`, `slog.ErrorContext`, ...) wherever a request
   context exists, so the request ID is attached. Never log secrets, tokens, `Authorization` headers, full DSNs, the
   config struct, or raw request bodies. `cmd/main.go` returns errors from `run()` instead of panicking.
-- Usecases take and return `internal/domain` types only; they must not import pgx, gqlgen, gRPC generated packages,
+- Usecase structs name their dependencies after the entity, not `xxxRepo` (`uc.expense.CreateExpense(...)`), with
+  receiver `uc`. Usecases take and return `internal/domain` types only; they must not import pgx, gqlgen, gRPC generated packages,
   or `internal/repository` (including in `usecase/bootstrap.go`, which takes `domain.Repository`). Check with
   `go list -deps ./internal/usecase/... | grep -E 'jackc/pgx|internal/repository'` (should print nothing).
 - Usecase tests use hand-written fakes implementing the domain repository interface (see
@@ -246,6 +248,10 @@ including integration, with `-race` (the same command as `make test-integration`
   interface has just the two reads). `NewResolver(tokenManager, usecase.Usecase)` and `dlvGrpc.Setup` unpack
   `usecase.Usecase` into those interface-typed fields; resolvers call `r.expense.CreateExpense(...)`, never the bundle.
   A new usecase method a handler or resolver needs is added to that layer's interface.
+- Ownership is always an explicit argument taken from the principal, never a form field:
+  `CreateExpense(ctx, userID, form)`, `UpdateExpense(ctx, id, userID, patch)`, `DeleteExpense(ctx, id, userID)`.
+  Usecase creates take a domain form (`domain.ExpenseForm`) the way updates take a patch; the handler or resolver
+  builds it. GraphQL create mutations take `form:`, updates `patch:`.
 - Updates are patches: omitted = keep, `""` clears clearable text (`description`, `last_name`). Domain patches
   (`*Patch`) have pointer fields and `Validate()` checks only the set ones; usecases take the patch struct; SQL uses
   `COALESCE(sqlc.narg('x')::TYPE, x)` per column (`CASE ... NULLIF(..., '')` where `""` must store `NULL`). gRPC
@@ -255,9 +261,11 @@ including integration, with `-race` (the same command as `make test-integration`
   unique tiebreaker (`ORDER BY transaction_dt DESC, id DESC`; categories need none, `category_name` is unique per
   user), a comparison against the cursor, an index matching the order, `LIMIT page size + 1` to detect a next page,
   and an opaque base64url cursor (`domain.ExpenseCursor`, `domain.CategoryCursor`). Decoding a cursor validates it
-  completely (a text cursor must be valid UTF-8, or Postgres rejects the parameter as an internal error). Page size:
-  `constant.DefaultPageSize` / `constant.MaxPageSize`, normalized by `pagination.SetPageSize`; the usecase fetches
-  `size + 1` and cuts the page with the **normalized** size, never the raw request value. GraphQL returns `nodes` + `pageInfo`; gRPC follows AIP-158
+  completely (a text cursor must be valid UTF-8, or Postgres rejects the parameter as an internal error). List usecases
+  take `(ctx, userID, [filter,] pagination.Request)` (`domain.ExpenseFilter` holds the filters; lists without
+  filters, like `ListCategories`, take none), normalize the
+  size with `NormalizedSize` (`constant.DefaultPageSize` / `constant.MaxPageSize`), fetch `size + 1` and cut the page
+  with `pagination.Cut(rows, size)`, which also returns the last row for the next cursor. GraphQL returns `nodes` + `pageInfo`; gRPC follows AIP-158
   (`page_size`, `page_token`, `next_page_token`).
 - Metrics: one registry (`platform/metrics`), passed in, never the Prometheus global. Labels must be bounded
   (route names, codes, method names), never client-supplied values or IDs. `/metrics` lives only on the metrics

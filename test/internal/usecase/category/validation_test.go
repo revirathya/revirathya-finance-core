@@ -20,7 +20,7 @@ func TestCategoryValidation(t *testing.T) {
 			repo := &fakeCategoryRepo{}
 			uc := category.NewCategoryUsecase(repo)
 
-			_, err := uc.CreateCategory(context.Background(), uuid.New(), name)
+			_, err := uc.CreateCategory(context.Background(), uuid.New(), domain.CategoryForm{CategoryName: name})
 
 			if !errors.Is(err, errDom.ErrInvalidInput) {
 				t.Fatalf("got %v, want errDom.ErrInvalidInput", err)
@@ -49,7 +49,7 @@ func TestCategoryValidation(t *testing.T) {
 		repo := &fakeCategoryRepo{}
 		uc := category.NewCategoryUsecase(repo)
 
-		if _, err := uc.CreateCategory(context.Background(), uuid.New(), "  Food  "); err != nil {
+		if _, err := uc.CreateCategory(context.Background(), uuid.New(), domain.CategoryForm{CategoryName: "  Food  "}); err != nil {
 			t.Fatalf("create: %v", err)
 		}
 		if _, err := uc.UpdateCategory(context.Background(), uuid.New(), uuid.New(), domain.CategoryPatch{CategoryName: ptr("  Groceries  ")}); err != nil {

@@ -212,7 +212,7 @@ func TestCategoryResolvers(t *testing.T) {
 	a := newAPI(t)
 	alice, _ := a.login("Alice", "")
 	bob, _ := a.login("Bob", "")
-	const create = `mutation($n: String!) { createCategory(input: { categoryName: $n }) { id categoryName } }`
+	const create = `mutation($n: String!) { createCategory(form: { categoryName: $n }) { id categoryName } }`
 
 	food := field(a.ok(alice, create, map[string]any{"n": "  Food "}), "createCategory").(map[string]any)
 	a.ok(alice, create, map[string]any{"n": "Bills"})
@@ -282,7 +282,7 @@ func TestCategoryResolvers(t *testing.T) {
 			t.Fatalf("renamed %v, want Groceries", renamed)
 		}
 
-		a.ok(alice, `mutation($c: UUID!) { createExpense(input: { transactionDt: "2026-01-15", categoryId: $c, amount: "10" }) { id } }`, map[string]any{"c": food["id"]})
+		a.ok(alice, `mutation($c: UUID!) { createExpense(form: { transactionDt: "2026-01-15", categoryId: $c, amount: "10" }) { id } }`, map[string]any{"c": food["id"]})
 		a.wantCode(alice, `mutation($id: UUID!) { deleteCategory(id: $id) }`, map[string]any{"id": food["id"]}, "CONFLICT", "")
 
 		unused := field(a.ok(alice, create, map[string]any{"n": "Unused"}), "createCategory", "id")
@@ -297,10 +297,10 @@ func TestExpenseResolvers(t *testing.T) {
 	alice, aliceID := a.login("Alice", "")
 	bob, _ := a.login("Bob", "")
 	category := func(token, name string) string {
-		return field(a.ok(token, `mutation($n: String!) { createCategory(input: { categoryName: $n }) { id } }`, map[string]any{"n": name}), "createCategory", "id").(string)
+		return field(a.ok(token, `mutation($n: String!) { createCategory(form: { categoryName: $n }) { id } }`, map[string]any{"n": name}), "createCategory", "id").(string)
 	}
 	food, bobsFood := category(alice, "Food"), category(bob, "Food")
-	const create = `mutation($in: CreateExpenseInput!) { createExpense(input: $in) { id userId categoryId categoryName transactionDt description amount } }`
+	const create = `mutation($in: CreateExpenseInput!) { createExpense(form: $in) { id userId categoryId categoryName transactionDt description amount } }`
 	expenseInput := func(dt, amount string, extra map[string]any) map[string]any {
 		in := map[string]any{"transactionDt": dt, "categoryId": food, "amount": amount}
 		for k, v := range extra {

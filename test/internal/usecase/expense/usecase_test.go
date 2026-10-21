@@ -11,6 +11,7 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/domain/constant"
 	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
+	"github.com/revirathya/revirathya-finance-core/internal/domain/pagination"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase/expense"
 	"github.com/shopspring/decimal"
 )
@@ -23,10 +24,11 @@ type fakeExpenseRepo struct {
 	updateResp *domain.Expense
 	err        error
 
-	gotCreateInput domain.ExpenseForm
-	gotGetID       uuid.UUID
-	gotListUserID  uuid.UUID
-	gotListQuery   domain.ExpenseListQuery
+	gotCreateUserID uuid.UUID
+	gotCreateInput  domain.ExpenseForm
+	gotGetID        uuid.UUID
+	gotListUserID   uuid.UUID
+	gotListQuery    domain.ExpenseListQuery
 
 	gotUpdateID    uuid.UUID
 	gotUpdatePatch domain.ExpensePatch
@@ -34,7 +36,8 @@ type fakeExpenseRepo struct {
 	gotDeleteID uuid.UUID
 }
 
-func (f *fakeExpenseRepo) CreateExpense(ctx context.Context, input domain.ExpenseForm) (*domain.Expense, error) {
+func (f *fakeExpenseRepo) CreateExpense(ctx context.Context, userID uuid.UUID, input domain.ExpenseForm) (*domain.Expense, error) {
+	f.gotCreateUserID = userID
 	f.gotCreateInput = input
 	return f.createResp, f.err
 }
@@ -73,7 +76,7 @@ func TestCreateExpense(t *testing.T) {
 		repo := &fakeExpenseRepo{createResp: want}
 		uc := expense.NewExpenseUsecase(repo)
 
-		got, err := uc.CreateExpense(context.Background(), userID, categoryID, dt, &description, amount)
+		got, err := uc.CreateExpense(context.Background(), userID, domain.ExpenseForm{CategoryID: categoryID, TransactionDt: dt, Description: &description, Amount: amount})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -82,8 +85,10 @@ func TestCreateExpense(t *testing.T) {
 			t.Fatalf("got %v, want %v", got, want)
 		}
 
+		if repo.gotCreateUserID != userID {
+			t.Fatalf("repo received owner %v, want %v", repo.gotCreateUserID, userID)
+		}
 		wantInput := domain.ExpenseForm{
-			UserID:        userID,
 			CategoryID:    categoryID,
 			TransactionDt: dt,
 			Description:   &description,
@@ -98,7 +103,7 @@ func TestCreateExpense(t *testing.T) {
 		repo := &fakeExpenseRepo{err: errors.New("db down")}
 		uc := expense.NewExpenseUsecase(repo)
 
-		if _, err := uc.CreateExpense(context.Background(), userID, categoryID, dt, &description, amount); err == nil {
+		if _, err := uc.CreateExpense(context.Background(), userID, domain.ExpenseForm{CategoryID: categoryID, TransactionDt: dt, Description: &description, Amount: amount}); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})
@@ -154,7 +159,7 @@ func TestListExpenses(t *testing.T) {
 		repo := &fakeExpenseRepo{listResp: expenses(3)}
 		uc := expense.NewExpenseUsecase(repo)
 
-		page, err := uc.ListExpenses(context.Background(), userID, &dt, 10, "")
+		page, err := uc.ListExpenses(context.Background(), userID, domain.ExpenseFilter{TransactionDt: &dt}, pagination.Request{Size: 10, Token: ""})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -178,7 +183,7 @@ func TestListExpenses(t *testing.T) {
 			repo := &fakeExpenseRepo{}
 			uc := expense.NewExpenseUsecase(repo)
 
-			if _, err := uc.ListExpenses(context.Background(), userID, nil, tt.in, ""); err != nil {
+			if _, err := uc.ListExpenses(context.Background(), userID, domain.ExpenseFilter{}, pagination.Request{Size: tt.in, Token: ""}); err != nil {
 				t.Fatalf("page size %d: unexpected error: %v", tt.in, err)
 			}
 			if repo.gotListQuery.Limit != tt.wantLimit {
@@ -192,7 +197,7 @@ func TestListExpenses(t *testing.T) {
 		repo := &fakeExpenseRepo{listResp: rows}
 		uc := expense.NewExpenseUsecase(repo)
 
-		page, err := uc.ListExpenses(context.Background(), userID, nil, 2, "")
+		page, err := uc.ListExpenses(context.Background(), userID, domain.ExpenseFilter{}, pagination.Request{Size: 2, Token: ""})
 
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -209,7 +214,7 @@ func TestListExpenses(t *testing.T) {
 	t.Run("the default and capped sizes are the ones used to cut the page", func(t *testing.T) {
 		for _, tt := range []struct{ in, want int }{{0, constant.DefaultPageSize}, {1_000_000, constant.MaxPageSize}} {
 			rows := expenses(tt.want + 1) // what the repository returns for limit want+1
-			page, err := expense.NewExpenseUsecase(&fakeExpenseRepo{listResp: rows}).ListExpenses(context.Background(), userID, nil, tt.in, "")
+			page, err := expense.NewExpenseUsecase(&fakeExpenseRepo{listResp: rows}).ListExpenses(context.Background(), userID, domain.ExpenseFilter{}, pagination.Request{Size: tt.in, Token: ""})
 			if err != nil || len(page.Expenses) != tt.want || page.NextCursor == nil || page.NextCursor.ID != rows[tt.want-1].ID {
 				t.Fatalf("page size %d: got %d expenses, cursor %v, %v; want %d and a cursor at the last one", tt.in, len(page.Expenses), page.NextCursor, err, tt.want)
 			}
@@ -220,7 +225,7 @@ func TestListExpenses(t *testing.T) {
 		repo := &fakeExpenseRepo{listResp: expenses(2)}
 		uc := expense.NewExpenseUsecase(repo)
 
-		page, err := uc.ListExpenses(context.Background(), userID, nil, 2, "")
+		page, err := uc.ListExpenses(context.Background(), userID, domain.ExpenseFilter{}, pagination.Request{Size: 2, Token: ""})
 
 		if err != nil || len(page.Expenses) != 2 || page.NextCursor != nil {
 			t.Fatalf("got %d expenses, cursor %v, err %v; want 2 and no next page", len(page.Expenses), page.NextCursor, err)
@@ -230,7 +235,7 @@ func TestListExpenses(t *testing.T) {
 	t.Run("empty result is an empty last page", func(t *testing.T) {
 		uc := expense.NewExpenseUsecase(&fakeExpenseRepo{})
 
-		page, err := uc.ListExpenses(context.Background(), userID, nil, 0, "")
+		page, err := uc.ListExpenses(context.Background(), userID, domain.ExpenseFilter{}, pagination.Request{Size: 0, Token: ""})
 
 		if err != nil || len(page.Expenses) != 0 || page.NextCursor != nil {
 			t.Fatalf("got %v, %v; want an empty page without cursor", page, err)
@@ -242,7 +247,7 @@ func TestListExpenses(t *testing.T) {
 		repo := &fakeExpenseRepo{}
 		uc := expense.NewExpenseUsecase(repo)
 
-		if _, err := uc.ListExpenses(context.Background(), userID, nil, 0, cursor.Encode()); err != nil {
+		if _, err := uc.ListExpenses(context.Background(), userID, domain.ExpenseFilter{}, pagination.Request{Size: 0, Token: cursor.Encode()}); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if repo.gotListQuery.After == nil || *repo.gotListQuery.After != cursor {
@@ -253,11 +258,11 @@ func TestListExpenses(t *testing.T) {
 	t.Run("invalid input is rejected before the repository", func(t *testing.T) {
 		for name, call := range map[string]func(uc *expense.ExpenseUsecase) error{
 			"page_size": func(uc *expense.ExpenseUsecase) error {
-				_, err := uc.ListExpenses(context.Background(), userID, nil, -1, "")
+				_, err := uc.ListExpenses(context.Background(), userID, domain.ExpenseFilter{}, pagination.Request{Size: -1, Token: ""})
 				return err
 			},
 			"page_token": func(uc *expense.ExpenseUsecase) error {
-				_, err := uc.ListExpenses(context.Background(), userID, nil, 0, "garbage!")
+				_, err := uc.ListExpenses(context.Background(), userID, domain.ExpenseFilter{}, pagination.Request{Size: 0, Token: "garbage!"})
 				return err
 			},
 		} {
@@ -277,7 +282,7 @@ func TestListExpenses(t *testing.T) {
 	t.Run("propagates repo error", func(t *testing.T) {
 		uc := expense.NewExpenseUsecase(&fakeExpenseRepo{err: errors.New("db down")})
 
-		if _, err := uc.ListExpenses(context.Background(), userID, nil, 0, ""); err == nil {
+		if _, err := uc.ListExpenses(context.Background(), userID, domain.ExpenseFilter{}, pagination.Request{Size: 0, Token: ""}); err == nil {
 			t.Fatal("expected error, got nil")
 		}
 	})

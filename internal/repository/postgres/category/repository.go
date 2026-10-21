@@ -153,10 +153,12 @@ func (r *categoryRepositoryImpl) DeleteCategory(ctx context.Context, id uuid.UUI
 
 	rowCnt, err := r.query.DeleteCategory(ctx, args)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if (errors.As(err, &pgErr)) && (pgErr.Code == "23503") {
-			// Remove used category
-			return errDom.ErrConflict
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
+			switch pgErr.Code {
+			case "23503":
+				// Category still used by an expense
+				return errDom.ErrConflict
+			}
 		}
 		return err
 	}

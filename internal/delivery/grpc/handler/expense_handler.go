@@ -4,15 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	// Generated
 	financecorev1 "github.com/revirathya/revirathya-finance-core/gen/grpc/financecore/v1"
 
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	"github.com/revirathya/revirathya-finance-core/internal/domain/pagination"
 
 	// Internal - gRPC
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/converter"
@@ -66,13 +64,13 @@ func (h *ExpenseHandler) CreateExpense(ctx context.Context, req *financecorev1.C
 	}
 
 	// Create expense
-	expense, err := h.expense.CreateExpense(ctx,
-		userID,
-		categoryID,
-		transactionDt,
-		req.Description,
-		amount,
-	)
+	form := domain.ExpenseForm{
+		CategoryID:    categoryID,
+		TransactionDt: transactionDt,
+		Description:   req.Description,
+		Amount:        amount,
+	}
+	expense, err := h.expense.CreateExpense(ctx, userID, form)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "create expense", err)
 	}
@@ -112,13 +110,22 @@ func (h *ExpenseHandler) ListExpenses(ctx context.Context, req *financecorev1.Li
 	}
 
 	// Parse input
-	tmTransactionDt, err := converter.FromOptionalProtoDate("transaction_dt", req.GetTransactionDt())
+	transactionDt, err := converter.FromOptionalProtoDate("transaction_dt", req.GetTransactionDt())
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "list expenses", err)
 	}
 
 	// List expenses
-	expensePage, err := h.expense.ListExpenses(ctx, userID, tmTransactionDt, int(req.PageSize), req.PageToken)
+	filter := domain.ExpenseFilter{
+		TransactionDt: transactionDt,
+	}
+
+	pageReq := pagination.Request{
+		Size:  int(req.PageSize),
+		Token: req.PageToken,
+	}
+
+	expensePage, err := h.expense.ListExpenses(ctx, userID, filter, pageReq)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "list expenses", err)
 	}
@@ -191,7 +198,7 @@ func (h *ExpenseHandler) DeleteExpense(ctx context.Context, req *financecorev1.D
 	// Parse input
 	id, err := converter.ParseUUID("id", req.GetId())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid id UUID format: %v", err)
+		return nil, errGrpc.ToStatus(ctx, "delete expense", err)
 	}
 
 	// Delete expense

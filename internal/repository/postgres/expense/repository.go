@@ -31,9 +31,9 @@ func NewExpenseRepositoryImpl(pool *pgxpool.Pool) domain.ExpenseRepository {
 	}
 }
 
-func (r *expenseRepositoryImpl) CreateExpense(ctx context.Context, form domain.ExpenseForm) (*domain.Expense, error) {
+func (r *expenseRepositoryImpl) CreateExpense(ctx context.Context, userID uuid.UUID, form domain.ExpenseForm) (*domain.Expense, error) {
 	args := sqlc.CreateExpenseParams{
-		UserID:        database.ToPgxUUID(form.UserID),
+		UserID:        database.ToPgxUUID(userID),
 		CategoryID:    database.ToPgxUUID(form.CategoryID),
 		TransactionDt: database.ToPgxDate(form.TransactionDt),
 		Description:   form.Description,
@@ -55,7 +55,7 @@ func (r *expenseRepositoryImpl) CreateExpense(ctx context.Context, form domain.E
 		return nil, err
 	}
 
-	return r.GetExpenseByID(ctx, database.FromPgxUUID(row.ID), form.UserID)
+	return r.GetExpenseByID(ctx, database.FromPgxUUID(row.ID), userID)
 }
 
 func (r *expenseRepositoryImpl) GetExpenseByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Expense, error) {

@@ -12,77 +12,72 @@ import (
 
 // Usecase: Category
 type CategoryUsecase struct {
-	ctgRepo domain.CategoryRepository
+	category domain.CategoryRepository
 }
 
-func NewCategoryUsecase(ctgRepo domain.CategoryRepository) *CategoryUsecase {
+func NewCategoryUsecase(category domain.CategoryRepository) *CategoryUsecase {
 	return &CategoryUsecase{
-		ctgRepo: ctgRepo,
+		category: category,
 	}
 }
 
-func (uc *CategoryUsecase) CreateCategory(ctx context.Context, userID uuid.UUID, categoryName string) (*domain.Category, error) {
-	form := domain.CategoryForm{
-		CategoryName: categoryName,
-	}
+func (uc *CategoryUsecase) CreateCategory(ctx context.Context, userID uuid.UUID, form domain.CategoryForm) (*domain.Category, error) {
 	if err := form.Validate(); err != nil {
 		return nil, err
 	}
-
-	return uc.ctgRepo.CreateCategory(ctx, userID, form)
+	return uc.category.CreateCategory(ctx, userID, form)
 }
 
 func (uc *CategoryUsecase) GetCategoryByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Category, error) {
-	return uc.ctgRepo.GetCategoryByID(ctx, id, userID)
+	return uc.category.GetCategoryByID(ctx, id, userID)
 }
 
-func (uc *CategoryUsecase) ListCategories(ctx context.Context, userID uuid.UUID, pageSize int, pageToken string) (*domain.CategoryPage, error) {
+func (uc *CategoryUsecase) ListCategories(ctx context.Context, userID uuid.UUID, pageReq pagination.Request) (*domain.CategoryPage, error) {
 	// Define page size
-	ps, err := pagination.SetPageSize(pageSize)
+	size, err := pagination.SetPageSize(pageReq.Size)
 	if err != nil {
 		return nil, err
 	}
 
 	// Decode token if exists
 	query := domain.CategoryListQuery{
-		Limit: ps + 1,
+		Limit: size + 1,
 	}
-	if pageToken != "" {
+	if pageReq.Token != "" {
 		// Not the first page
-		cursor, err := domain.DecodeCategoryCursor(pageToken)
+		cursor, err := domain.DecodeCategoryCursor(pageReq.Token)
 		if err != nil {
 			return nil, err
 		}
 		query.After = &cursor
 	}
 
-	// Process
-	categories, err := uc.ctgRepo.ListCategories(ctx, userID, query)
+	// List categories
+	categories, err := uc.category.ListCategories(ctx, userID, query)
 	if err != nil {
 		return nil, err
 	}
 
 	// Parse page result
-	page := &domain.CategoryPage{
-		Categories: categories,
+	items, last, more := pagination.Cut(categories, size)
+	response := &domain.CategoryPage{
+		Categories: items,
 	}
-	if len(categories) > ps {
-		page.Categories = categories[:ps]
-		last := page.Categories[ps-1]
-		page.NextCursor = &domain.CategoryCursor{
+	if more {
+		response.NextCursor = &domain.CategoryCursor{
 			CategoryName: last.CategoryName,
 		}
 	}
-	return page, nil
+	return response, nil
 }
 
 func (uc *CategoryUsecase) UpdateCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.CategoryPatch) (*domain.Category, error) {
 	if err := patch.Validate(); err != nil {
 		return nil, err
 	}
-	return uc.ctgRepo.UpdateCategory(ctx, id, userID, patch)
+	return uc.category.UpdateCategory(ctx, id, userID, patch)
 }
 
 func (uc *CategoryUsecase) DeleteCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
-	return uc.ctgRepo.DeleteCategory(ctx, id, userID)
+	return uc.category.DeleteCategory(ctx, id, userID)
 }

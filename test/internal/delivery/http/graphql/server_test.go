@@ -428,7 +428,7 @@ func TestScalars(t *testing.T) {
 			code:      "BAD_USER_INPUT", message: `invalid 'Date' "17-10-2026"`,
 		},
 		"Decimal sent as a JSON number": {
-			query: `mutation($in: CreateExpenseInput!) { createExpense(input: $in) { id } }`,
+			query: `mutation($in: CreateExpenseInput!) { createExpense(form: $in) { id } }`,
 			variables: map[string]any{"in": map[string]any{
 				"transactionDt": "2026-10-17", "categoryId": uuid.NewString(), "amount": 12.5,
 			}},

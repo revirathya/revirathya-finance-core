@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
-	"github.com/shopspring/decimal"
+	"github.com/revirathya/revirathya-finance-core/internal/domain/pagination"
 )
 
 // Auth
@@ -16,18 +16,18 @@ type authUsecase interface {
 
 // Category
 type categoryUsecase interface {
-	CreateCategory(ctx context.Context, userID uuid.UUID, categoryName string) (*domain.Category, error)
+	CreateCategory(ctx context.Context, userID uuid.UUID, form domain.CategoryForm) (*domain.Category, error)
 	GetCategoryByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Category, error)
-	ListCategories(ctx context.Context, userID uuid.UUID, pageSize int, pageToken string) (*domain.CategoryPage, error)
+	ListCategories(ctx context.Context, userID uuid.UUID, pageReq pagination.Request) (*domain.CategoryPage, error)
 	UpdateCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.CategoryPatch) (*domain.Category, error)
 	DeleteCategory(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 }
 
 // Expense
 type expenseUsecase interface {
-	CreateExpense(ctx context.Context, userID uuid.UUID, categoryID uuid.UUID, transactionDt time.Time, description *string, amount decimal.Decimal) (*domain.Expense, error)
+	CreateExpense(ctx context.Context, userID uuid.UUID, form domain.ExpenseForm) (*domain.Expense, error)
 	GetExpenseByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Expense, error)
-	ListExpenses(ctx context.Context, userID uuid.UUID, transactionDt *time.Time, pageSize int, pageToken string) (*domain.ExpensePage, error)
+	ListExpenses(ctx context.Context, userID uuid.UUID, filter domain.ExpenseFilter, pageReq pagination.Request) (*domain.ExpensePage, error)
 	UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch domain.ExpensePatch) (*domain.Expense, error)
 	DeleteExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 }

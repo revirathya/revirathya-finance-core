@@ -26,7 +26,6 @@ type Expense struct {
 
 // Form
 type ExpenseForm struct {
-	UserID        uuid.UUID
 	CategoryID    uuid.UUID
 	TransactionDt time.Time
 	Description   *string
@@ -138,6 +137,10 @@ type ExpenseListQuery struct {
 	Limit         int
 }
 
+type ExpenseFilter struct {
+	TransactionDt *time.Time
+}
+
 type ExpensePage struct {
 	Expenses   []Expense
 	NextCursor *ExpenseCursor
@@ -145,7 +148,7 @@ type ExpensePage struct {
 
 // Repository
 type ExpenseRepository interface {
-	CreateExpense(ctx context.Context, form ExpenseForm) (*Expense, error)
+	CreateExpense(ctx context.Context, userID uuid.UUID, form ExpenseForm) (*Expense, error)
 	GetExpenseByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*Expense, error)
 	ListExpenses(ctx context.Context, userID uuid.UUID, query ExpenseListQuery) ([]Expense, error)
 	UpdateExpense(ctx context.Context, id uuid.UUID, userID uuid.UUID, patch ExpensePatch) (*Expense, error)

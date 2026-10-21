@@ -38,8 +38,7 @@ func TestExpenseRepository(t *testing.T) {
 		alice := testutil.NewUser(t)
 		food := testutil.NewCategory(t, alice.ID, "Food")
 
-		created, err := repo.CreateExpense(ctx, domain.ExpenseForm{
-			UserID:        alice.ID,
+		created, err := repo.CreateExpense(ctx, alice.ID, domain.ExpenseForm{
 			CategoryID:    food.ID,
 			TransactionDt: testutil.Day(t, "2026-01-15"),
 			Description:   testutil.Ptr("Lunch"),
@@ -83,8 +82,8 @@ func TestExpenseRepository(t *testing.T) {
 	t.Run("update keeps the description when omitted and clears it with an empty string", func(t *testing.T) {
 		alice := testutil.NewUser(t)
 		food := testutil.NewCategory(t, alice.ID, "Food")
-		created, err := repo.CreateExpense(ctx, domain.ExpenseForm{
-			UserID: alice.ID, CategoryID: food.ID, TransactionDt: testutil.Day(t, "2026-01-15"),
+		created, err := repo.CreateExpense(ctx, alice.ID, domain.ExpenseForm{
+			CategoryID: food.ID, TransactionDt: testutil.Day(t, "2026-01-15"),
 			Description: testutil.Ptr("Lunch"), Amount: decimal.RequireFromString("10"),
 		})
 		if err != nil {
@@ -123,8 +122,7 @@ func TestExpenseRepository(t *testing.T) {
 		alice, bob := testutil.NewUser(t), testutil.NewUser(t)
 		bobsFood := testutil.NewCategory(t, bob.ID, "Food")
 
-		_, err := repo.CreateExpense(ctx, domain.ExpenseForm{
-			UserID:        alice.ID,
+		_, err := repo.CreateExpense(ctx, alice.ID, domain.ExpenseForm{
 			CategoryID:    bobsFood.ID,
 			TransactionDt: testutil.Day(t, "2026-01-15"),
 			Amount:        decimal.RequireFromString("10"),
@@ -284,8 +282,7 @@ func TestExpenseRepositoryLimits(t *testing.T) {
 
 	t.Run("amount of 10^12 on create is invalid input", func(t *testing.T) {
 		alice := testutil.NewUser(t)
-		_, err := repo.CreateExpense(ctx, domain.ExpenseForm{
-			UserID:        alice.ID,
+		_, err := repo.CreateExpense(ctx, alice.ID, domain.ExpenseForm{
 			CategoryID:    testutil.NewCategory(t, alice.ID, "Food").ID,
 			TransactionDt: testutil.Day(t, "2026-01-15"),
 			Amount:        decimal.RequireFromString("1000000000000"),
@@ -424,8 +421,8 @@ func TestExpenseRepositoryPatch(t *testing.T) {
 	repo := rExpense.NewExpenseRepositoryImpl(testutil.TestPool)
 	alice := testutil.NewUser(t)
 	food, bills := testutil.NewCategory(t, alice.ID, "Food"), testutil.NewCategory(t, alice.ID, "Bills")
-	created, err := repo.CreateExpense(ctx, domain.ExpenseForm{
-		UserID: alice.ID, CategoryID: food.ID, TransactionDt: testutil.Day(t, "2026-01-15"),
+	created, err := repo.CreateExpense(ctx, alice.ID, domain.ExpenseForm{
+		CategoryID: food.ID, TransactionDt: testutil.Day(t, "2026-01-15"),
 		Description: testutil.Ptr("Lunch"), Amount: decimal.RequireFromString("10"),
 	})
 	if err != nil {

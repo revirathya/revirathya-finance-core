@@ -9,80 +9,97 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+
+	// Generated
 	"github.com/revirathya/revirathya-finance-core/gen/graphql/model"
+
+	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	"github.com/revirathya/revirathya-finance-core/internal/domain/pagination"
 )
 
 // CreateCategory is the resolver for the createCategory field.
-func (r *mutationResolver) CreateCategory(ctx context.Context, input model.CreateCategoryInput) (*model.Category, error) {
+func (r *mutationResolver) CreateCategory(ctx context.Context, form model.CreateCategoryInput) (*model.Category, error) {
+	// Get user from context
 	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := r.category.CreateCategory(ctx, userID, input.CategoryName)
+	// Create category
+	category, err := r.category.CreateCategory(ctx, userID, domain.CategoryForm{
+		CategoryName: form.CategoryName,
+	})
 	if err != nil {
 		return nil, err
 	}
 
+	// Parse response
 	response := &model.Category{
-		ID:           result.ID,
-		CategoryName: result.CategoryName,
+		ID:           category.ID,
+		CategoryName: category.CategoryName,
 	}
 	return response, nil
 }
 
 // UpdateCategory is the resolver for the updateCategory field.
 func (r *mutationResolver) UpdateCategory(ctx context.Context, id uuid.UUID, patch model.UpdateCategoryInput) (*model.Category, error) {
+	// Get user from context
 	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := r.category.UpdateCategory(ctx, id, userID, domain.CategoryPatch{
+	// Update category
+	category, err := r.category.UpdateCategory(ctx, id, userID, domain.CategoryPatch{
 		CategoryName: patch.CategoryName,
 	})
 	if err != nil {
 		return nil, err
 	}
 
+	// Parse response
 	response := &model.Category{
-		ID:           result.ID,
-		CategoryName: result.CategoryName,
+		ID:           category.ID,
+		CategoryName: category.CategoryName,
 	}
 	return response, nil
 }
 
 // DeleteCategory is the resolver for the deleteCategory field.
 func (r *mutationResolver) DeleteCategory(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	// Get user from context
 	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return uuid.Nil, err
 	}
 
+	// Delete category
 	if err = r.category.DeleteCategory(ctx, id, userID); err != nil {
 		return uuid.Nil, err
 	}
-
 	return id, nil
 }
 
 // Category is the resolver for the category field.
 func (r *queryResolver) Category(ctx context.Context, id uuid.UUID) (*model.Category, error) {
+	// Get user from context
 	userID, err := auth.UserIDFrom(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := r.category.GetCategoryByID(ctx, id, userID)
+	// Get category by id
+	category, err := r.category.GetCategoryByID(ctx, id, userID)
 	if err != nil {
 		return nil, err
 	}
 
+	// Parse response
 	response := &model.Category{
-		ID:           result.ID,
-		CategoryName: result.CategoryName,
+		ID:           category.ID,
+		CategoryName: category.CategoryName,
 	}
 	return response, nil
 }
@@ -95,19 +112,12 @@ func (r *queryResolver) Categories(ctx context.Context, first *int, after *strin
 		return nil, err
 	}
 
-	// Parse params
-	pageSize := 0
-	if first != nil {
-		pageSize = *first
-	}
-
-	pageToken := ""
-	if after != nil {
-		pageToken = *after
-	}
-
 	// List categories
-	categoryPage, err := r.category.ListCategories(ctx, userID, pageSize, pageToken)
+	pageReq := pagination.Request{
+		Size:  derefOr(first, 0),
+		Token: derefOr(after, ""),
+	}
+	categoryPage, err := r.category.ListCategories(ctx, userID, pageReq)
 	if err != nil {
 		return nil, err
 	}

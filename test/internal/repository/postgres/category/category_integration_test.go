@@ -242,3 +242,18 @@ func TestCategoryRepositoryPagination(t *testing.T) {
 		}
 	})
 }
+
+func TestCategoryRepositoryDatabaseErrors(t *testing.T) {
+	repo := rCategory.NewCategoryRepositoryImpl(testutil.TestPool)
+	alice := testutil.NewUser(t)
+	food := testutil.NewCategory(t, alice.ID, "Food")
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	t.Run("a failed delete returns the database error, not NOT_FOUND", func(t *testing.T) {
+		err := repo.DeleteCategory(cancelled, food.ID, alice.ID)
+		if err == nil || errors.Is(err, errDom.ErrNotFound) {
+			t.Fatalf("got %v, want the database error (a NOT_FOUND here would hide outages and FK violations)", err)
+		}
+	})
+}

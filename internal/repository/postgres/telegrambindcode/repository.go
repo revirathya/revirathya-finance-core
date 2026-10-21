@@ -96,10 +96,12 @@ func (r *telegramBindCodeRepositoryImpl) BindCode(ctx context.Context, codeHash 
 	}
 	userID, err = q.UpsertTelegramBinding(ctx, args)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if (errors.As(err, &pgErr)) && (pgErr.Code == "23505") {
-			// Telegram ID are used by other users
-			return nil, errDom.ErrConflict
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
+			switch pgErr.Code {
+			case "23505":
+				// Telegram ID are used by other users
+				return nil, errDom.ErrConflict
+			}
 		}
 		return nil, err
 	}

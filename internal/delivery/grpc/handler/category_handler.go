@@ -10,6 +10,7 @@ import (
 	// Internal
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
+	"github.com/revirathya/revirathya-finance-core/internal/domain/pagination"
 
 	// Internal - gRPC
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/converter"
@@ -42,7 +43,12 @@ func (h *CategoryHandler) ListCategories(ctx context.Context, req *financecorev1
 	}
 
 	// List categories
-	categoryPage, err := h.category.ListCategories(ctx, userID, int(req.PageSize), req.PageToken)
+	pageReq := pagination.Request{
+		Size:  int(req.PageSize),
+		Token: req.PageToken,
+	}
+
+	categoryPage, err := h.category.ListCategories(ctx, userID, pageReq)
 	if err != nil {
 		return nil, errGrpc.ToStatus(ctx, "list categories", err)
 	}
