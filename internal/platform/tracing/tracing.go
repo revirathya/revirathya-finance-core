@@ -18,12 +18,14 @@ import (
 const defaultServiceName = "financecore"
 
 // Install sets up the provider with the given exporter; tests pass an in-memory one.
-// OTEL_SERVICE_NAME, OTEL_RESOURCE_ATTRIBUTES and OTEL_TRACES_SAMPLER are read from the environment.
-func Install(ctx context.Context, exporter sdktrace.SpanExporter) (func(context.Context) error, error) {
+// version is the binary's build version; OTEL_SERVICE_NAME, OTEL_RESOURCE_ATTRIBUTES and OTEL_TRACES_SAMPLER are read
+// from the environment.
+func Install(ctx context.Context, exporter sdktrace.SpanExporter, version string) (func(context.Context) error, error) {
 	res, err := resource.New(
 		ctx,
 		resource.WithTelemetrySDK(),
 		resource.WithAttributes(
+			semconv.ServiceVersion(version),
 			semconv.ServiceName(defaultServiceName),
 		),
 		resource.WithFromEnv(),
@@ -48,7 +50,7 @@ func Install(ctx context.Context, exporter sdktrace.SpanExporter) (func(context.
 
 // Setup installs the global tracer provider when OTEL_EXPORTER_OTLP_ENDPOINT is set, and returns a shutdown
 // function that flushes pending spans. With no endpoint, tracing stays off (OTel's default no-op provider).
-func Setup(ctx context.Context) (func(context.Context) error, error) {
+func Setup(ctx context.Context, version string) (func(context.Context) error, error) {
 	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") == "" {
 		return func(context.Context) error {
 			return nil
@@ -59,7 +61,7 @@ func Setup(ctx context.Context) (func(context.Context) error, error) {
 	if err != nil {
 		return nil, fmt.Errorf("otlp exporter: %w", err)
 	}
-	return Install(ctx, exporter)
+	return Install(ctx, exporter, version)
 }
 
 // RunShutdown run the shutdown function with timeout context.

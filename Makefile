@@ -16,10 +16,10 @@ TRIVY_IMAGE := aquasec/trivy@sha256:be1190afcb28352bfddc4ddeb71470835d16462af68d
 	image-scan
 
 run:
-	go run ./cmd
+	go run -ldflags "-X main.version=$(VERSION)" ./cmd
 
 build:
-	go build -o bin/financecore ./cmd
+	go build -ldflags "-X main.version=$(VERSION)" -o bin/financecore ./cmd
 
 test:
 	go test -count=1 ./test/...
@@ -49,6 +49,7 @@ docker-build: svc ?= core
 docker-build:
 	docker build \
 		-f infra/docker/$(if $(filter migration,$(svc)),migration.Dockerfile,Dockerfile) \
+		$(if $(filter migration,$(svc)),,--build-arg VERSION=$(VERSION)) \
 		-t revirathya/revirathya-finance-$(svc):$(if $(filter migration,$(svc)),$(MIGRATION_VERSION),$(VERSION)) .
 
 # make docker-up tracing=1 -> also start Jaeger (profile "tracing") and send core's traces to it

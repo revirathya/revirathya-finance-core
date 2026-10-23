@@ -12,6 +12,7 @@ import (
 	// Internal - HTTP
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/health"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/middleware"
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/version"
 
 	// Middlewares
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/middleware/accesslog"
@@ -34,6 +35,7 @@ type ServerLayer struct {
 func Setup(
 	env string,
 	port string,
+	buildVersion string,
 	ping func(ctx context.Context) error,
 ) *ServerLayer {
 	// Configure server
@@ -42,6 +44,7 @@ func Setup(
 	// Set Handler
 	mux.HandleFunc("GET /healthz", health.Healthz())
 	mux.HandleFunc("GET /readyz", health.Readyz(ping))
+	mux.HandleFunc("GET /version", version.Handler(buildVersion))
 
 	if env == "dev" {
 		mux.Handle("GET /playground", playground.Handler("Finance Core", "/graphql"))

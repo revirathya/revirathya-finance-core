@@ -82,7 +82,9 @@ proto/, graphql/schema/        source-of-truth API contracts (hand-written)
 sqlc/queries/*.sql             hand-written SQL, source of truth for sqlc
 gen/grpc, gen/graphql, gen/sqlc  generated code (buf / gqlgen / sqlc), committed — do not hand-edit
 migrations/                    golang-migrate pairs
-cmd/main.go                    package main: config, logger, DB pool, wiring, run(); `healthcheck` subcommand
+cmd/main.go                    package main: config, logger, DB pool, wiring, run(); `healthcheck` and `version`
+                               subcommands; `var version` is stamped at build time (-ldflags "-X main.version=$(VERSION)",
+                               in make run/build and the Dockerfile's VERSION build arg), "dev" otherwise
 cmd/api/startup.go             RunServers: runs the gRPC, HTTP and metrics servers in an errgroup, graceful shutdown
 cmd/sub/healthcheck.go         RunHealthcheck(port): `financecore healthcheck` (calls /readyz on HTTP_PORT; used by Docker)
 internal/domain                entities, forms/patches with Validate(), repository interfaces (no framework deps)
@@ -113,8 +115,8 @@ internal/delivery/grpc/
   interceptor/telegramuser     x-telegram-user-id -> principal (unbound users: BindTelegramAccount only)
   interceptor/writelimit       per-user write limit on RateLimitedMethods (server.go); last, after telegramuser
 internal/delivery/http/
-  server.go                    Setup(env, port, ping): the HTTP server + mux (requestid -> accesslog), /healthz, /readyz,
-                               and GET /playground (GraphiQL) only when APP_ENV=dev -> ServerLayer
+  server.go                    Setup(env, port, version, ping): the HTTP server + mux (requestid -> accesslog), /healthz,
+                               /readyz, GET /version (version/), and GET /playground (GraphiQL) only when APP_ENV=dev -> ServerLayer
   health/                      /healthz and /readyz handlers
   middleware/helper.go         ChainMiddleware (first listed = outermost, like grpc.ChainUnaryInterceptor)
   middleware/recorder.go       StatusRecorder: shared status capture (first status wins) for accesslog and metrics
@@ -131,17 +133,21 @@ internal/delivery/http/
                                writelimit is a gqlgen field middleware (AroundFields), not HTTP: per-user limit on
                                the RateLimitedMutations (setup.go) fields
 internal/delivery/metrics/     Setup: separate metrics server (METRICS_PORT) serving only GET /metrics
-internal/auth                  principal + Telegram ID in context, session JWT (TokenManager), bind-code helpers
+internal/auth                  principal + Telegram ID in context, session JWT (TokenManager), bind-code helpers;
+                               WithPrincipalSlot / SlotUserID let the access logs (outermost) read the principal that
+                               auth sets further in
 internal/platform/database     pgxpool setup (limits + statement_timeout, set in code) + pgx<->domain type conversion helpers (UUID/Date/Numeric/Timestamp)
 internal/platform/google       Google ID-token verifier (implements domain.GoogleVerifier)
 internal/platform/ratelimit    in-memory fixed-window limiter (per process); Take returns the wait until the window resets.
                                One write limiter (WRITE_RATE_LIMIT / WRITE_RATE_WINDOW) is built in main.go and shared
                                by both APIs; BindTelegramAccount has its own
-internal/platform/metrics      Prometheus registry + collectors (gRPC, HTTP, GraphQL errors, pool); ObserveHTTP, GraphQLError
+internal/platform/metrics      Prometheus registry + collectors (gRPC, HTTP, GraphQL errors, pool, build info);
+                               ObserveHTTP, GraphQLError, RateLimited, SetBuildInfo
 internal/platform/logging      slog setup (LOG_FORMAT json/text, LOG_LEVEL), request ID in context, EnsureRequestID;
                                adds request_id and, inside a span, trace_id / span_id to every *Context log line
-internal/platform/tracing      OpenTelemetry: Setup(ctx) (off unless OTEL_EXPORTER_OTLP_ENDPOINT), Install(ctx, exporter)
-                               (global provider, W3C propagator, resource/sampler from OTEL_*), RunShutdown
+internal/platform/tracing      OpenTelemetry: Setup(ctx, version) (off unless OTEL_EXPORTER_OTLP_ENDPOINT),
+                               Install(ctx, exporter, version) (global provider, W3C propagator, service.version from the
+                               build; resource/sampler from OTEL_*, which win), RunShutdown
 internal/config                env-based config loading (.env via godotenv, falls back to OS env); APP_ENV (dev|prod, default prod)
                                sets the defaults of GRPC_ENABLE_REFLECTION / GQL_ENABLE_INTROSPECTION, explicit values win
 infra/docker/                  Dockerfile, migration.Dockerfile, docker-compose.yaml
@@ -228,7 +234,8 @@ the `//go:build integration` tag; each integration package has
 that migrates down, inserts old-shape rows, and checks them after `up` and `down` (`testutil.MigrationsDir()`). Handlers and resolvers are tested end-to-end
 (`test/internal/delivery/grpc/handler`, `test/internal/delivery/http/graphql/resolver`): the production servers on
 `testutil.NewUsecases(verifier)` (real repositories on `TestPool`) with `testutil.FakeGoogleVerifier`. CI runs all tests,
-including integration, with `-race` (the same command as `make test-integration`).
+including integration, with `-race` (the same command as `make test-integration`), and
+`govulncheck -tags=integration ./...`, which fails on vulnerabilities the code (tests included) actually calls.
 
 ## Conventions to follow when extending
 
@@ -252,6 +259,9 @@ including integration, with `-race` (the same command as `make test-integration`
 - Significant decisions are recorded as ADRs in `docs/adr/` (`NNNN-short-title.md`, listed in `docs/adr/README.md`).
   A decision that changes gets a new record that supersedes the old one; accepted records aren't rewritten. ADR 0007
   (no compatibility guarantees yet) must be superseded when the first consumer depends on the API.
+- Repeatable procedures are runbooks in `docs/runbooks/` (`NNNN-short-title.md`, listed in `docs/runbooks/README.md`):
+  when to use it, steps with a check for each, troubleshooting. Unlike ADRs, runbooks are updated when the procedure
+  changes.
 - Commit messages and PR titles follow Conventional Commits (`feat(scope): …`, `fix: …`, `chore: …`; the commit-msg hook
   and CI's `pr-title` job enforce it). PRs are squash-merged into `main`.
 - Code must pass `make lint` (CI runs golangci-lint). Silence a finding only with a targeted

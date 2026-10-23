@@ -46,3 +46,22 @@ func TestNewDBPool(t *testing.T) {
 		}
 	})
 }
+
+func TestNewDBPoolErrorHidesPassword(t *testing.T) {
+	// main.go logs this error ("server stopped"), so it must never carry the password.
+	const password = "SuperSecretPw"
+	for _, dsn := range []string{
+		"postgres://app:" + password + "@localhost:5432/finance?sslmode=bogus",
+		"postgres://app:" + password + "@local host:5432/finance",
+		"postgres://app:" + password + "@localhost:notaport/finance",
+		"host=localhost user=app password=" + password + " sslmode=bogus",
+	} {
+		_, err := database.NewDBPool(context.Background(), dsn)
+		if err == nil {
+			t.Fatalf("%q: no error, want an invalid DSN error", dsn)
+		}
+		if strings.Contains(err.Error(), password) {
+			t.Fatalf("error contains the password: %v", err)
+		}
+	}
+}

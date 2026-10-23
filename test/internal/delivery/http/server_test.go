@@ -12,7 +12,7 @@ import (
 
 func get(t *testing.T, env, path string) *httptest.ResponseRecorder {
 	t.Helper()
-	layer := dlvHttp.Setup(env, ":0", func(ctx context.Context) error { return nil })
+	layer := dlvHttp.Setup(env, ":0", "test", func(ctx context.Context) error { return nil })
 	rec := httptest.NewRecorder()
 	layer.Server.Handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
 	return rec

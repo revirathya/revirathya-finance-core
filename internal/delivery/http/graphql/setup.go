@@ -38,7 +38,7 @@ const (
 )
 
 // RateLimitedMutations are the Mutation fields counted against the user's write budget. loginWithGoogle is
-// unauthenticated and ok writes nothing (docs/rate-limiting.md).
+// unauthenticated and ok writes nothing (docs/adr/0008-per-user-write-limit.md).
 var RateLimitedMutations = []string{
 	"createCategory", "updateCategory", "deleteCategory",
 	"createExpense", "updateExpense", "deleteExpense",

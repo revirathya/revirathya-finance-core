@@ -21,7 +21,7 @@ func TestRunServers(t *testing.T) {
 		if err != nil {
 			t.Fatalf("grpc setup: %v", err)
 		}
-		httpLayer := dlvHttp.Setup("prod", "127.0.0.1:0", func(ctx context.Context) error { return nil })
+		httpLayer := dlvHttp.Setup("prod", "127.0.0.1:0", "test", func(ctx context.Context) error { return nil })
 		metricsLayer := dlvMetrics.Setup("127.0.0.1:0", m)
 
 		ctx, cancel := context.WithCancel(context.Background())

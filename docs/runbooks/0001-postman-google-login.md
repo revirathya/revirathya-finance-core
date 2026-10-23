@@ -1,6 +1,13 @@
-# Logging in with Google from Postman
+# 0001. Get a GraphQL session token from Postman
 
-How to get a session token for the GraphQL API from Postman, without the Web Console.
+**When:** you want to call the GraphQL API by hand (Postman, or any HTTP client) without the Web Console, for
+example to try a query against local or Docker mode.
+
+**Result:** a session token (`Authorization: Bearer <token>`) that works for every GraphQL request until it expires
+(`JWT_TTL`, default `24h`).
+
+**Needs:** access to the Google Cloud project that owns `GOOGLE_CLIENT_ID`, and a Google account with a verified
+email.
 
 The flow has two parts:
 

@@ -46,7 +46,7 @@ func newServerWithMetrics(t *testing.T, introspection bool) (http.Handler, *auth
 	tokens := auth.NewTokenManager(testSecret, time.Hour)
 	ping := func(ctx context.Context) error { return nil }
 	m := metrics.NewMetrics(nil)
-	layer := dlvHttp.Setup("prod", ":0", ping)
+	layer := dlvHttp.Setup("prod", ":0", "test", ping)
 	dlvGql.RegisterHandler(layer, []string{testOrigin}, introspection, tokens, m, ratelimit.NewLimiter(1000, time.Minute), usecase.Usecase{})
 	return layer.Server.Handler, tokens, m
 }

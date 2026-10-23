@@ -24,7 +24,7 @@ func InstallTracing(t *testing.T) {
 	t.Helper()
 	tracingOnce.Do(func() {
 		tracingExporter = tracetest.NewInMemoryExporter()
-		if _, err := tracing.Install(context.Background(), tracingExporter); err != nil {
+		if _, err := tracing.Install(context.Background(), tracingExporter, "test"); err != nil {
 			t.Fatalf("tracing.Install: %v", err)
 		}
 	})
