@@ -32,6 +32,7 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/requestid"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/telegramuser"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/timeout"
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/grpc/interceptor/writelimit"
 )
 
 // Const
@@ -45,6 +46,14 @@ const (
 	keepaliveTimeout            = 20 * time.Second // drop it if the ping isn't answered
 	keepaliveEnforcementMinTime = 30 * time.Second // clients may ping at most this often
 )
+
+// RateLimitedMethods are the RPCs counted against the user's write budget. BindTelegramAccount has its own limit,
+// and UpdateUserTelegramContext is the bot's conversation state, called on every step (docs/rate-limiting.md).
+var RateLimitedMethods = []string{
+	financecorev1.ExpenseService_CreateExpense_FullMethodName,
+	financecorev1.ExpenseService_UpdateExpense_FullMethodName,
+	financecorev1.ExpenseService_DeleteExpense_FullMethodName,
+}
 
 // Private
 func userLookup(usecase usecase.Usecase) func(ctx context.Context, telegramID string) (uuid.UUID, error) {
@@ -69,6 +78,7 @@ func Setup(
 	enableReflection bool,
 	apiKey string,
 	metricsColl *metrics.Metrics,
+	writeLimiter *ratelimit.Limiter,
 	usecase usecase.Usecase,
 ) (*ServerLayer, error) {
 	// Set limiter
@@ -117,6 +127,7 @@ func Setup(
 				userLookup(usecase),
 				financecorev1.UserTelegramContextService_BindTelegramAccount_FullMethodName,
 			),
+			writelimit.UnaryServerInterceptor(writeLimiter, metricsColl, RateLimitedMethods...),
 		),
 	)
 

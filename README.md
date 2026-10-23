@@ -171,6 +171,8 @@ Copy `.env.example` to `.env`. Only the required variables must be set; prefer t
 |`LOG_FORMAT`|`json`|Log output format: `json` (one JSON object per line, for log platforms) or `text` (readable in a terminal; handy in your local `.env`)|
 |`LOG_LEVEL`|`info`|Minimum level logged: `debug`, `info`, `warn` or `error`|
 |`GQL_ENABLE_INTROSPECTION`|`false` (`true` in `dev`)|Allow GraphQL introspection (schema download) and "Did you mean …?" hints in validation errors. Keep it off in production.|
+|`WRITE_RATE_LIMIT`|`15`|Writes allowed per user per `WRITE_RATE_WINDOW`, gRPC and GraphQL together ([rate limiting](docs/rate-limiting.md)). Positive integer.|
+|`WRITE_RATE_WINDOW`|`1m`|Length of the write-limit window, as a Go duration. Positive.|
 |`OTEL_EXPORTER_OTLP_ENDPOINT`|empty (tracing off)|OTLP gRPC collector to send traces to, e.g. `http://localhost:4317` (local mode) or `http://jaeger:4317` (Docker mode). `http://` means no TLS. See [Tracing](#tracing).|
 |`OTEL_TRACES_SAMPLER`|`parentbased_always_on`|Which traces are kept, e.g. `parentbased_traceidratio` to keep a fraction (read by the OpenTelemetry SDK).|
 |`OTEL_TRACES_SAMPLER_ARG`|none|Argument for the ratio samplers: the fraction to keep, e.g. `0.1`.|
@@ -205,10 +207,10 @@ A checklist for a new client. Each point links to the section with the details.
 |**Auth**|`authorization: Bearer <GRPC_API_KEY>` plus `x-telegram-user-id` of a bound Telegram account on every call ([gRPC auth](#grpc-telegram-bot), [binding](#telegram-binding))|`Authorization: Bearer <session token>` from `loginWithGoogle` ([GraphQL auth](#graphql-web-console))|
 |**Contract**|`proto/financecore/v1/*.proto`; Go clients import `gen/grpc/financecore/v1` ([messages](#grpc-messages), [tools](#grpc-tools))|`graphql/schema/*.graphql`; explore with the [playground](#playground-app_envdev-only) in dev|
 |**Types**|`google.type.Date`, `google.type.Decimal`, IDs as UUID strings|`Date`, `Decimal`, `UUID` scalars, all JSON strings ([scalars](#custom-scalars))|
-|**Errors**|Status codes; validation is `INVALID_ARGUMENT` with `field: reason`; another user's record is `NOT_FOUND`|`extensions.code`: `BAD_USER_INPUT` (`field: reason`), `NOT_FOUND`, `UNAUTHENTICATED`, `CONFLICT`, `INTERNAL`|
+|**Errors**|Status codes; validation is `INVALID_ARGUMENT` with `field: reason`; another user's record is `NOT_FOUND`; over the write limit is `RESOURCE_EXHAUSTED`|`extensions.code`: `BAD_USER_INPUT` (`field: reason`), `NOT_FOUND`, `UNAUTHENTICATED`, `CONFLICT`, `RATE_LIMITED`, `INTERNAL`|
 |**Lists**|`page_size` / `page_token` → `next_page_token` ([pagination](#pagination))|`first` / `after` → `pageInfo` ([pagination](#pagination))|
 |**Updates**|Patch: unset fields are kept ([updates](#updates))|Patch: omitted or `null` fields are kept ([updates](#updates))|
-|**Limits**|1 MB messages, 10 s default deadline, keepalive pings ≥ 30 s ([gRPC server](#grpc-server))|1 MB body, 10 s, 5000 tokens, complexity 200 ([GraphQL server](#graphql-server))|
+|**Limits**|1 MB messages, 10 s default deadline, keepalive pings ≥ 30 s ([gRPC server](#grpc-server)); 15 writes per user per minute, shared with GraphQL: `CreateExpense`, `UpdateExpense`, `DeleteExpense` ([rate limiting](docs/rate-limiting.md)). Over it: wait the `retry-after` header (seconds)|1 MB body, 10 s, 5000 tokens, complexity 200 ([GraphQL server](#graphql-server)); 15 writes per user per minute, shared with gRPC: every mutation except `loginWithGoogle`, each field counted ([rate limiting](docs/rate-limiting.md)). Over it: wait `extensions.retryAfter` (seconds)|
 |**Tracing**|Send `x-request-id` to correlate with this service's logs ([request IDs](#request-ids)); send W3C `traceparent` metadata to join your trace ([tracing](#tracing))|Send `X-Request-ID` ([request IDs](#request-ids)); send a W3C `traceparent` header to join your trace ([tracing](#tracing))|
 |**Health**|`grpc.health.v1.Health/Check` ([health checks](#health-checks))|`GET /healthz`, `GET /readyz`|
 
@@ -342,6 +344,7 @@ public HTTP port, so they can stay internal. Only `/metrics` is served there.
 |`http_requests_total`|counter|`handler` (`graphql`), `code`|`/graphql` requests by HTTP status, including middleware rejections (413, 503)|
 |`http_request_duration_seconds`|histogram|`handler`|`/graphql` latency|
 |`graphql_errors_total`|counter|`code`|GraphQL errors by `extensions.code` (`BAD_USER_INPUT`, `INTERNAL`, ...)|
+|`rate_limited_total`|counter|`api` (`grpc`, `graphql`)|Writes rejected by the per-user write limit|
 |`db_pool_connections_max` / `_total` / `_acquired` / `_idle`|gauge|—|Connection pool size and use|
 |`db_pool_acquires_total`, `db_pool_acquire_wait_total`, `db_pool_acquire_wait_seconds_total`|counter|—|Connection acquires; a growing wait count means requests queue for a connection|
 |`go_*`, `process_*`|various|—|Go runtime and process (memory, goroutines, CPU, open files)|

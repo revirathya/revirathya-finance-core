@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +26,8 @@ type Config struct {
 	JwtTtl                 time.Duration
 	LogFormat              string // 'json' or 'text'
 	LogLevel               slog.Level
+	WriteRateLimit         int // writes per user per WriteRateWindow, both APIs together
+	WriteRateWindow        time.Duration
 }
 
 func getEnv(key string, fallback string) string {
@@ -90,6 +93,20 @@ func Load() (*Config, error) {
 	if err := cfg.LogLevel.UnmarshalText(logLevel); err != nil {
 		return nil, fmt.Errorf("LOG_LEVEL is invalid: %w", err)
 	}
+
+	// Parse WriteRateLimit
+	writeRateLimit, err := strconv.Atoi(getEnv("WRITE_RATE_LIMIT", "15"))
+	if err != nil || writeRateLimit < 1 {
+		return nil, fmt.Errorf("WRITE_RATE_LIMIT must be a positive integer")
+	}
+	cfg.WriteRateLimit = writeRateLimit
+
+	// Parse WriteRateWindow
+	writeRateWindow, err := time.ParseDuration(getEnv("WRITE_RATE_WINDOW", "1m"))
+	if err != nil || writeRateWindow <= 0 {
+		return nil, fmt.Errorf("WRITE_RATE_WINDOW must be a positive duration")
+	}
+	cfg.WriteRateWindow = writeRateWindow
 
 	// Validation
 	if cfg.DatabaseURI == "" {

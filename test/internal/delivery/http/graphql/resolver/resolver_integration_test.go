@@ -21,6 +21,7 @@ import (
 	dlvGql "github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/metrics"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/ratelimit"
 
 	// Test Util
 	"github.com/revirathya/revirathya-finance-core/testutil"
@@ -40,10 +41,16 @@ type api struct {
 
 func newAPI(t *testing.T) *api {
 	t.Helper()
+	return newAPIWith(t, ratelimit.NewLimiter(1000, time.Minute), metrics.NewMetrics(nil))
+}
+
+// newAPIWith is newAPI with the given write limiter and metrics.
+func newAPIWith(t *testing.T, writeLimiter *ratelimit.Limiter, m *metrics.Metrics) *api {
+	t.Helper()
 	verifier := testutil.NewFakeGoogleVerifier()
 	tokens := auth.NewTokenManager("0123456789abcdef0123456789abcdef", time.Hour)
 	layer := dlvHttp.Setup("prod", ":0", func(ctx context.Context) error { return nil })
-	dlvGql.RegisterHandler(layer, nil, false, tokens, metrics.NewMetrics(nil), testutil.NewUsecases(verifier))
+	dlvGql.RegisterHandler(layer, nil, false, tokens, m, writeLimiter, testutil.NewUsecases(verifier))
 	return &api{t: t, handler: layer.Server.Handler, verifier: verifier}
 }
 

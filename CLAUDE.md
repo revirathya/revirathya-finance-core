@@ -110,6 +110,7 @@ internal/delivery/grpc/
   interceptor/timeout          default 10s deadline for calls without a client deadline; right after recovery
   interceptor/apikeyauth       bot API key (authorization: Bearer)
   interceptor/telegramuser     x-telegram-user-id -> principal (unbound users: BindTelegramAccount only)
+  interceptor/writelimit       per-user write limit on RateLimitedMethods (server.go); last, after telegramuser
 internal/delivery/http/
   server.go                    Setup(env, port, ping): the HTTP server + mux (requestid -> accesslog), /healthz, /readyz,
                                and GET /playground (GraphiQL) only when APP_ENV=dev -> ServerLayer
@@ -125,12 +126,16 @@ internal/delivery/http/
   graphql/error/error.go       ErrorPresenter: domain error -> GraphQL error code (import as errGql)
   graphql/error/recovery.go    RecoverFunc: logs resolver panics via slog; ErrorPresenter skips logging them again
   graphql/tracing/             gqlgen extension: operation + resolver spans, no query text / variables / argument values
-  graphql/middleware/<name>/   /graphql-only middleware (after metricscollector, which is outermost): limitbody, withcors, withauth (session JWT -> principal), withtimeout
+  graphql/middleware/<name>/   /graphql-only middleware (after metricscollector, which is outermost): limitbody, withcors, withauth (session JWT -> principal), withtimeout;
+                               writelimit is a gqlgen field middleware (AroundFields), not HTTP: per-user limit on
+                               the RateLimitedMutations (setup.go) fields
 internal/delivery/metrics/     Setup: separate metrics server (METRICS_PORT) serving only GET /metrics
 internal/auth                  principal + Telegram ID in context, session JWT (TokenManager), bind-code helpers
 internal/platform/database     pgxpool setup (limits + statement_timeout, set in code) + pgx<->domain type conversion helpers (UUID/Date/Numeric/Timestamp)
 internal/platform/google       Google ID-token verifier (implements domain.GoogleVerifier)
-internal/platform/ratelimit    in-memory fixed-window limiter (per process)
+internal/platform/ratelimit    in-memory fixed-window limiter (per process); Take returns the wait until the window resets.
+                               One write limiter (WRITE_RATE_LIMIT / WRITE_RATE_WINDOW) is built in main.go and shared
+                               by both APIs; BindTelegramAccount has its own
 internal/platform/metrics      Prometheus registry + collectors (gRPC, HTTP, GraphQL errors, pool); ObserveHTTP, GraphQLError
 internal/platform/logging      slog setup (LOG_FORMAT json/text, LOG_LEVEL), request ID in context, EnsureRequestID;
                                adds request_id and, inside a span, trace_id / span_id to every *Context log line
@@ -158,7 +163,8 @@ inside an `errgroup`, so either server failing — or SIGINT/SIGTERM — brings 
 shutdown. On the HTTP side the whole mux is wrapped in `otelhttp` (outermost; skips `/healthz` and `/readyz`) -> `requestid` ->
 `accesslog`; `/graphql` additionally goes
 through `limitbody` -> `withcors` -> `withauth` -> `withtimeout`; `/healthz` and `/readyz` sit outside CORS and auth.
-The gRPC chain is `requestid` -> `accesslog` -> metrics -> `recovery` -> `timeout` -> `apikeyauth` -> `telegramuser`
+The gRPC chain is `requestid` -> `accesslog` -> metrics -> `recovery` -> `timeout` -> `apikeyauth` -> `telegramuser` ->
+`writelimit`
 (tracing is the `otelgrpc` stats handler, outside the chain, skipping health checks; `tracing.Setup` runs in
 `main.go` before the pool and servers are built, because the instrumentation captures the tracer provider then)
 (`InitializeMetrics` runs after the services are registered); server
@@ -287,6 +293,10 @@ including integration, with `-race` (the same command as `make test-integration`
   size with `NormalizedSize` (`constant.DefaultPageSize` / `constant.MaxPageSize`), fetch `size + 1` and cut the page
   with `pagination.Cut(rows, size)`, which also returns the last row for the next cursor. GraphQL returns `nodes` + `pageInfo`; gRPC follows AIP-158
   (`page_size`, `page_token`, `next_page_token`).
+- Write limit: a new write RPC or mutation goes into `dlvGrpc.RateLimitedMethods` / `dlvGql.RateLimitedMutations`, or
+  into the not-counted list of the classification tests (`TestRateLimitedMethodsClassified`,
+  `TestRateLimitedMutationsClassified`), which fail until it is classified. Over the limit, return
+  `*errDom.RateLimitError{RetryAfter}`; the mappers turn it into `RESOURCE_EXHAUSTED` / `RATE_LIMITED`.
 - Metrics: one registry (`platform/metrics`), passed in, never the Prometheus global. Labels must be bounded
   (route names, codes, method names), never client-supplied values or IDs. `/metrics` lives only on the metrics
   server, never on the public HTTP port.

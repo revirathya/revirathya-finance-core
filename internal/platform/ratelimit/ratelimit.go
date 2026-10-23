@@ -45,7 +45,9 @@ func (l *Limiter) sweep(now time.Time) {
 	l.lastSweep = now
 }
 
-func (l *Limiter) Allow(key string) bool {
+// Take counts one event for key. Over the limit, it returns false and how long until key's window resets;
+// a denied event isn't counted.
+func (l *Limiter) Take(key string) (bool, time.Duration) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
@@ -54,16 +56,25 @@ func (l *Limiter) Allow(key string) bool {
 
 	e, ok := l.entries[key]
 	if !ok || now.Sub(e.start) >= l.window {
-		l.entries[key] = &entry{count: 1, start: now}
-		return true
+		l.entries[key] = &entry{
+			count: 1,
+			start: now,
+		}
+		return true, 0
 	}
 
 	if e.count >= l.limit {
-		return false
+		return false, e.start.Add(l.window).Sub(now)
 	}
 
-	e.count++
-	return true
+	e.count += 1
+	return true, 0
+}
+
+// Allow counts one event for key and reports whether it is within the limit.
+func (l *Limiter) Allow(key string) bool {
+	ok, _ := l.Take(key)
+	return ok
 }
 
 func (l *Limiter) Len() int {

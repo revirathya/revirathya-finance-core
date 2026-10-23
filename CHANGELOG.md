@@ -9,6 +9,10 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
 ## [Unreleased]
 
 ### Added
+- Per-user write limit, shared by gRPC and GraphQL: 15 writes per minute by default (`WRITE_RATE_LIMIT`,
+  `WRITE_RATE_WINDOW`). Over it, gRPC returns `RESOURCE_EXHAUSTED` with `retry-after` metadata and GraphQL
+  `RATE_LIMITED` with `extensions.retryAfter` (seconds). Counted: gRPC `CreateExpense` / `UpdateExpense` /
+  `DeleteExpense` and every GraphQL mutation except `loginWithGoogle`. New metric `rate_limited_total{api}`.
 - OpenTelemetry tracing, off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set: spans for gRPC calls, HTTP requests,
   GraphQL operations and resolvers, and SQL queries (no SQL parameters, and no GraphQL query text, variables or
   argument values), W3C `traceparent` propagation,

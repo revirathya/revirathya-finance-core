@@ -21,6 +21,7 @@ import (
 	dlvGql "github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/logging"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/metrics"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/ratelimit"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase"
 	"github.com/revirathya/revirathya-finance-core/testutil"
 )
@@ -46,7 +47,7 @@ func newServerWithMetrics(t *testing.T, introspection bool) (http.Handler, *auth
 	ping := func(ctx context.Context) error { return nil }
 	m := metrics.NewMetrics(nil)
 	layer := dlvHttp.Setup("prod", ":0", ping)
-	dlvGql.RegisterHandler(layer, []string{testOrigin}, introspection, tokens, m, usecase.Usecase{})
+	dlvGql.RegisterHandler(layer, []string{testOrigin}, introspection, tokens, m, ratelimit.NewLimiter(1000, time.Minute), usecase.Usecase{})
 	return layer.Server.Handler, tokens, m
 }
 
