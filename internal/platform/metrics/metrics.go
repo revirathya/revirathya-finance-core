@@ -22,6 +22,7 @@ type Metrics struct {
 	httpRequests  *prometheus.CounterVec
 	httpDuration  *prometheus.HistogramVec
 	graphqlErrors *prometheus.CounterVec
+	rateLimited   *prometheus.CounterVec
 }
 
 // Private
@@ -99,6 +100,15 @@ func NewMetrics(pool *pgxpool.Pool) *Metrics {
 		[]string{"code"},
 	)
 
+	// Init rate limit collectors - counter
+	rateLimitedColl := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "rate_limited_total",
+			Help: "Writes rejected by the per-user write limit, by API (grpc, graphql)",
+		},
+		[]string{"api"},
+	)
+
 	// Register metrics
 	m := &Metrics{
 		Registry:      reg,
@@ -106,9 +116,10 @@ func NewMetrics(pool *pgxpool.Pool) *Metrics {
 		httpRequests:  httpRequestsColl,
 		httpDuration:  httpDurationColl,
 		graphqlErrors: graphqlErrorsColl,
+		rateLimited:   rateLimitedColl,
 	}
 
-	reg.MustRegister(m.Grpc, m.httpRequests, m.httpDuration, m.graphqlErrors)
+	reg.MustRegister(m.Grpc, m.httpRequests, m.httpDuration, m.graphqlErrors, m.rateLimited)
 	if pool != nil {
 		registerPoolMetrics(reg, pool)
 	}
@@ -129,4 +140,9 @@ func (m *Metrics) GraphQLError(code string) {
 func (m *Metrics) ObserveHTTP(handler string, code int, d time.Duration) {
 	m.httpRequests.WithLabelValues(handler, strconv.Itoa(code)).Inc()
 	m.httpDuration.WithLabelValues(handler).Observe(d.Seconds())
+}
+
+// RateLimited counts one write rejected by the write limit; api is "grpc" or "graphql"
+func (m *Metrics) RateLimited(api string) {
+	m.rateLimited.WithLabelValues(api).Inc()
 }

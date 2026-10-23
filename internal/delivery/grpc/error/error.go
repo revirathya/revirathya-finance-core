@@ -26,6 +26,8 @@ func ToStatus(ctx context.Context, op string, err error) error {
 		return status.Errorf(codes.PermissionDenied, "%s: permission denied", op)
 	case errors.Is(err, errDom.ErrConflict):
 		return status.Errorf(codes.AlreadyExists, "%s: resource already exists", op)
+	case errors.Is(err, errDom.ErrRateLimited):
+		return status.Error(codes.ResourceExhausted, "too many write requests, try again later")
 	case errors.As(err, &vErr):
 		return status.Error(codes.InvalidArgument, vErr.Error())
 	case errors.Is(err, errDom.ErrInvalidInput):

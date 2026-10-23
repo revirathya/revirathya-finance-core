@@ -43,6 +43,7 @@ func NewErrorPresenter(metricsColl *metrics.Metrics) graphql.ErrorPresenterFunc 
 
 func present(ctx context.Context, err error) *gqlerror.Error {
 	var vErr *errDom.ValidationError
+	var rlErr *errDom.RateLimitError
 	gqlErr := graphql.DefaultErrorPresenter(ctx, err)
 
 	if code, _ := gqlErr.Extensions["code"].(string); passThroughCodes[code] {
@@ -88,6 +89,12 @@ func present(ctx context.Context, err error) *gqlerror.Error {
 		gqlErr.Message = "resource already exists"
 		gqlErr.Extensions = map[string]any{
 			"code": "CONFLICT",
+		}
+	case errors.As(err, &rlErr):
+		gqlErr.Message = rlErr.Error()
+		gqlErr.Extensions = map[string]any{
+			"code":       "RATE_LIMITED",
+			"retryAfter": rlErr.RetryAfterSeconds(),
 		}
 	case errors.Is(err, errDom.ErrInvalidInput):
 		gqlErr.Message = "invalid argument"

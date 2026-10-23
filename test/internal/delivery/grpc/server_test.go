@@ -18,6 +18,7 @@ import (
 	// Internal
 	dlvGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/metrics"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/ratelimit"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase"
 	"github.com/revirathya/revirathya-finance-core/testutil"
 )
@@ -33,7 +34,7 @@ func startServer(t *testing.T) *grpc.ClientConn {
 func startServerWithMetrics(t *testing.T) (*grpc.ClientConn, *metrics.Metrics) {
 	t.Helper()
 	m := metrics.NewMetrics(nil)
-	layer, err := dlvGrpc.Setup("127.0.0.1:0", false, "test-api-key", m, usecase.Usecase{})
+	layer, err := dlvGrpc.Setup("127.0.0.1:0", false, "test-api-key", m, ratelimit.NewLimiter(1000, time.Minute), usecase.Usecase{})
 	if err != nil {
 		t.Fatalf("Setup: %v", err)
 	}

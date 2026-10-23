@@ -24,6 +24,7 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/platform/google"
 	logApp "github.com/revirathya/revirathya-finance-core/internal/platform/logging"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/metrics"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/ratelimit"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/tracing"
 	"github.com/revirathya/revirathya-finance-core/internal/repository"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase"
@@ -90,6 +91,9 @@ func run(cfg *config.Config) error {
 	// Setup metrics collector
 	metricsColl := metrics.NewMetrics(pool)
 
+	// Setup write limiter, shared by gRPC and GraphQL so the budget is per user across both
+	writeLimiter := ratelimit.NewLimiter(cfg.WriteRateLimit, cfg.WriteRateWindow)
+
 	// Setup repo and usecase
 	repo := repository.BootstrapRepository(pool)
 	uc := usecase.BootstrapUsecase(gVeri, repo)
@@ -100,6 +104,7 @@ func run(cfg *config.Config) error {
 		cfg.GrpcEnableReflection,
 		cfg.GrpcApiKey,
 		metricsColl,
+		writeLimiter,
 		uc,
 	)
 	if err != nil {
@@ -116,6 +121,7 @@ func run(cfg *config.Config) error {
 		cfg.GqlEnableIntrospection,
 		tokenManager,
 		metricsColl,
+		writeLimiter,
 		uc,
 	)
 

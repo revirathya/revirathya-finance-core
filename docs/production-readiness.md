@@ -283,8 +283,10 @@ client later. Do these first.
   GraphQL): migration `000007_expense_request_id`, unique per user; a retry returns the first expense, and a reused
   key with a different payload is `INVALID_ARGUMENT` / `BAD_USER_INPUT`. Known edge cases: a key is freed when its
   expense is deleted, and a retry after the expense was updated no longer matches (so it's rejected).
-- [ ] Rate limiting on writes: 15 per user per minute, shared by gRPC and GraphQL, single instance. Full spec in
-  [rate-limiting.md](rate-limiting.md). (Today only Telegram binding is limited.)
+- [x] Rate limiting on writes: 15 per user per minute (`WRITE_RATE_LIMIT` / `WRITE_RATE_WINDOW`), shared by gRPC and
+  GraphQL, single instance; `RESOURCE_EXHAUSTED` + `retry-after` / `RATE_LIMITED` + `retryAfter`; `rate_limited_total`.
+  Full spec in [rate-limiting.md](rate-limiting.md).
+  - [ ] Shared counters (Redis) before running more than one instance, with the deploy target.
 - [x] Normalize CRUD in the repositories and usecases (internal only, so no client impact; the end-to-end tests cover
   the behaviour). The behaviour rules below already hold; what's left is consistency:
   - [x] The owner is always an argument, never part of a form (`CreateExpense(ctx, userID, form)`; `ExpenseForm`
@@ -404,7 +406,7 @@ Next, in this order:
 3. ~~Idempotency key~~ (done).
 4. ~~Repo hygiene~~ (done; Dependabot skipped for now).
 5. ~~OpenTelemetry tracing~~ (done; production backend and sampling decided with the deploy target).
-6. **Rate limiting on writes**, per [rate-limiting.md](rate-limiting.md).
+6. ~~Rate limiting on writes~~ (done; shared counters wait for the deploy target).
 7. **Trivy** image scanning (section 3, Docker).
 
 Optional, as more entities are added: generic paging types (`domain.Page[T]`, one cursor helper) instead of a

@@ -10,13 +10,14 @@ import (
 	dlvHttp "github.com/revirathya/revirathya-finance-core/internal/delivery/http"
 	dlvMetrics "github.com/revirathya/revirathya-finance-core/internal/delivery/metrics"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/metrics"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/ratelimit"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase"
 )
 
 func TestRunServers(t *testing.T) {
 	t.Run("all servers stop and Wait returns once the context is cancelled", func(t *testing.T) {
 		m := metrics.NewMetrics(nil)
-		grpcLayer, err := dlvGrpc.Setup("127.0.0.1:0", false, "test-api-key", m, usecase.Usecase{})
+		grpcLayer, err := dlvGrpc.Setup("127.0.0.1:0", false, "test-api-key", m, ratelimit.NewLimiter(1000, time.Minute), usecase.Usecase{})
 		if err != nil {
 			t.Fatalf("grpc setup: %v", err)
 		}

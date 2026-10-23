@@ -16,6 +16,7 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/auth"
 	dlvHttp "github.com/revirathya/revirathya-finance-core/internal/delivery/http"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/metrics"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/ratelimit"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase"
 
 	// Internal - GraphQL
@@ -24,6 +25,7 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql/middleware/withauth"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql/middleware/withcors"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql/middleware/withtimeout"
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql/middleware/writelimit"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql/resolver"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql/tracing"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/middleware"
@@ -35,12 +37,21 @@ const (
 	maxRequestBodySize = 1 * 1024 * 1024  // 1 MB
 )
 
+// RateLimitedMutations are the Mutation fields counted against the user's write budget. loginWithGoogle is
+// unauthenticated and ok writes nothing (docs/rate-limiting.md).
+var RateLimitedMutations = []string{
+	"createCategory", "updateCategory", "deleteCategory",
+	"createExpense", "updateExpense", "deleteExpense",
+	"updateUser", "createTelegramBindCode", "unbindTelegram",
+}
+
 func RegisterHandler(
 	srvLayer *dlvHttp.ServerLayer,
 	allowedOrigins []string,
 	enableInstropection bool,
 	tokenManager *auth.TokenManager,
 	metricsColl *metrics.Metrics,
+	writeLimiter *ratelimit.Limiter,
 	usecase usecase.Usecase,
 ) {
 	// Init resolver and server
@@ -61,6 +72,9 @@ func RegisterHandler(
 		gqlHdl.Use(extension.Introspection{})
 	}
 	gqlHdl.Use(tracing.New())
+	gqlHdl.AroundFields(
+		writelimit.FieldMiddleware(writeLimiter, metricsColl, RateLimitedMutations...),
+	)
 	gqlHdl.SetErrorPresenter(errGql.NewErrorPresenter(metricsColl))
 	gqlHdl.SetRecoverFunc(errGql.RecoverFunc)
 

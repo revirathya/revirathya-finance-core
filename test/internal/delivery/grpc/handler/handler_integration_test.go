@@ -25,6 +25,7 @@ import (
 	dlvGrpc "github.com/revirathya/revirathya-finance-core/internal/delivery/grpc"
 	"github.com/revirathya/revirathya-finance-core/internal/domain"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/metrics"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/ratelimit"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase"
 
 	// Test Util
@@ -49,8 +50,14 @@ type bot struct {
 
 func newBot(t *testing.T) *bot {
 	t.Helper()
+	return newBotWith(t, ratelimit.NewLimiter(1000, time.Minute), metrics.NewMetrics(nil))
+}
+
+// newBotWith is newBot with the given write limiter and metrics.
+func newBotWith(t *testing.T, writeLimiter *ratelimit.Limiter, m *metrics.Metrics) *bot {
+	t.Helper()
 	uc := testutil.NewUsecases(testutil.NewFakeGoogleVerifier())
-	layer, err := dlvGrpc.Setup("127.0.0.1:0", false, apiKey, metrics.NewMetrics(nil), uc)
+	layer, err := dlvGrpc.Setup("127.0.0.1:0", false, apiKey, m, writeLimiter, uc)
 	if err != nil {
 		t.Fatalf("setup: %v", err)
 	}
