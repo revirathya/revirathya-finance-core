@@ -4,6 +4,7 @@ export
 COMPOSE := docker compose --project-directory . -f infra/docker/docker-compose.yaml
 GRPC_ADDR ?= localhost:51051
 GRPC_PROTOS := -proto financecore/v1/categories.proto -proto financecore/v1/expenses.proto -proto financecore/v1/user_telegram_contexts.proto
+TRIVY_IMAGE := aquasec/trivy@sha256:be1190afcb28352bfddc4ddeb71470835d16462af68d310f9f4bca710961a41e # 0.70.0
 
 .PHONY: run build test test-integration vet check tidy lint \
 	docker-build docker-up docker-down docker-logs \
@@ -11,7 +12,8 @@ GRPC_PROTOS := -proto financecore/v1/categories.proto -proto financecore/v1/expe
 	sqlc-generate proto-generate proto-lint \
 	grpc-list grpc-describe \
 	gql-init gql-generate \
-	generate hooks
+	generate hooks \
+	image-scan
 
 run:
 	go run ./cmd
@@ -108,3 +110,14 @@ generate: proto-generate sqlc-generate gql-generate
 
 hooks:
 	git config core.hooksPath .githooks
+
+# make image-scan [svc=migration] -> scan the image built by docker-build, with the same rules as CI
+image-scan: svc ?= core
+image-scan:
+	docker run --rm \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v financecore-trivy-cache:/root/.cache \
+		-v $(CURDIR)/.trivyignore:/work/.trivyignore:ro \
+		$(TRIVY_IMAGE) image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
+		--ignorefile /work/.trivyignore \
+		revirathya/revirathya-finance-$(svc):$(if $(filter migration,$(svc)),$(MIGRATION_VERSION),$(VERSION))

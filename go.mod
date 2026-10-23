@@ -2,6 +2,8 @@ module github.com/revirathya/revirathya-finance-core
 
 go 1.26.0
 
+toolchain go1.26.10
+
 require (
 	github.com/99designs/gqlgen v0.17.94
 	github.com/exaring/otelpgx v0.13.0

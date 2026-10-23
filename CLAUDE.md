@@ -20,7 +20,7 @@ Revirathya Finance Core is a Go service managing financial data (users, categori
 conversation state). It exposes both gRPC and GraphQL APIs backed by Postgres, served from a single binary
 (built from `cmd/`) over two listeners.
 
-Stack: Go 1.26, pgx/v5, gRPC, gqlgen, sqlc, golang-migrate.
+Stack: Go 1.26 (`toolchain go1.26.10` in `go.mod`), pgx/v5, gRPC, gqlgen, sqlc, golang-migrate.
 
 ## Common commands
 
@@ -38,6 +38,7 @@ make lint                  # golangci-lint run ./... (config: .golangci.yaml; li
 make check                 # vet + lint + test + proto-lint
 make generate              # proto-generate + sqlc-generate + gql-generate
 make hooks                 # git config core.hooksPath .githooks (pre-commit: gofmt/vet/codegen drift; commit-msg: conventional commits)
+make image-scan            # Trivy scan of the image docker-build built (svc=migration for the other), same rules as CI
 
 # Single test
 go test ./test/internal/usecase/category/... -run TestCreateCategory -v
@@ -62,8 +63,8 @@ Docker files live in `infra/docker/`. The Makefile runs compose as
 `docker compose --project-directory . -f infra/docker/docker-compose.yaml`, so it reads the root `.env` and keeps
 the project name (and its `pgdata` volume). `make docker-build` builds `infra/docker/Dockerfile` (distroless runtime
 image; it builds `./cmd` from the committed `gen/` code, so regenerate before building). `make docker-build
-svc=migration` builds `infra/docker/migration.Dockerfile`, a standalone `migrate/migrate` image bundled with
-`migrations/`. The core image is tagged `$(VERSION)` and the migration image `$(MIGRATION_VERSION)`, both from
+svc=migration` builds `infra/docker/migration.Dockerfile`: the `migrate` CLI built inside this module (so it gets the
+app's Go and dependency versions) on distroless, bundled with `migrations/`. The core image is tagged `$(VERSION)` and the migration image `$(MIGRATION_VERSION)`, both from
 `.env`; docker-compose requires both. Make parses leading-dash words as its own flags, so extra compose flags are
 passed through make variables (`args="..."`), not as `make docker-down -v`.
 
@@ -297,6 +298,10 @@ including integration, with `-race` (the same command as `make test-integration`
   into the not-counted list of the classification tests (`TestRateLimitedMethodsClassified`,
   `TestRateLimitedMutationsClassified`), which fail until it is classified. Over the limit, return
   `*errDom.RateLimitError{RetryAfter}`; the mappers turn it into `RESOURCE_EXHAUSTED` / `RATE_LIMITED`.
+- Images are scanned by Trivy in CI (`image-scan.yaml`: HIGH/CRITICAL with a fix fail the build); exceptions go in
+  `.trivyignore` with an expiry and a reason. The Go version is set in three places that move together: `go.mod`'s
+  `toolchain` line and the `golang:` tag in both Dockerfiles. Third-party actions with a history of tag tampering
+  (trivy-action) are pinned to a commit SHA, and the local Trivy image by digest.
 - Metrics: one registry (`platform/metrics`), passed in, never the Prometheus global. Labels must be bounded
   (route names, codes, method names), never client-supplied values or IDs. `/metrics` lives only on the metrics
   server, never on the public HTTP port.

@@ -1,0 +1,41 @@
+name: Image scan
+
+on:
+  pull_request:
+  schedule:
+    - cron: "0 3 * * 1" # Monday 03:00 UTC: catch vulnerabilities published after merge
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-scan-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  image-scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: core
+            dockerfile: infra/docker/Dockerfile
+          - name: migration
+            dockerfile: infra/docker/migration.Dockerfile
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build image
+        run: docker build -f ${{ matrix.dockerfile }} -t financecore-${{ matrix.name }}:ci .
+      - name: Scan image
+        # Pinned to a commit: trivy-action's tags were force-pushed with malware in March 2026
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: financecore-${{ matrix.name }}:ci
+          version: v0.70.0
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          trivyignores: .trivyignore

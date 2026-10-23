@@ -329,7 +329,10 @@ client later. Do these first.
 
 ### Docker
 - [x] Version-tagged images instead of `:latest` (`VERSION`, `MIGRATION_VERSION`).
-- [ ] Image scanning (Trivy).
+- [x] Image scanning (Trivy): both images on every PR and weekly on `main`, failing on HIGH/CRITICAL with a fix;
+  `make image-scan` locally; `.trivyignore` for exceptions. The migration image is now `migrate` built inside this
+  module on distroless (the official `migrate/migrate` images carried 12-61 such findings).
+  - [ ] Add `image-scan (core)` and `image-scan (migration)` to the required checks of the `main` ruleset.
 - [ ] Build-time version info via `-ldflags "-X main.version=..."`, exposed at `/version`.
 
 ## 4. Schema discovery ("metadata server")
@@ -407,7 +410,7 @@ Next, in this order:
 4. ~~Repo hygiene~~ (done; Dependabot skipped for now).
 5. ~~OpenTelemetry tracing~~ (done; production backend and sampling decided with the deploy target).
 6. ~~Rate limiting on writes~~ (done; shared counters wait for the deploy target).
-7. **Trivy** image scanning (section 3, Docker).
+7. ~~Trivy~~ image scanning (done).
 
 Optional, as more entities are added: generic paging types (`domain.Page[T]`, one cursor helper) instead of a
 `*Cursor` / `*ListQuery` / `*Page` per entity.

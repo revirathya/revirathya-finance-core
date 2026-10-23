@@ -1,0 +1,3 @@
+# Accepted Trivy findings: one ID per line, with an expiry and the reason it doesn't apply here.
+# Expired entries stop being ignored, so every exception gets looked at again.
+# CVE-2026-00000 exp:2026-12-31  # example: only reachable through a feature we don't use
