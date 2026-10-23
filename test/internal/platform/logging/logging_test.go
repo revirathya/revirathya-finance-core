@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/revirathya/revirathya-finance-core/internal/platform/logging"
 )
@@ -187,6 +188,40 @@ func TestEnsureRequestID(t *testing.T) {
 		id := logging.EnsureRequestID("")
 		if again := logging.EnsureRequestID(id); again != id {
 			t.Fatalf("generated ID %q is not accepted back (got %q)", id, again)
+		}
+	})
+}
+
+func TestTraceIDs(t *testing.T) {
+	t.Run("a span in the context adds trace_id and span_id", func(t *testing.T) {
+		traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+		ctx := trace.ContextWithSpanContext(context.Background(), trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		}))
+		logger, buf := newJSONLogger(t, slog.LevelInfo)
+
+		logger.InfoContext(ctx, "hello")
+
+		line := decode(t, buf)
+		if line["trace_id"] != traceID.String() || line["span_id"] != spanID.String() {
+			t.Fatalf("trace_id %v, span_id %v; want %s and %s", line["trace_id"], line["span_id"], traceID, spanID)
+		}
+	})
+
+	t.Run("no span adds neither", func(t *testing.T) {
+		logger, buf := newJSONLogger(t, slog.LevelInfo)
+
+		logger.InfoContext(context.Background(), "hello")
+
+		line := decode(t, buf)
+		if _, ok := line["trace_id"]; ok {
+			t.Fatalf("trace_id %v logged without a span", line["trace_id"])
+		}
+		if _, ok := line["span_id"]; ok {
+			t.Fatalf("span_id %v logged without a span", line["span_id"])
 		}
 	})
 }

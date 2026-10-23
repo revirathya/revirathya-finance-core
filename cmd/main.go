@@ -24,6 +24,7 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/platform/google"
 	logApp "github.com/revirathya/revirathya-finance-core/internal/platform/logging"
 	"github.com/revirathya/revirathya-finance-core/internal/platform/metrics"
+	"github.com/revirathya/revirathya-finance-core/internal/platform/tracing"
 	"github.com/revirathya/revirathya-finance-core/internal/repository"
 	"github.com/revirathya/revirathya-finance-core/internal/usecase"
 )
@@ -56,10 +57,19 @@ func run(cfg *config.Config) error {
 	}
 	slog.SetDefault(logger)
 
-	// Get Postgres Pool
+	// Define context
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// Setup tracing
+	tracingShutdown, err := tracing.Setup(ctx)
+	if err != nil {
+		return fmt.Errorf("setup tracing: %w", err)
+	}
+
+	defer tracing.RunShutdown(tracingShutdown)
+
+	// Get Postgres Pool
 	pool, err := database.NewDBPool(ctx, cfg.DatabaseURI)
 	if err != nil {
 		return fmt.Errorf("create db pool: %w", err)

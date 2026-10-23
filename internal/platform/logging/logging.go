@@ -8,6 +8,7 @@ import (
 	"regexp"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type requestIDKey struct{}
@@ -62,6 +63,13 @@ func NewLogger(w io.Writer, format string, level slog.Level) (*slog.Logger, erro
 func (h contextHandler) Handle(ctx context.Context, r slog.Record) error {
 	if id := RequestIDFrom(ctx); id != "" {
 		r.AddAttrs(slog.String("request_id", id))
+	}
+
+	if sc := trace.SpanContextFromContext(ctx); sc.IsValid() {
+		r.AddAttrs(
+			slog.String("trace_id", sc.TraceID().String()),
+			slog.String("span_id", sc.SpanID().String()),
+		)
 	}
 	return h.Handler.Handle(ctx, r)
 }

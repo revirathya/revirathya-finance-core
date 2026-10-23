@@ -3,9 +3,11 @@ package http
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql/playground"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	// Internal - HTTP
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/health"
@@ -46,13 +48,31 @@ func Setup(
 	}
 
 	// Set Server
-	httpServer := &http.Server{
-		Addr: port,
-		Handler: middleware.ChainMiddleware(
+	handler := otelhttp.NewHandler(
+		middleware.ChainMiddleware(
 			mux,
 			requestid.Middleware(),
 			accesslog.Middleware(),
 		),
+		"http",
+		otelhttp.WithFilter(
+			func(r *http.Request) bool {
+				return r.URL.Path != "/healthz" && r.URL.Path != "/readyz"
+			},
+		),
+		otelhttp.WithSpanNameFormatter(
+			func(_ string, r *http.Request) string {
+				if _, pattern := mux.Handler(r); pattern != "" {
+					return r.Method + " " + strings.TrimPrefix(pattern, r.Method+" ")
+				}
+				return r.Method
+			},
+		),
+	)
+
+	httpServer := &http.Server{
+		Addr:              port,
+		Handler:           handler,
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,

@@ -25,6 +25,7 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql/middleware/withcors"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql/middleware/withtimeout"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql/resolver"
+	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/graphql/tracing"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/middleware"
 	"github.com/revirathya/revirathya-finance-core/internal/delivery/http/middleware/metricscollector"
 )
@@ -59,6 +60,7 @@ func RegisterHandler(
 	if enableInstropection {
 		gqlHdl.Use(extension.Introspection{})
 	}
+	gqlHdl.Use(tracing.New())
 	gqlHdl.SetErrorPresenter(errGql.NewErrorPresenter(metricsColl))
 	gqlHdl.SetRecoverFunc(errGql.RecoverFunc)
 
