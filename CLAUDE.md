@@ -20,7 +20,7 @@ Revirathya Finance Core is a Go service managing financial data (users, categori
 conversation state). It exposes both gRPC and GraphQL APIs backed by Postgres, served from a single binary
 (built from `cmd/`) over two listeners.
 
-Stack: Go 1.26 (`toolchain go1.26.10` in `go.mod`), pgx/v5, gRPC, gqlgen, sqlc, golang-migrate.
+Stack: Go 1.26.10 (`go 1.26.10` in `go.mod`, the minimum), pgx/v5, gRPC, gqlgen, sqlc, golang-migrate.
 
 ## Common commands
 
@@ -300,7 +300,8 @@ including integration, with `-race` (the same command as `make test-integration`
   `*errDom.RateLimitError{RetryAfter}`; the mappers turn it into `RESOURCE_EXHAUSTED` / `RATE_LIMITED`.
 - Images are scanned by Trivy in CI (`image-scan.yaml`: HIGH/CRITICAL with a fix fail the build); exceptions go in
   `.trivyignore` with an expiry and a reason. The Go version is set in three places that move together: `go.mod`'s
-  `toolchain` line and the `golang:` tag in both Dockerfiles. Third-party actions with a history of tag tampering
+  `go` line (a patch-level minimum, no `toolchain` line; fine for an application nothing imports) and the `golang:`
+  tag in both Dockerfiles. Third-party actions with a history of tag tampering
   (trivy-action) are pinned to a commit SHA, and the local Trivy image by digest.
 - Metrics: one registry (`platform/metrics`), passed in, never the Prometheus global. Labels must be bounded
   (route names, codes, method names), never client-supplied values or IDs. `/metrics` lives only on the metrics

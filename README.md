@@ -4,7 +4,7 @@
 Core services to managing financial data. Exposes gRPC and GraphQL as APIs backed by Postgres.
 
 **Stack:**
-- Go 1.26 (toolchain 1.26.10)
+- Go 1.26.10
 - pgx
 - gRPC
 - gqlgen (GraphQL)
@@ -14,7 +14,7 @@ Core services to managing financial data. Exposes gRPC and GraphQL as APIs backe
 ## Prerequisites
 | Tool | Used by | Required? |
 |:--|:--|:--|
-| Go 1.26 | `run`, `build`, `test`, `vet`, `gql-generate` | Yes. Any 1.26.x works: `go.mod`'s `toolchain go1.26.10` makes `go` fetch and use 1.26.10 in this repo (with the default `GOTOOLCHAIN=auto`) |
+| Go 1.26.10 or newer | `run`, `build`, `test`, `vet`, `gql-generate` | Yes. `go.mod` requires `go 1.26.10`: an older Go refuses to build (`GOTOOLCHAIN=local`) or downloads 1.26.10 (the default `GOTOOLCHAIN=auto`) |
 | GNU Make | all `make` commands | Yes |
 | Docker with Compose v2 (`docker compose`) | `docker-*` | Yes |
 | `migrate` (golang-migrate, with Postgres driver) | `migrate-*` | Yes, for local mode |
@@ -206,8 +206,8 @@ make docker-build svc=migration && make image-scan svc=migration   # migration
 ```
 
 A finding that doesn't apply goes into `.trivyignore`, one ID per line with an expiry and a reason
-(`CVE-… exp:2026-12-31  # why`); expired entries are reported again. Most findings are fixed by bumping the Go toolchain
-(`go.mod`'s `toolchain` line and the `golang:` tag in both Dockerfiles, together) or a dependency.
+(`CVE-… exp:2026-12-31  # why`); expired entries are reported again. Most findings are fixed by bumping Go
+(`go.mod`'s `go` line and the `golang:` tag in both Dockerfiles, together) or a dependency.
 
 ## Migrations
 

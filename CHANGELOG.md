@@ -58,7 +58,8 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
 
 ### Changed
 - The migration image builds `migrate` from this module on distroless instead of using `migrate/migrate`, so it
-  carries the app's patched Go and dependencies. Go toolchain pinned to 1.26.10 (`go.mod`, Dockerfiles).
+  carries the app's patched Go and dependencies. Go 1.26.10 is now the minimum (`go 1.26.10` in `go.mod`) and the
+  Dockerfiles build with it.
 - GraphQL: the user comes from the session, never from an argument: `expenses(userId:)` is `expenses(transactionDt:)`,
   `CreateExpenseInput.userId` and `updateExpense`'s `userId` are gone, and `user(id:)` is replaced by `me`.
 - GraphQL: mutation inputs are required (`CreateExpenseInput!`, `UpdateExpenseInput!`, `UpdateUserInput!`),
