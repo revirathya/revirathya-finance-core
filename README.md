@@ -4,7 +4,7 @@
 Core services to managing financial data. Exposes gRPC and GraphQL as APIs backed by Postgres.
 
 **Stack:**
-- Go 1.26
+- Go 1.26.10
 - pgx
 - gRPC
 - gqlgen (GraphQL)
@@ -14,7 +14,7 @@ Core services to managing financial data. Exposes gRPC and GraphQL as APIs backe
 ## Prerequisites
 | Tool | Used by | Required? |
 |:--|:--|:--|
-| Go 1.26 | `run`, `build`, `test`, `vet`, `gql-generate` | Yes |
+| Go 1.26.10 or newer | `run`, `build`, `test`, `vet`, `gql-generate` | Yes. `go.mod` requires `go 1.26.10`: an older Go refuses to build (`GOTOOLCHAIN=local`) or downloads 1.26.10 (the default `GOTOOLCHAIN=auto`) |
 | GNU Make | all `make` commands | Yes |
 | Docker with Compose v2 (`docker compose`) | `docker-*` | Yes |
 | `migrate` (golang-migrate, with Postgres driver) | `migrate-*` | Yes, for local mode |
@@ -22,6 +22,7 @@ Core services to managing financial data. Exposes gRPC and GraphQL as APIs backe
 | `buf` + `protoc-gen-go` + `protoc-gen-go-grpc` | `proto-generate`, `proto-lint`, `check` | When editing `.proto` files, and for `make check` |
 | `golangci-lint` v2 | `lint`, `check` | For `make lint` / `make check` (CI runs it on every PR) |
 | `grpcurl` | `grpc-list`, `grpc-describe` | Optional |
+| Trivy | `image-scan` | No install: runs as a Docker image, pinned by digest |
 
 `gqlgen` needs no install: it's declared as a Go tool in `go.mod` and runs through `go run`.
 
@@ -53,7 +54,7 @@ ones CI uses and the committed generated code.
 4. Install `migrate` with the Postgres driver (the `postgres` build tag is required, or it can't connect):
 
    ```sh
-   go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1
+   go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.20.1
    ```
 
 5. Install `golangci-lint` (the project recommends the binary over `go install`):
@@ -132,7 +133,7 @@ through `args="..."` instead.
 
 |Variable|Used by|Default|Description|
 |:--|:--|:--|:--|
-|`svc`|`docker-build`|`core`|Image to build: `core` (`infra/docker/Dockerfile`) or `migration` (`infra/docker/migration.Dockerfile`)|
+|`svc`|`docker-build`, `image-scan`|`core`|Image to build or scan: `core` (`infra/docker/Dockerfile`) or `migration` (`infra/docker/migration.Dockerfile`)|
 |`svc`|`docker-up`, `docker-logs`|all services|Service(s) to start or follow, e.g. `svc=db` or `svc="db migration"`|
 |`VERSION`|`docker-build`, `docker-up`|from `.env`|Tag of the `core` image; override for one-off builds, e.g. `make docker-build VERSION=0.0.2`. Pass the same value to `docker-up` so compose runs the image you built.|
 |`MIGRATION_VERSION`|`docker-build svc=migration`, `docker-up`|from `.env`|Tag of the `migration` image; override the same way, e.g. `make docker-build svc=migration MIGRATION_VERSION=0.0.2`.|
@@ -192,10 +193,27 @@ effect in Docker mode.
 |`HTTP_HOST_PORT`|`8180`|Host port for HTTP (GraphQL, health checks).|
 |`METRICS_HOST_PORT`|`9900`|Host port for metrics|
 
+### Image scanning
+
+CI's **Image scan** workflow (`.github/workflows/image-scan.yaml`) builds both images and scans them with
+[Trivy](https://trivy.dev) on every PR, every Monday on `main` (vulnerabilities are published after merge too), and
+on demand. It fails on `HIGH` / `CRITICAL` findings that have a fixed version. The action is pinned to a commit and
+Trivy to a version, because trivy-action's tags were rewritten with malware in March 2026.
+
+```sh
+make docker-build && make image-scan                               # core, same rules as CI
+make docker-build svc=migration && make image-scan svc=migration   # migration
+```
+
+A finding that doesn't apply goes into `.trivyignore`, one ID per line with an expiry and a reason
+(`CVE-… exp:2026-12-31  # why`); expired entries are reported again. Most findings are fixed by bumping Go
+(`go.mod`'s `go` line and the `golang:` tag in both Dockerfiles, together) or a dependency.
+
 ## Migrations
 
 - Local: `make migrate-up` / `make migrate-down` / `make migrate-create name=<X>` / `make migrate-version`
-- Docker: built from `infra/docker/migration.Dockerfile` (`migrate/migrate` + bundled `migrations`); the `migration`
+- Docker: built from `infra/docker/migration.Dockerfile`: the `migrate` CLI compiled inside this module (same Go and
+  dependency versions as the app, so it scans clean) on distroless, with `migrations/` bundled. The `migration`
   service runs `up` automatically before `core` starts.
 
 ## Integrating a new service
@@ -545,8 +563,8 @@ Run `make hooks` once after cloning. It points git at `.githooks/`:
   change.
 
 PRs are squash-merged and CI checks the PR title against the same format, since it becomes the commit on `main`.
-Merging into `main` needs a PR, squash merge, all four CI checks passing (`test`, `migration-test`, `codegen`,
-`pr-title`; nobody can bypass them), and an approval from a code owner (`.github/CODEOWNERS`:
+Merging into `main` needs a PR, squash merge, all CI checks passing (`test`, `migration-test`, `codegen`,
+`pr-title`, `image-scan (core)`, `image-scan (migration)`; nobody can bypass them), and an approval from a code owner (`.github/CODEOWNERS`:
 `@revirathya/finance-core`). Admins may skip only the approval, while the team has a single member.
 
 ### Adding an entity

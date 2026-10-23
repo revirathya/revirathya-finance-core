@@ -21,7 +21,7 @@ services:
       db:
         condition: service_healthy
     entrypoint:
-      - "migrate"
+      - "/usr/local/bin/migrate"
       - "-path=/migrations"
       - "-database=postgres://${DB_USER:-revirathya}:${DB_PASSWORD:?DB_PASSWORD is required}@db:5432/${DB_NAME:-finance}?sslmode=disable"
     command:

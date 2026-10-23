@@ -9,6 +9,8 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
 ## [Unreleased]
 
 ### Added
+- Trivy image scanning in CI (`Image scan` workflow: every PR, weekly, on demand) and `make image-scan`; builds fail on
+  HIGH/CRITICAL vulnerabilities with a fix. Exceptions go in `.trivyignore`.
 - Per-user write limit, shared by gRPC and GraphQL: 15 writes per minute by default (`WRITE_RATE_LIMIT`,
   `WRITE_RATE_WINDOW`). Over it, gRPC returns `RESOURCE_EXHAUSTED` with `retry-after` metadata and GraphQL
   `RATE_LIMITED` with `extensions.retryAfter` (seconds). Counted: gRPC `CreateExpense` / `UpdateExpense` /
@@ -55,6 +57,9 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
   migration image.
 
 ### Changed
+- The migration image builds `migrate` from this module on distroless instead of using `migrate/migrate`, so it
+  carries the app's patched Go and dependencies. Go 1.26.10 is now the minimum (`go 1.26.10` in `go.mod`) and the
+  Dockerfiles build with it.
 - GraphQL: the user comes from the session, never from an argument: `expenses(userId:)` is `expenses(transactionDt:)`,
   `CreateExpenseInput.userId` and `updateExpense`'s `userId` are gone, and `user(id:)` is replaced by `me`.
 - GraphQL: mutation inputs are required (`CreateExpenseInput!`, `UpdateExpenseInput!`, `UpdateUserInput!`),
