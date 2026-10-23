@@ -12,6 +12,7 @@ never rewritten after they're accepted; a decision that changes gets a new recor
 | [0005](0005-idempotent-creates.md) | Idempotent creates with a per-user request ID | Accepted |
 | [0006](0006-layering.md) | Layering: domain at the centre, consumer-side interfaces | Accepted |
 | [0007](0007-no-downstream-compatibility-yet.md) | No compatibility guarantees until the first consumer | Accepted, temporary |
+| [0008](0008-per-user-write-limit.md) | A per-user write limit, shared by both APIs | Accepted |
 
 ## Adding a record
 

@@ -48,7 +48,7 @@ const (
 )
 
 // RateLimitedMethods are the RPCs counted against the user's write budget. BindTelegramAccount has its own limit,
-// and UpdateUserTelegramContext is the bot's conversation state, called on every step (docs/rate-limiting.md).
+// and UpdateUserTelegramContext is the bot's conversation state, called on every step (docs/adr/0008-per-user-write-limit.md).
 var RateLimitedMethods = []string{
 	financecorev1.ExpenseService_CreateExpense_FullMethodName,
 	financecorev1.ExpenseService_UpdateExpense_FullMethodName,

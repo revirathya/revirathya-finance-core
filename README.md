@@ -172,13 +172,13 @@ Copy `.env.example` to `.env`. Only the required variables must be set; prefer t
 |`LOG_FORMAT`|`json`|Log output format: `json` (one JSON object per line, for log platforms) or `text` (readable in a terminal; handy in your local `.env`)|
 |`LOG_LEVEL`|`info`|Minimum level logged: `debug`, `info`, `warn` or `error`|
 |`GQL_ENABLE_INTROSPECTION`|`false` (`true` in `dev`)|Allow GraphQL introspection (schema download) and "Did you mean …?" hints in validation errors. Keep it off in production.|
-|`WRITE_RATE_LIMIT`|`15`|Writes allowed per user per `WRITE_RATE_WINDOW`, gRPC and GraphQL together ([rate limiting](docs/rate-limiting.md)). Positive integer.|
+|`WRITE_RATE_LIMIT`|`15`|Writes allowed per user per `WRITE_RATE_WINDOW`, gRPC and GraphQL together ([write limit](docs/adr/0008-per-user-write-limit.md)). Positive integer.|
 |`WRITE_RATE_WINDOW`|`1m`|Length of the write-limit window, as a Go duration. Positive.|
 |`OTEL_EXPORTER_OTLP_ENDPOINT`|empty (tracing off)|OTLP gRPC collector to send traces to, e.g. `http://localhost:4317` (local mode) or `http://jaeger:4317` (Docker mode). `http://` means no TLS. See [Tracing](#tracing).|
 |`OTEL_TRACES_SAMPLER`|`parentbased_always_on`|Which traces are kept, e.g. `parentbased_traceidratio` to keep a fraction (read by the OpenTelemetry SDK).|
 |`OTEL_TRACES_SAMPLER_ARG`|none|Argument for the ratio samplers: the fraction to keep, e.g. `0.1`.|
 |`OTEL_SERVICE_NAME`|`financecore`|Service name on every span.|
-|`OTEL_RESOURCE_ATTRIBUTES`|none|Extra span resource attributes, e.g. `service.version=0.0.1`.|
+|`OTEL_RESOURCE_ATTRIBUTES`|none|Extra span resource attributes, e.g. `deployment.environment=staging`. Overrides `service.version`, which otherwise comes from the build.|
 
 ### Optional: host ports for Docker mode
 
@@ -228,7 +228,7 @@ A checklist for a new client. Each point links to the section with the details.
 |**Errors**|Status codes; validation is `INVALID_ARGUMENT` with `field: reason`; another user's record is `NOT_FOUND`; over the write limit is `RESOURCE_EXHAUSTED`|`extensions.code`: `BAD_USER_INPUT` (`field: reason`), `NOT_FOUND`, `UNAUTHENTICATED`, `CONFLICT`, `RATE_LIMITED`, `INTERNAL`|
 |**Lists**|`page_size` / `page_token` → `next_page_token` ([pagination](#pagination))|`first` / `after` → `pageInfo` ([pagination](#pagination))|
 |**Updates**|Patch: unset fields are kept ([updates](#updates))|Patch: omitted or `null` fields are kept ([updates](#updates))|
-|**Limits**|1 MB messages, 10 s default deadline, keepalive pings ≥ 30 s ([gRPC server](#grpc-server)); 15 writes per user per minute, shared with GraphQL: `CreateExpense`, `UpdateExpense`, `DeleteExpense` ([rate limiting](docs/rate-limiting.md)). Over it: wait the `retry-after` header (seconds)|1 MB body, 10 s, 5000 tokens, complexity 200 ([GraphQL server](#graphql-server)); 15 writes per user per minute, shared with gRPC: every mutation except `loginWithGoogle`, each field counted ([rate limiting](docs/rate-limiting.md)). Over it: wait `extensions.retryAfter` (seconds)|
+|**Limits**|1 MB messages, 10 s default deadline, keepalive pings ≥ 30 s ([gRPC server](#grpc-server)); 15 writes per user per minute, shared with GraphQL: `CreateExpense`, `UpdateExpense`, `DeleteExpense` ([write limit](docs/adr/0008-per-user-write-limit.md)). Over it: wait the `retry-after` header (seconds)|1 MB body, 10 s, 5000 tokens, complexity 200 ([GraphQL server](#graphql-server)); 15 writes per user per minute, shared with gRPC: every mutation except `loginWithGoogle`, each field counted ([write limit](docs/adr/0008-per-user-write-limit.md)). Over it: wait `extensions.retryAfter` (seconds)|
 |**Tracing**|Send `x-request-id` to correlate with this service's logs ([request IDs](#request-ids)); send W3C `traceparent` metadata to join your trace ([tracing](#tracing))|Send `X-Request-ID` ([request IDs](#request-ids)); send a W3C `traceparent` header to join your trace ([tracing](#tracing))|
 |**Health**|`grpc.health.v1.Health/Check` ([health checks](#health-checks))|`GET /healthz`, `GET /readyz`|
 
@@ -255,7 +255,7 @@ scoped to that user. The user is never taken from a request argument; another us
    `UNAUTHENTICATED`.
 
 To get a session token from Postman without the Web Console, see
-[docs/postman-google-login.md](docs/postman-google-login.md).
+[docs/runbooks/0001-postman-google-login.md](docs/runbooks/0001-postman-google-login.md).
 
 ### gRPC (Telegram bot)
 
@@ -326,7 +326,7 @@ committed schema in `graphql/schema/*.graphql` instead, or enable it in developm
 
 With `APP_ENV=dev`, `GET /playground` serves GraphiQL against `/graphql`, with the schema's descriptions in its docs
 panel. To call authenticated operations, put a session token in its headers panel:
-`{"Authorization": "Bearer <token>"}` (from `loginWithGoogle`, or see [docs/postman-google-login.md](docs/postman-google-login.md)).
+`{"Authorization": "Bearer <token>"}` (from `loginWithGoogle`, or see [docs/runbooks/0001-postman-google-login.md](docs/runbooks/0001-postman-google-login.md)).
 The page loads its scripts from a CDN, and it is never served with `APP_ENV=prod`.
 
 ## gRPC server
@@ -363,6 +363,7 @@ public HTTP port, so they can stay internal. Only `/metrics` is served there.
 |`http_request_duration_seconds`|histogram|`handler`|`/graphql` latency|
 |`graphql_errors_total`|counter|`code`|GraphQL errors by `extensions.code` (`BAD_USER_INPUT`, `INTERNAL`, ...)|
 |`rate_limited_total`|counter|`api` (`grpc`, `graphql`)|Writes rejected by the per-user write limit|
+|`financecore_build_info`|gauge, always 1|`version`, `go_version`|Which build is running|
 |`db_pool_connections_max` / `_total` / `_acquired` / `_idle`|gauge|—|Connection pool size and use|
 |`db_pool_acquires_total`, `db_pool_acquire_wait_total`, `db_pool_acquire_wait_seconds_total`|counter|—|Connection acquires; a growing wait count means requests queue for a connection|
 |`go_*`, `process_*`|various|—|Go runtime and process (memory, goroutines, CPU, open files)|
@@ -463,8 +464,8 @@ your own to correlate with your logs, or let the service generate one:
 |GraphQL / HTTP|`X-Request-ID` header (optional)|`X-Request-ID` header|
 |gRPC|`x-request-id` metadata (optional)|`x-request-id` response header|
 
-Each request also produces one access log line (method, path or gRPC method, status, duration, request ID).
-Query strings, headers and bodies are never logged.
+Each request also produces one access log line (method, path or gRPC method, status, duration, request ID, and
+`user_id` when the caller is signed in). Query strings, headers and bodies are never logged.
 
 An incoming ID is kept only if it is at most 64 characters of letters, digits, `-`, `_` and `.`; anything else is
 replaced with a new UUID. Browsers can send and read `X-Request-ID` through CORS.
@@ -476,11 +477,16 @@ replaced with a new UUID. Browsers can send and read `X-Request-ID` through CORS
 |`GET /healthz` (HTTP)|Liveness: always `200` while the process runs|
 |`GET /readyz` (HTTP)|Readiness: `200` when the database answers within 2 seconds, `503` otherwise|
 |`grpc.health.v1.Health/Check` (gRPC)|`SERVING` while the process runs, `NOT_SERVING` during shutdown|
+|`GET /version` (HTTP)|The build version, `{"version": "0.2.0"}` (`dev` for a binary built without one)|
 
 None of them require authentication. In Docker mode, `core` reports its health through `/readyz`
 (`docker compose ps` shows `healthy`). The runtime image has no shell or `curl`, so the check runs the binary
 itself: `financecore healthcheck` exits `0` when `/readyz` on `HTTP_PORT` returns `200`, and `1` otherwise. It loads the
 same config as the server, so it needs the same environment.
+
+The build version is also printed by `financecore version` (no config needed, so it works on the image:
+`docker run --rm revirathya/revirathya-finance-core:$VERSION version`), exported as `financecore_build_info`, and
+set as `service.version` on traces.
 
 ```sh
 curl -i localhost:8080/readyz
@@ -536,8 +542,8 @@ Go clients import `github.com/revirathya/revirathya-finance-core/gen/grpc/financ
 ## Development
 
 ```sh
-make run               # run the app locally (go run ./cmd)
-make build             # build the binary to bin/financecore
+make run               # run the app locally (go run ./cmd), stamped with VERSION from .env
+make build             # build the binary to bin/financecore, stamped with VERSION
 make proto-generate    # buf: gRPC stubs        -> gen/grpc (googleapis deps pinned in buf.lock)
 make sqlc-generate     # sqlc: query code       -> gen/sqlc  (queries in sqlc/queries)
 make gql-generate      # gqlgen: GraphQL code   -> gen/graphql
@@ -564,7 +570,8 @@ Run `make hooks` once after cloning. It points git at `.githooks/`:
 
 PRs are squash-merged and CI checks the PR title against the same format, since it becomes the commit on `main`.
 Merging into `main` needs a PR, squash merge, all CI checks passing (`test`, `migration-test`, `codegen`,
-`pr-title`, `image-scan (core)`, `image-scan (migration)`; nobody can bypass them), and an approval from a code owner (`.github/CODEOWNERS`:
+`pr-title`, `image-scan (core, infra/docker/Dockerfile)`, `image-scan (migration, infra/docker/migration.Dockerfile)`;
+nobody can bypass them), and an approval from a code owner (`.github/CODEOWNERS`:
 `@revirathya/finance-core`). Admins may skip only the approval, while the team has a single member.
 
 ### Adding an entity
@@ -597,7 +604,8 @@ make test-integration  # everything: unit + integration tests, with -race, again
 
 Tests live in `test/`, mirroring the `internal/` package they cover (e.g. `test/internal/usecase/category` tests
 `internal/usecase/category`); shared helpers are in `testutil/`. gRPC handlers and GraphQL resolvers are
-tested end-to-end against the real servers, usecases and Postgres, with only Google sign-in faked. CI runs everything with `-race`, the same as `make test-integration`. Integration tests carry the `integration` build tag; each package's `TestMain` calls `testutil.RunWithPostgres`, which starts a throwaway Postgres container,
+tested end-to-end against the real servers, usecases and Postgres, with only Google sign-in faked. CI runs everything with `-race`, the same as `make test-integration`, and `govulncheck -tags=integration ./...`,
+which fails on known vulnerabilities that the code or the tests actually call. Integration tests carry the `integration` build tag; each package's `TestMain` calls `testutil.RunWithPostgres`, which starts a throwaway Postgres container,
 applies `migrations/` and provides `testutil.TestPool`. They never touch your dev database. Tracing tests call
 `testutil.InstallTracing` (before building servers or pools) and read spans with `testutil.Spans`.
 
@@ -607,8 +615,8 @@ To get editor support in integration test files, add the tag to gopls (e.g. `.vs
 ## Further docs
 
 - [Architecture decision records](docs/adr/README.md): why the main design choices were made.
-- [Production readiness](docs/production-readiness.md): what's done and what's planned.
-- [Rate limiting spec](docs/rate-limiting.md), [Postman Google login](docs/postman-google-login.md).
+- [Production readiness](docs/production-readiness.md): what's still open, grouped by what it waits on.
+- [Runbooks](docs/runbooks/README.md): step-by-step procedures, e.g. [getting a session token from Postman](docs/runbooks/0001-postman-google-login.md).
 - [Security policy](SECURITY.md): how to report a vulnerability.
 
 ## License

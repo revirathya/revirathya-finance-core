@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"sync/atomic"
 
 	"github.com/google/uuid"
 	errDom "github.com/revirathya/revirathya-finance-core/internal/domain/error"
@@ -14,11 +15,37 @@ type Principal struct {
 
 type principalKey struct{}
 
+type principalSlotKey struct{}
+
 type telegramIDKey struct{}
 
 // WithPrincipal returns a copy of ctx carrying p.
 func WithPrincipal(ctx context.Context, p Principal) context.Context {
+	if slot, ok := ctx.Value(principalSlotKey{}).(*atomic.Pointer[Principal]); ok {
+		slot.Store(&p)
+	}
 	return context.WithValue(ctx, principalKey{}, p)
+}
+
+// WithPrincipalSlot returns a copy of ctx with an empty slot that WithPrincipal fills, so an outer middleware (the
+// access log) can read the principal that an inner one (auth) sets on its own, derived context.
+func WithPrincipalSlot(ctx context.Context) context.Context {
+	return context.WithValue(ctx, principalSlotKey{}, new(atomic.Pointer[Principal]))
+}
+
+// SlotUserID returns the user ID that WithPrincipal recorded in ctx's slot, if any.
+func SlotUserID(ctx context.Context) (uuid.UUID, bool) {
+	slot, ok := ctx.Value(principalSlotKey{}).(*atomic.Pointer[Principal])
+	if !ok {
+		return uuid.Nil, false
+	}
+
+	p := slot.Load()
+	if p == nil {
+		return uuid.Nil, false
+	}
+
+	return p.UserID, true
 }
 
 // WithTelegramUserID returns a copy of ctx carrying telegramID.

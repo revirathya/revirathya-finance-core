@@ -23,7 +23,7 @@ import (
 func installed(t *testing.T) tracetest.SpanStub {
 	t.Helper()
 	exporter := tracetest.NewInMemoryExporter()
-	shutdown, err := tracing.Install(context.Background(), exporter)
+	shutdown, err := tracing.Install(context.Background(), exporter, "1.0.0")
 	if err != nil {
 		t.Fatalf("Install: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestSetup(t *testing.T) {
 		t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
 		before := otel.GetTracerProvider()
 
-		shutdown, err := tracing.Setup(context.Background())
+		shutdown, err := tracing.Setup(context.Background(), "1.0.0")
 		if err != nil {
 			t.Fatalf("Setup: %v", err)
 		}
@@ -65,7 +65,7 @@ func TestSetup(t *testing.T) {
 
 	t.Run("an endpoint installs the SDK provider without connecting", func(t *testing.T) {
 		t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:1") // nothing listens; export isn't attempted
-		shutdown, err := tracing.Setup(context.Background())
+		shutdown, err := tracing.Setup(context.Background(), "1.0.0")
 		if err != nil {
 			t.Fatalf("Setup: %v", err)
 		}
@@ -78,11 +78,15 @@ func TestSetup(t *testing.T) {
 }
 
 func TestInstall(t *testing.T) {
-	t.Run("service name defaults to financecore", func(t *testing.T) {
+	t.Run("service name defaults to financecore, version to the build version", func(t *testing.T) {
 		t.Setenv("OTEL_SERVICE_NAME", "")
 		t.Setenv("OTEL_RESOURCE_ATTRIBUTES", "")
-		if got := resourceValue(installed(t), "service.name"); got != "financecore" {
+		span := installed(t)
+		if got := resourceValue(span, "service.name"); got != "financecore" {
 			t.Fatalf("service.name %q, want financecore", got)
+		}
+		if got := resourceValue(span, "service.version"); got != "1.0.0" {
+			t.Fatalf("service.version %q, want the build version 1.0.0", got)
 		}
 	})
 

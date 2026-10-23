@@ -30,7 +30,16 @@ import (
 	"github.com/revirathya/revirathya-finance-core/internal/usecase"
 )
 
+// version is set at build time: go build -ldflags "-X main.version=0.2.0"
+var version = "dev"
+
 func main() {
+	// Early version, needs no config
+	if len(os.Args) > 1 && os.Args[1] == "version" {
+		fmt.Println(version)
+		return
+	}
+
 	// Get Config
 	cfg, err := config.Load()
 	if err != nil {
@@ -63,7 +72,7 @@ func run(cfg *config.Config) error {
 	defer stop()
 
 	// Setup tracing
-	tracingShutdown, err := tracing.Setup(ctx)
+	tracingShutdown, err := tracing.Setup(ctx, version)
 	if err != nil {
 		return fmt.Errorf("setup tracing: %w", err)
 	}
@@ -90,6 +99,7 @@ func run(cfg *config.Config) error {
 
 	// Setup metrics collector
 	metricsColl := metrics.NewMetrics(pool)
+	metricsColl.SetBuildInfo(version)
 
 	// Setup write limiter, shared by gRPC and GraphQL so the budget is per user across both
 	writeLimiter := ratelimit.NewLimiter(cfg.WriteRateLimit, cfg.WriteRateWindow)
@@ -112,7 +122,7 @@ func run(cfg *config.Config) error {
 	}
 
 	// Setup server - HTTP
-	httpSrvLayer := dlvHttp.Setup(cfg.AppEnv, cfg.HttpPort, pool.Ping)
+	httpSrvLayer := dlvHttp.Setup(cfg.AppEnv, cfg.HttpPort, version, pool.Ping)
 
 	// Configure GraphQL
 	httpGql.RegisterHandler(
@@ -132,6 +142,7 @@ func run(cfg *config.Config) error {
 	g := api.RunServers(ctx, grpcSrvLayer, httpSrvLayer, metricsSrvLayer)
 	slog.Info(
 		"server started",
+		"version", version,
 		"grpc_addr", cfg.GrpcPort,
 		"http_port", cfg.HttpPort,
 		"metrics_port", cfg.MetricsPort,

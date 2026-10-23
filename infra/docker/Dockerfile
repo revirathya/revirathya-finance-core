@@ -17,8 +17,9 @@ RUN go mod download
 # Copy sources
 COPY . .
 
-# Static binary
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/financecore ./cmd
+# Static binary, stamped with the image version
+ARG VERSION=dev
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o /out/financecore ./cmd
 
 # -------------------
 

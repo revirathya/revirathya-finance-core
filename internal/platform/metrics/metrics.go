@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"net/http"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -19,6 +20,7 @@ type Metrics struct {
 	Registry *prometheus.Registry
 	Grpc     *grpcProm.ServerMetrics
 
+	buildInfo     *prometheus.GaugeVec
 	httpRequests  *prometheus.CounterVec
 	httpDuration  *prometheus.HistogramVec
 	graphqlErrors *prometheus.CounterVec
@@ -67,6 +69,15 @@ func NewMetrics(pool *pgxpool.Pool) *Metrics {
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
 
+	// Init build info - gauge, always 1
+	buildInfoColl := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "financecore_build_info",
+			Help: "Always 1; labels carry the running binary's version and Go version",
+		},
+		[]string{"version", "go_version"},
+	)
+
 	// Init grpc server metrics
 	grpcSrvMet := grpcProm.NewServerMetrics(
 		grpcProm.WithServerHandlingTimeHistogram(),
@@ -113,13 +124,21 @@ func NewMetrics(pool *pgxpool.Pool) *Metrics {
 	m := &Metrics{
 		Registry:      reg,
 		Grpc:          grpcSrvMet,
+		buildInfo:     buildInfoColl,
 		httpRequests:  httpRequestsColl,
 		httpDuration:  httpDurationColl,
 		graphqlErrors: graphqlErrorsColl,
 		rateLimited:   rateLimitedColl,
 	}
 
-	reg.MustRegister(m.Grpc, m.httpRequests, m.httpDuration, m.graphqlErrors, m.rateLimited)
+	reg.MustRegister(
+		m.buildInfo,
+		m.Grpc,
+		m.httpRequests,
+		m.httpDuration,
+		m.graphqlErrors,
+		m.rateLimited,
+	)
 	if pool != nil {
 		registerPoolMetrics(reg, pool)
 	}
@@ -129,6 +148,11 @@ func NewMetrics(pool *pgxpool.Pool) *Metrics {
 
 func (m *Metrics) Handler() http.Handler {
 	return promhttp.HandlerFor(m.Registry, promhttp.HandlerOpts{})
+}
+
+// SetBuildInfo exports financecore_build_info{version, go_version} = 1 for the running binary
+func (m *Metrics) SetBuildInfo(version string) {
+	m.buildInfo.WithLabelValues(version, runtime.Version()).Set(1)
 }
 
 // GraphQLError counts one GraphQL error by its extensions.code
