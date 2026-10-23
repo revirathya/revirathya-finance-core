@@ -261,7 +261,16 @@ client later. Do these first.
 - [x] Prometheus metrics at `/metrics` on a separate `METRICS_PORT` listener: gRPC via the `go-grpc-middleware`
   prometheus provider, `/graphql` requests and latency, GraphQL errors by code, pgxpool stats, Go runtime and process.
   Optional later: dashboards and alerts (error rate, latency, `db_pool_acquire_wait_total` growth).
-- [ ] OpenTelemetry tracing from gRPC and GraphQL through to pgx (`otelpgx`).
+- [x] OpenTelemetry tracing from gRPC and GraphQL through to pgx, exported over OTLP when
+  `OTEL_EXPORTER_OTLP_ENDPOINT` is set; Jaeger as the compose profile `tracing` locally.
+  - [x] `internal/platform/tracing` (`Setup` / `Install`, W3C propagation, sampler and resource from `OTEL_*`),
+    `otelgrpc`, `otelhttp` (span names by route), `otelpgx` (no parameters), `trace_id` / `span_id` in logs; health
+    checks not traced.
+  - [x] GraphQL spans from an in-repo extension (`internal/delivery/http/graphql/tracing`) instead of otelgqlgen,
+    which always records the query text and argument literals (an inline `idToken` would reach the backend).
+  - [x] Operation spans named from the document (`query TraceMe { … }`) when the request has no `operationName`.
+  - [x] `make docker-up tracing=1` (profile + endpoint together), so `.env`'s endpoint is for local mode only.
+  - [ ] Production tracing backend and sampling ratio, with the deploy target.
 
 ### API design
 - [x] Pagination on `expenses` / `ListExpenses`: keyset on `(transaction_dt, id)`, opaque cursor, default 20 and
@@ -308,12 +317,12 @@ client later. Do these first.
 - [x] `make generate` (all three codegens), `make hooks`, and a pre-commit hook (`gofmt`, `go vet`, codegen drift).
 - [x] ADRs in [`docs/adr/`](adr/README.md): two APIs, exact decimals, keyset pagination, patch updates, idempotent
   creates, layering, and the temporary compatibility rule.
-- [ ] Branch protection on `main` (ruleset "main"): PR required, squash only, code owner review, no force push or
-  deletion.
-  - [x] Required status checks: `test`, `migration-test`, `codegen`.
-  - [ ] Add `pr-title` to the required checks (it appears in the picker once it has run on a PR).
-  - [x] Bypass for organization and repository admins, pull requests only: with one team member, the required
-    code-owner approval can't come from someone other than the author.
+- [x] Branch protection on `main`, as two rulesets so CI can never be skipped:
+  - `main` (**no bypass**): PR required (squash only, 0 approvals), required checks `test`, `migration-test`,
+    `codegen`, `pr-title`; no force push or deletion.
+  - `main-review`: 1 approval with code-owner review; bypass for organization and repository admins, pull requests
+    only, because the team has one member and GitHub doesn't count the author's own approval.
+  - [ ] When `finance-core` has a second member: remove the bypass from `main-review`.
   - [x] Repository settings: squash commit title "Pull request title"; merge and rebase commits disabled.
 
 ### Docker
@@ -393,9 +402,8 @@ Next, in this order:
 1. ~~`converter.ParseUUID`~~ (done).
 2. ~~Normalize CRUD~~ (done).
 3. ~~Idempotency key~~ (done).
-4. **Repo hygiene** (section 3): `LICENSE`, `CODEOWNERS`, `SECURITY.md`, PR template, Dependabot, `make generate`
-   and a pre-commit hook, ADRs.
-5. **OpenTelemetry tracing** (section 3, Observability).
+4. ~~Repo hygiene~~ (done; Dependabot skipped for now).
+5. ~~OpenTelemetry tracing~~ (done; production backend and sampling decided with the deploy target).
 6. **Rate limiting on writes**, per [rate-limiting.md](rate-limiting.md).
 7. **Trivy** image scanning (section 3, Docker).
 

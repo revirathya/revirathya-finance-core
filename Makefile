@@ -49,11 +49,12 @@ docker-build:
 		-f infra/docker/$(if $(filter migration,$(svc)),migration.Dockerfile,Dockerfile) \
 		-t revirathya/revirathya-finance-$(svc):$(if $(filter migration,$(svc)),$(MIGRATION_VERSION),$(VERSION)) .
 
+# make docker-up tracing=1 -> also start Jaeger (profile "tracing") and send core's traces to it
 docker-up:
-	$(COMPOSE) up -d $(svc)
+	$(if $(tracing),COMPOSE_PROFILES=tracing DOCKER_OTLP_ENDPOINT=http://jaeger:4317) $(COMPOSE) up $(args) -d $(svc)
 
 docker-down:
-	$(COMPOSE) down $(args)
+	COMPOSE_PROFILES='*' $(COMPOSE) down $(args)
 
 docker-logs:
 	$(COMPOSE) logs -f $(svc)

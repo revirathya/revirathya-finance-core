@@ -9,6 +9,11 @@ Pre-release - APIs, GraphQL schema, and gRPC contracts may change without notice
 ## [Unreleased]
 
 ### Added
+- OpenTelemetry tracing, off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set: spans for gRPC calls, HTTP requests,
+  GraphQL operations and resolvers, and SQL queries (no SQL parameters, and no GraphQL query text, variables or
+  argument values), W3C `traceparent` propagation,
+  sampling via `OTEL_TRACES_SAMPLER`, and `trace_id` / `span_id` on log lines. Jaeger for local use as the compose
+  profile `tracing` (UI on `127.0.0.1:16686`).
 - Idempotent expense creation: an optional `request_id` (gRPC) / `requestId` (GraphQL) UUID on create. Retrying with
   the same key returns the expense the first call created; reusing it for a different expense is `INVALID_ARGUMENT` /
   `BAD_USER_INPUT`. Keys are per user.

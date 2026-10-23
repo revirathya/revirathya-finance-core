@@ -100,6 +100,7 @@ make run                # Run the app (gRPC :50051, GraphQL :8080/graphql)
 make docker-build                 # Build the app image (revirathya-finance-core:$VERSION)
 make docker-build svc=migration   # Build the migration image (revirathya-finance-migration:$MIGRATION_VERSION)
 make docker-up                    # Start db -> migration -> core
+make docker-up tracing=1          # Same, plus Jaeger, with core sending traces to it
 ```
 
 In Docker mode the app is reachable on the host ports (gRPC `:51051`, GraphQL `:8180/graphql`, metrics
@@ -135,7 +136,8 @@ through `args="..."` instead.
 |`svc`|`docker-up`, `docker-logs`|all services|Service(s) to start or follow, e.g. `svc=db` or `svc="db migration"`|
 |`VERSION`|`docker-build`, `docker-up`|from `.env`|Tag of the `core` image; override for one-off builds, e.g. `make docker-build VERSION=0.0.2`. Pass the same value to `docker-up` so compose runs the image you built.|
 |`MIGRATION_VERSION`|`docker-build svc=migration`, `docker-up`|from `.env`|Tag of the `migration` image; override the same way, e.g. `make docker-build svc=migration MIGRATION_VERSION=0.0.2`.|
-|`args`|`docker-down`|none|Extra flags for `docker compose down`, e.g. `args="-v --remove-orphans"`|
+|`args`|`docker-up`, `docker-down`|none|Extra flags for `docker compose up` / `down`, e.g. `args="-v --remove-orphans"`. `docker-down` always stops every profile's services, Jaeger included.|
+|`tracing`|`docker-up`|off|Any value (`tracing=1`) also starts Jaeger (compose profile `tracing`) and points core at it ([tracing](#tracing))|
 
 ## Configuration
 
@@ -169,6 +171,11 @@ Copy `.env.example` to `.env`. Only the required variables must be set; prefer t
 |`LOG_FORMAT`|`json`|Log output format: `json` (one JSON object per line, for log platforms) or `text` (readable in a terminal; handy in your local `.env`)|
 |`LOG_LEVEL`|`info`|Minimum level logged: `debug`, `info`, `warn` or `error`|
 |`GQL_ENABLE_INTROSPECTION`|`false` (`true` in `dev`)|Allow GraphQL introspection (schema download) and "Did you mean …?" hints in validation errors. Keep it off in production.|
+|`OTEL_EXPORTER_OTLP_ENDPOINT`|empty (tracing off)|OTLP gRPC collector to send traces to, e.g. `http://localhost:4317` (local mode) or `http://jaeger:4317` (Docker mode). `http://` means no TLS. See [Tracing](#tracing).|
+|`OTEL_TRACES_SAMPLER`|`parentbased_always_on`|Which traces are kept, e.g. `parentbased_traceidratio` to keep a fraction (read by the OpenTelemetry SDK).|
+|`OTEL_TRACES_SAMPLER_ARG`|none|Argument for the ratio samplers: the fraction to keep, e.g. `0.1`.|
+|`OTEL_SERVICE_NAME`|`financecore`|Service name on every span.|
+|`OTEL_RESOURCE_ATTRIBUTES`|none|Extra span resource attributes, e.g. `service.version=0.0.1`.|
 
 ### Optional: host ports for Docker mode
 
@@ -202,7 +209,7 @@ A checklist for a new client. Each point links to the section with the details.
 |**Lists**|`page_size` / `page_token` → `next_page_token` ([pagination](#pagination))|`first` / `after` → `pageInfo` ([pagination](#pagination))|
 |**Updates**|Patch: unset fields are kept ([updates](#updates))|Patch: omitted or `null` fields are kept ([updates](#updates))|
 |**Limits**|1 MB messages, 10 s default deadline, keepalive pings ≥ 30 s ([gRPC server](#grpc-server))|1 MB body, 10 s, 5000 tokens, complexity 200 ([GraphQL server](#graphql-server))|
-|**Tracing**|Send `x-request-id` to correlate with this service's logs ([request IDs](#request-ids))|Send `X-Request-ID` ([request IDs](#request-ids))|
+|**Tracing**|Send `x-request-id` to correlate with this service's logs ([request IDs](#request-ids)); send W3C `traceparent` metadata to join your trace ([tracing](#tracing))|Send `X-Request-ID` ([request IDs](#request-ids)); send a W3C `traceparent` header to join your trace ([tracing](#tracing))|
 |**Health**|`grpc.health.v1.Health/Check` ([health checks](#health-checks))|`GET /healthz`, `GET /readyz`|
 
 Retries: reads, updates and deletes are safe to retry (a retried delete that already succeeded returns `NOT_FOUND`).
@@ -344,6 +351,33 @@ Labels are bounded on purpose (no GraphQL operation names, no user IDs).
 ```sh
 curl -s localhost:9090/metrics | grep -E '^(grpc_server_handled_total|http_requests_total|db_pool_connections)'
 ```
+
+## Tracing
+
+OpenTelemetry traces are exported over OTLP gRPC when `OTEL_EXPORTER_OTLP_ENDPOINT` is set; without it, tracing is
+off and costs almost nothing. One trace per request:
+
+|Span|From|Name|
+|:--|:--|:--|
+|gRPC call|`otelgrpc` stats handler|`financecore.v1.ExpenseService/CreateExpense`; attributes `rpc.system.name=grpc`, `rpc.method`, `rpc.response.status_code` (e.g. `NOT_FOUND`)|
+|HTTP request|`otelhttp`, outermost handler|the route, `POST /graphql` (unknown paths: just the method); attributes `url.path`, `http.response.status_code`|
+|GraphQL|in-repo extension (`graphql/tracing`)|an operation span (`mutation CreateExpense`, or `mutation` without a name) and one span per resolver (`Mutation.createExpense`), marked as errors when they fail; never the query text, variables or argument values|
+|SQL query|`otelpgx`|`SELECT`, `INSERT`, ...; the SQL text (`db.query.text`), never the parameters. Only queries inside a request are traced.|
+
+Health checks (`grpc.health.v1`, `/healthz`, `/readyz`) aren't traced. Incoming W3C `traceparent` headers or metadata
+are honoured, so a caller's trace continues here. Log lines written during a traced request carry `trace_id` and
+`span_id`, so a log entry leads straight to its trace.
+
+Locally, use [Jaeger](https://www.jaegertracing.io/) (compose profile `tracing`). Its UI is at
+<http://localhost:16686> and it receives OTLP on `localhost:4317`; both are bound to `127.0.0.1`, and traces are kept
+in memory only.
+
+- **Docker mode:** `make docker-up tracing=1` starts Jaeger and points core at `http://jaeger:4317`. Without
+  `tracing=1`, Docker mode doesn't trace; it ignores `OTEL_EXPORTER_OTLP_ENDPOINT` from `.env`.
+- **Local mode:** `make docker-up svc=jaeger` (naming a service starts it whatever its profile) and set
+  `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317` in `.env` for `make run`. In the UI, pick service `financecore`, then filter by operation (span name) or by
+tags such as `rpc.system.name=grpc`, `rpc.response.status_code=INTERNAL`, `url.path=/graphql` or `error=true`, or paste
+a `trace_id` from a log line into the search box.
 
 ## Pagination
 
@@ -508,8 +542,9 @@ Run `make hooks` once after cloning. It points git at `.githooks/`:
   change.
 
 PRs are squash-merged and CI checks the PR title against the same format, since it becomes the commit on `main`.
-Merging into `main` needs a PR, an approval from a code owner (`.github/CODEOWNERS`: `@revirathya/finance-core`),
-and squash merge.
+Merging into `main` needs a PR, squash merge, all four CI checks passing (`test`, `migration-test`, `codegen`,
+`pr-title`; nobody can bypass them), and an approval from a code owner (`.github/CODEOWNERS`:
+`@revirathya/finance-core`). Admins may skip only the approval, while the team has a single member.
 
 ### Adding an entity
 
@@ -542,7 +577,8 @@ make test-integration  # everything: unit + integration tests, with -race, again
 Tests live in `test/`, mirroring the `internal/` package they cover (e.g. `test/internal/usecase/category` tests
 `internal/usecase/category`); shared helpers are in `testutil/`. gRPC handlers and GraphQL resolvers are
 tested end-to-end against the real servers, usecases and Postgres, with only Google sign-in faked. CI runs everything with `-race`, the same as `make test-integration`. Integration tests carry the `integration` build tag; each package's `TestMain` calls `testutil.RunWithPostgres`, which starts a throwaway Postgres container,
-applies `migrations/` and provides `testutil.TestPool`. They never touch your dev database.
+applies `migrations/` and provides `testutil.TestPool`. They never touch your dev database. Tracing tests call
+`testutil.InstallTracing` (before building servers or pools) and read spans with `testutil.Spans`.
 
 To get editor support in integration test files, add the tag to gopls (e.g. `.vscode/settings.json`):
 `"gopls": { "buildFlags": ["-tags=integration"] }`.

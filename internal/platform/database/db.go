@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -31,6 +32,7 @@ func NewDBPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	cfg.MaxConnIdleTime = maxConnIdleTime
 	cfg.HealthCheckPeriod = healthCheckPeriod
 	cfg.ConnConfig.ConnectTimeout = connectTimeout
+	cfg.ConnConfig.Tracer = otelpgx.NewTracer()
 	cfg.ConnConfig.RuntimeParams["statement_timeout"] = statementTimeout
 	cfg.ConnConfig.RuntimeParams["application_name"] = "financecore"
 

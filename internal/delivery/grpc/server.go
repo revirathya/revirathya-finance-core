@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -97,6 +99,11 @@ func Setup(
 		grpc.MaxRecvMsgSize(maxRecvMsgSize),
 		grpc.MaxConcurrentStreams(maxConcurrentStreams),
 		grpc.ConnectionTimeout(connectionTimeout),
+		grpc.StatsHandler(
+			otelgrpc.NewServerHandler(
+				otelgrpc.WithFilter(filters.Not(filters.HealthCheck())),
+			),
+		),
 		grpcKeepaliveParams,
 		grpcKeepaliveEnforcementPolicy,
 		grpc.ChainUnaryInterceptor(

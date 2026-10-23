@@ -124,6 +124,7 @@ internal/delivery/http/
                                Decimal <-> decimal.Decimal, UUID <-> uuid.UUID
   graphql/error/error.go       ErrorPresenter: domain error -> GraphQL error code (import as errGql)
   graphql/error/recovery.go    RecoverFunc: logs resolver panics via slog; ErrorPresenter skips logging them again
+  graphql/tracing/             gqlgen extension: operation + resolver spans, no query text / variables / argument values
   graphql/middleware/<name>/   /graphql-only middleware (after metricscollector, which is outermost): limitbody, withcors, withauth (session JWT -> principal), withtimeout
 internal/delivery/metrics/     Setup: separate metrics server (METRICS_PORT) serving only GET /metrics
 internal/auth                  principal + Telegram ID in context, session JWT (TokenManager), bind-code helpers
@@ -131,12 +132,16 @@ internal/platform/database     pgxpool setup (limits + statement_timeout, set in
 internal/platform/google       Google ID-token verifier (implements domain.GoogleVerifier)
 internal/platform/ratelimit    in-memory fixed-window limiter (per process)
 internal/platform/metrics      Prometheus registry + collectors (gRPC, HTTP, GraphQL errors, pool); ObserveHTTP, GraphQLError
-internal/platform/logging      slog setup (LOG_FORMAT json/text, LOG_LEVEL), request ID in context, EnsureRequestID
+internal/platform/logging      slog setup (LOG_FORMAT json/text, LOG_LEVEL), request ID in context, EnsureRequestID;
+                               adds request_id and, inside a span, trace_id / span_id to every *Context log line
+internal/platform/tracing      OpenTelemetry: Setup(ctx) (off unless OTEL_EXPORTER_OTLP_ENDPOINT), Install(ctx, exporter)
+                               (global provider, W3C propagator, resource/sampler from OTEL_*), RunShutdown
 internal/config                env-based config loading (.env via godotenv, falls back to OS env); APP_ENV (dev|prod, default prod)
                                sets the defaults of GRPC_ENABLE_REFLECTION / GQL_ENABLE_INTROSPECTION, explicit values win
 infra/docker/                  Dockerfile, migration.Dockerfile, docker-compose.yaml
 test/internal/...              all tests, mirroring the internal/ package they cover
-testutil/                      shared test helpers: RunWithPostgres/TestPool/New* (integration tag), CaptureLogs
+testutil/                      shared test helpers: RunWithPostgres/TestPool/New* (integration tag), CaptureLogs,
+                               InstallTracing/Spans (in-memory exporter, installed once per test binary)
 ```
 
 Data flow for a request: delivery (grpc handler or graphql resolver) -> usecase (builds the domain form/patch and
@@ -150,9 +155,12 @@ pgx wire types happens only inside `internal/repository/postgres/<entity>/reposi
 `dlvGrpc.Setup(...)` / `dlvHttp.Setup(...)` + `dlvGql.RegisterHandler(...)`, then `api.RunServers` runs the gRPC
 server and the HTTP server
 inside an `errgroup`, so either server failing — or SIGINT/SIGTERM — brings both down together via graceful
-shutdown. On the HTTP side the whole mux is wrapped in `requestid` -> `accesslog`; `/graphql` additionally goes
+shutdown. On the HTTP side the whole mux is wrapped in `otelhttp` (outermost; skips `/healthz` and `/readyz`) -> `requestid` ->
+`accesslog`; `/graphql` additionally goes
 through `limitbody` -> `withcors` -> `withauth` -> `withtimeout`; `/healthz` and `/readyz` sit outside CORS and auth.
 The gRPC chain is `requestid` -> `accesslog` -> metrics -> `recovery` -> `timeout` -> `apikeyauth` -> `telegramuser`
+(tracing is the `otelgrpc` stats handler, outside the chain, skipping health checks; `tracing.Setup` runs in
+`main.go` before the pool and servers are built, because the instrumentation captures the tracer provider then)
 (`InitializeMetrics` runs after the services are registered); server
 options in `grpc/server.go` cap messages at 1 MB and set keepalive. `ToStatus` maps `context.DeadlineExceeded` /
 `context.Canceled` to `DeadlineExceeded` / `Canceled` without logging them.
@@ -242,8 +250,11 @@ including integration, with `-race` (the same command as `make test-integration`
 - Code must pass `make lint` (CI runs golangci-lint). Silence a finding only with a targeted
   `//nolint:<linter> // <reason>` on that line, never by disabling the linter.
 - Logging: use `log/slog`'s `*Context` methods (`slog.InfoContext`, `slog.ErrorContext`, ...) wherever a request
-  context exists, so the request ID is attached. Never log secrets, tokens, `Authorization` headers, full DSNs, the
-  config struct, or raw request bodies. `cmd/main.go` returns errors from `run()` instead of panicking.
+  context exists, so the request ID and trace ID are attached. Never log secrets, tokens, `Authorization` headers, full
+  DSNs, the config struct, or raw request bodies. `cmd/main.go` returns errors from `run()` instead of panicking.
+- Tracing: the same rule applies to span attributes, which leave the process. No SQL parameters (otelpgx's
+  `WithIncludeQueryParameters` stays off), no GraphQL variables, query text or argument values, no headers. Pass
+  `ctx` down to pgx so query spans join the request; otelpgx skips queries without a parent span.
 - Usecase structs name their dependencies after the entity, not `xxxRepo` (`uc.expense.CreateExpense(...)`), with
   receiver `uc`. Usecases take and return `internal/domain` types only; they must not import pgx, gqlgen, gRPC generated packages,
   or `internal/repository` (including in `usecase/bootstrap.go`, which takes `domain.Repository`). Check with
